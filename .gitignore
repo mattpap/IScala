@@ -1,0 +1,8 @@
+*.sw[opn]
+*~
+
+target/
+project/sbt-launch-*.jar
+
+.idea/
+.idea_modules/
