@@ -27,7 +27,14 @@ object ProjectBuild extends Build {
                 namespace %% "lift-json" % version)
         }
 
-        val zeromq = "org.zeromq" % "jzmq" % "2.2.1"
+        val scalaio = {
+            val namespace = "com.github.scala-incubator.io"
+            val version = "0.4.2"
+            Seq(namespace %% "scala-io-core" % version,
+                namespace %% "scala-io-file" % version)
+        }
+
+        val jeromq = "org.jeromq" % "jeromq" % "0.3.0-SNAPSHOT"
 
         val specs2 = "org.specs2" %% "specs2" % "2.1.1" % "test"
     }
@@ -45,7 +52,7 @@ object ProjectBuild extends Build {
         },
         libraryDependencies ++= {
             import Dependencies._
-            lift ++ Seq(zeromq, specs2)
+            lift ++ scalaio ++ Seq(jeromq, specs2)
         }
     )
 
