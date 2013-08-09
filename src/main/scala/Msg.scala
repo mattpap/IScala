@@ -5,6 +5,10 @@ package object msg {
     type Data = Map[MIME, String]
     type Metadata = Map[String, String]
 
+    sealed trait Msg
+    sealed trait Request extends Msg
+    sealed trait Reply extends Msg
+
     case class execute_request(
         // Source code to be executed by the kernel, one or more lines.
         code: String,
@@ -37,7 +41,7 @@ package object msg {
         // Some frontends (e.g. the Notebook) do not support stdin requests. If
         // raw_input is called from code executed from such a frontend, a
         // StdinNotImplementedError will be raised.
-        allow_stdin: Boolean)
+        allow_stdin: Boolean) extends Request
 
     sealed abstract class ExecutionStatus(str: String)
     case object OK extends ExecutionStatus("ok")
@@ -65,7 +69,7 @@ package object msg {
 
         // Results for the user_variables and user_expressions.
         user_variables: Map[String, String],
-        user_expressions: Map[String, String])
+        user_expressions: Map[String, String]) extends Reply
 
     case class object_info_request(
         // The (possibly dotted) name of the object to be searched in all
@@ -74,7 +78,7 @@ package object msg {
 
         // The level of detail desired.  The default (0) is equivalent to typing
         // 'x?' at the prompt, 1 is equivalent to 'x??'.
-        detail_level: Int)
+        detail_level: Int) extends Request
 
     case class ArgSpec(
         // The names of all the arguments
@@ -158,7 +162,7 @@ package object msg {
         // If detail_level was 1, we also try to find the source code that
         // defines the object, if possible.  The string 'None' will indicate
         // that no source was found.
-        source: String)
+        source: String) extends Reply
 
     case class complete_request(
         // The text to be completed, such as 'a.is'
@@ -180,7 +184,7 @@ package object msg {
         block: Option[String],
 
         // The position of the cursor where the user hit 'TAB' on the line.
-        cursor_pos: Int)
+        cursor_pos: Int) extends Request
 
     case class complete_reply(
         // The list of all matches to the completion request, such as
@@ -196,7 +200,7 @@ package object msg {
         // status should be 'ok' unless an exception was raised during the request,
         // in which case it should be 'error', along with the usual error message content
         // in other messages.
-        status: ExecutionStatus)
+        status: ExecutionStatus) extends Reply
 
     sealed abstract class HistAccessType(str: String)
     case object Range extends HistAccessType("range")
@@ -231,16 +235,16 @@ package object msg {
 
         // If hist_access_type is 'search' and unique is true, do not
         // include duplicated history.  Default is false.
-        unique: Boolean)
+        unique: Boolean) extends Request
 
     case class history_reply(
         // A list of 3 tuples, either:
         // (session, line_number, input) or
         // (session, line_number, (input, output)),
         // depending on whether output was False or True, respectively.
-        history: List[(String, Int, Either[String, (String, String)])])
+        history: List[(String, Int, Either[String, (String, String)])]) extends Reply
 
-    case class connect_request()
+    case class connect_request() extends Request
 
     case class connect_reply(
         // The port the shell ROUTER socket is listening on.
@@ -250,9 +254,9 @@ package object msg {
         // The port the stdin ROUTER socket is listening on.
         stdin_port: Int,
         // The port the heartbeat socket is listening on.
-        hb_port: Int)
+        hb_port: Int) extends Reply
 
-    case class kernel_info_request()
+    case class kernel_info_request() extends Request
 
     case class kernel_info_reply(
         // Version of messaging protocol (mandatory).
@@ -276,22 +280,22 @@ package object msg {
 
         // Programming language in which kernel is implemented (mandatory).
         // Kernel included in IPython returns 'python'.
-        language: String)
+        language: String) extends Reply
 
     case class shutdown_request(
         // whether the shutdown is final, or precedes a restart
-        restart: Boolean)
+        restart: Boolean) extends Request
 
     case class shutdown_reply(
         // whether the shutdown is final, or precedes a restart
-        restart: Boolean)
+        restart: Boolean) extends Reply
 
     case class stream(
         // The name of the stream is one of 'stdout', 'stderr'
         name: String,
 
         // The data is an arbitrary string to be written to that stream
-        data: String)
+        data: String) extends Reply
 
     case class display_data(
         // Who create the data
@@ -303,7 +307,7 @@ package object msg {
         data: Data,
 
         // Any metadata that describes the data
-        metadata: Metadata)
+        metadata: Metadata) extends Reply
 
     case class pyin(
         // Source code to be executed, one or more lines
@@ -312,7 +316,7 @@ package object msg {
         // The counter for this execution is also provided so that clients can
         // display it, since IPython automatically creates variables called _iN
         // (for input prompt In[N]).
-        execution_count: Int)
+        execution_count: Int) extends Reply
 
     case class pyout(
         // The counter for this execution is also provided so that clients can
@@ -324,12 +328,12 @@ package object msg {
         // the object being displayed is that passed to the display hook,
         // i.e. the *result* of the execution.
         data: Data,
-        metadata: Metadata)
+        metadata: Metadata) extends Reply
 
     case class pyerr(
         // Similar content to the execute_reply messages for the 'error' case,
         // except the 'status' field is omitted.
-    )
+    ) extends Reply
 
     sealed abstract class ExecutionState(str: String)
     case object Busy extends ExecutionState("busy")
@@ -340,11 +344,11 @@ package object msg {
         // When the kernel starts to execute code, it will enter the 'busy'
         // state and when it finishes, it will enter the 'idle' state.
         // The kernel will publish state 'starting' exactly once at process startup.
-        execution_state: ExecutionState)
+        execution_state: ExecutionState) extends Reply
 
     case class input_request(
-        prompt: String)
+        prompt: String) extends Request
 
     case class input_reply(
-        value: String)
+        value: String) extends Reply
 }
