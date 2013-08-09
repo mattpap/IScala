@@ -4,9 +4,6 @@ import java.io.File
 import java.util.UUID
 import java.lang.management.ManagementFactory
 
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
-
 import org.zeromq.ZMQ
 
 import scala.collection.mutable
@@ -100,6 +97,8 @@ object IScala extends App {
             throw new IllegalArgumentException("expected zero or one arguments")
     }
 
+    val hmac = new HMAC(profile.key)
+
     val ctx = ZMQ.context(1)
 
     val publish = ctx.socket(ZMQ.PUB)
@@ -135,16 +134,6 @@ object IScala extends App {
     control.bind(uri(profile.control_port))
     raw_input.bind(uri(profile.stdin_port))
     heartbeat.bind(uri(profile.hb_port))
-
-    val hmacAlgorithm = "HmacSHA256"
-    val mac = Mac.getInstance(hmacAlgorithm)
-    val keySpec = new SecretKeySpec(profile.key.getBytes, hmacAlgorithm)
-    mac.init(keySpec)
-
-    def hmac(args: String*): String = {
-        args.map(_.getBytes).foreach(mac.update)
-        hex(mac.doFinal())
-    }
 
     def msg_pub(m: Msg, msg_type: String, content: Dict, metadata: Dict=Dict()): Msg =
         Msg((if (msg_type == "stream") content("name").asInstanceOf[String] else msg_type) :: Nil,
