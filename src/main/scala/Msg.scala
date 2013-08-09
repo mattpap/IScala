@@ -1,13 +1,56 @@
 package org.refptr.iscala
 
+import java.util.UUID
+
 package object msg {
     type MIME = String
     type Data = Map[MIME, String]
     type Metadata = Map[String, String]
 
-    sealed trait Msg
-    sealed trait Request extends Msg
-    sealed trait Reply extends Msg
+    case class Msg(
+        idents: List[UUID],
+        header: Header,
+        parent_header: Header,
+        metadata: Metadata,
+        content: Content)
+
+    case class Header(
+        msg_id: UUID,
+        username: String,
+        session: UUID,
+        msg_type: MsgType)
+
+    object MsgType extends Enumeration {
+        type MsgType = Value
+
+        val execute_request,
+            execute_reply,
+            object_info_request,
+            object_info_reply,
+            complete_request,
+            complete_reply,
+            history_request,
+            history_reply,
+            connect_request,
+            connect_reply,
+            kernel_info_request,
+            kernel_info_reply,
+            shutdown_request,
+            shutdown_reply,
+            stream,
+            display_data,
+            pyin,
+            pyout,
+            pyerr,
+            status,
+            input_request,
+            input_reply = Value
+    }
+    type MsgType = MsgType.MsgType
+
+    sealed trait Content
+    sealed trait Request extends Content
+    sealed trait Reply extends Content
 
     case class execute_request(
         // Source code to be executed by the kernel, one or more lines.
