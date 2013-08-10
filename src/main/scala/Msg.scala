@@ -91,17 +91,19 @@ package object msg {
     case object Error extends ExecutionStatus("error")
     case object Abort extends ExecutionStatus("abort")
 
-    case class execute_reply(
+    sealed trait execute_reply extends Reply {
         // One of: 'ok' OR 'error' OR 'abort'
-        status: ExecutionStatus,
+        val status: ExecutionStatus
 
         // The global kernel counter that increases by one with each request that
         // stores history.  This will typically be used by clients to display
         // prompt numbers to the user.  If the request did not store history, this will
         // be the current value of the counter in the kernel.
-        execution_count: Int,
+        val execution_count: Int
+    }
 
-        // When status is ‘ok’, the following extra fields are present:
+    case class execute_ok_reply(
+        execution_count: Int,
 
         // 'payload' will be a list of payload dicts.
         // Each execution payload is a dict with string keys that may have been
@@ -112,7 +114,37 @@ package object msg {
 
         // Results for the user_variables and user_expressions.
         user_variables: Map[String, String],
-        user_expressions: Map[String, String]) extends Reply
+        user_expressions: Map[String, String]) extends execute_reply {
+
+        val status = OK
+    }
+
+    case class execute_error_reply(
+        execution_count: Int,
+
+        // Exception name, as a string
+        ename: String,
+        // Exception value, as a string
+        evalue: String,
+
+        // The traceback will contain a list of frames, represented each as a
+        // string.  For now we'll stick to the existing design of ultraTB, which
+        // controls exception level of detail statefully.  But eventually we'll
+        // want to grow into a model where more information is collected and
+        // packed into the traceback object, with clients deciding how little or
+        // how much of it to unpack.  But for now, let's start with a simple list
+        // of strings, since that requires only minimal changes to ultratb as
+        // written.
+        traceback: List[String]) extends execute_reply {
+
+        val status = Error
+    }
+
+    case class execute_abort_reply(
+        execution_count: Int) extends execute_reply {
+
+        val status = Abort
+    }
 
     case class object_info_request(
         // The (possibly dotted) name of the object to be searched in all
@@ -374,9 +406,22 @@ package object msg {
         metadata: Metadata) extends Reply
 
     case class pyerr(
-        // Similar content to the execute_reply messages for the 'error' case,
-        // except the 'status' field is omitted.
-    ) extends Reply
+        execution_count: Int,
+
+        // Exception name, as a string
+        ename: String,
+        // Exception value, as a string
+        evalue: String,
+
+        // The traceback will contain a list of frames, represented each as a
+        // string.  For now we'll stick to the existing design of ultraTB, which
+        // controls exception level of detail statefully.  But eventually we'll
+        // want to grow into a model where more information is collected and
+        // packed into the traceback object, with clients deciding how little or
+        // how much of it to unpack.  But for now, let's start with a simple list
+        // of strings, since that requires only minimal changes to ultratb as
+        // written.
+        traceback: List[String]) extends Reply
 
     sealed abstract class ExecutionState(str: String)
     case object Busy extends ExecutionState("busy")
