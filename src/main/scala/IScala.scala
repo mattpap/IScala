@@ -15,6 +15,8 @@ import net.liftweb.json.{JsonAST,JsonParser,Extraction,DefaultFormats,ShortTypeH
 import net.liftweb.common.{Box,Full,Empty}
 import net.liftweb.util.Helpers.tryo
 
+import org.refptr.iscala.msg._
+
 object Util {
     def uuid4(): String = UUID.randomUUID().toString
 
@@ -56,17 +58,7 @@ object IScala extends App {
         iopub_port: Int,
         key: String)
 
-    type Dict = Map[String, Any]
-    val Dict = Map
-
-    case class Msg(
-        idents: List[String] = Nil,
-        header: Dict = Dict(),
-        content: Dict = Dict(),
-        parent_header: Dict = Dict(),
-        metadata: Dict = Dict())
-
-    def parseJSON(json: String): Dict = {
+    def parseJSON(json: String): Metadata = {
         JsonParser.parse(json) match {
             case obj: JsonAST.JObject => obj.values
             case jv => sys.error("expected an object, got $jv")
@@ -137,23 +129,24 @@ object IScala extends App {
     raw_input.bind(uri(profile.stdin_port))
     heartbeat.bind(uri(profile.hb_port))
 
-    def msg_pub(m: Msg, msg_type: String, content: Dict, metadata: Dict=Dict()): Msg =
-        Msg((if (msg_type == "stream") content("name").asInstanceOf[String] else msg_type) :: Nil,
-            Map("msg_id" -> uuid4(),
-                "username" -> m.header("username"),
-                "session" -> m.header("session"),
-                "msg_type" -> msg_type),
-            content, m.header, metadata)
+    def msg_pub[T<:Content](m: Msg[_], msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] =
+        // TODO: Msg((if (msg_type == "stream") content("name").asInstanceOf[String] else msg_type) :: Nil,
+        Msg(msg_type.toString :: Nil,
+            Header(msg_id=uuid4(),
+                   username=m.header.username,
+                   session=m.header.session,
+                   msg_type=msg_type),
+            Some(m.header), metadata, content)
 
-    def msg_reply(m: Msg, msg_type: String, content: Dict, metadata: Dict=Dict()): Msg =
+    def msg_reply[T<:Content](m: Msg[_], msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] =
         Msg(m.idents,
-            Map("msg_id" -> uuid4(),
-                "username" -> m.header("username"),
-                "session" -> m.header("session"),
-                "msg_type" -> msg_type),
-            content, m.header, metadata)
+            Header(msg_id=uuid4(),
+                   username=m.header.username,
+                   session=m.header.session,
+                   msg_type=msg_type),
+            Some(m.header), metadata, content)
 
-    def send_ipython(socket: ZMQ.Socket, m: Msg) {
+    def send_ipython[T<:Content:Manifest](socket: ZMQ.Socket, m: Msg[T]) {
         log(s"SENDING $m")
         m.idents.foreach(socket.send(_, ZMQ.SNDMORE))
         /*
@@ -163,7 +156,10 @@ object IScala extends App {
         */
         socket.send("<IDS|MSG>", ZMQ.SNDMORE)
         val header = toJSON(m.header)
-        val parent_header = toJSON(m.parent_header)
+        val parent_header = m.parent_header match {
+            case Some(parent_header) => toJSON(parent_header)
+            case None => "{}"
+        }
         val metadata = toJSON(m.metadata)
         val content = toJSON(m.content)
         socket.send(hmac(header, parent_header, metadata, content), ZMQ.SNDMORE)
@@ -173,7 +169,7 @@ object IScala extends App {
         socket.send(content)
     }
 
-    def recv_ipython(socket: ZMQ.Socket): Msg = {
+    def recv_ipython[T<:Content:Manifest](socket: ZMQ.Socket): Msg[T] = {
         val idents = Stream.continually {
             val s = socket.recvStr()
             log(s"got msg part $s")
@@ -198,27 +194,33 @@ object IScala extends App {
             sys.error("Invalid HMAC signature") // What should we do here?
         }
         val m = Msg(idents,
-            parseJSON(header),
-            parseJSON(content),
-            parseJSON(parent_header),
-            parseJSON(metadata))
+            fromJSON[Header](header),
+            fromJSON[Option[Header]](parent_header),
+            parseJSON(metadata),
+            fromJSON[T](content))
+            //parseJSON(header),
+            //parseJSON(content),
+            //parseJSON(parent_header),
+            //parseJSON(metadata))
         log(s"RECEIVED $m")
         m
     }
 
-    def send_status(state: String) {
+    def send_status(state: ExecutionState) {
         val msg = Msg(
             "status" :: Nil,
-            Map("msg_id" -> uuid4(),
-                "username" -> "scala_kernel",
-                "session" -> uuid4(),
-                "msg_type" -> "status"),
-            Map("execution_state" -> state))
+            Header(msg_id=uuid4(),
+                   username="scala_kernel",
+                   session=uuid4(),
+                   msg_type=MsgType.status),
+            None,
+            Metadata(),
+            status(
+                execution_state=state))
         send_ipython(publish, msg)
     }
 
     var _n: Int = 0
-    var execute_msg: Msg = _
     val In = mutable.Map[Int, String]()
     val Out = mutable.Map[Int, Any]()
 
@@ -234,27 +236,28 @@ object IScala extends App {
 
     lazy val (interpreter, output) = initInterpreter(args)
 
-    def execute_request(socket: ZMQ.Socket, msg: Msg) {
-        log(s"EXECUTING ${msg.content("code")}")
-        execute_msg = msg
+    def handle_execute_request(socket: ZMQ.Socket, msg: Msg[execute_request]) {
+        val content = msg.content
+        val code = content.code
+        val silent = content.silent || code.trim.endsWith(";")
+        val store_history = content.store_history getOrElse !silent
 
-        val code = msg.content("code").asInstanceOf[String]
-        val silent = msg.content("silent").asInstanceOf[Boolean] || code.trim.endsWith(";")
-        val store_history = msg.content.get("store_history").asInstanceOf[Option[Boolean]].getOrElse(!silent)
+        log(s"EXECUTING $code")
 
         if (!silent) {
             _n += 1
             if (store_history) {
                 In(_n) = code
             }
-            send_ipython(publish, msg_pub(msg, "pyin",
-                Map("execution_count" -> _n,
-                    "code" -> code)))
+            send_ipython(publish, msg_pub(msg, MsgType.pyin,
+                pyin(
+                    execution_count=_n,
+                    code=code)))
         } else {
             log("SILENT")
         }
 
-        send_status("busy")
+        send_status(Busy)
 
         try {
             interpreter.interpret(code) match {
@@ -273,8 +276,8 @@ object IScala extends App {
                         }
                     }
 
-                    val user_variables = Dict()
-                    val user_expressions = Dict()
+                    val user_variables: List[String] = Nil
+                    val user_expressions: Map[String, String] = Map()
 
                     /*
                     for (v <- msg.content("user_variables")) {
@@ -291,10 +294,11 @@ object IScala extends App {
                     */
 
                     if (result.nonEmpty) {
-                        send_ipython(publish, msg_pub(msg, "pyout",
-                            Map("execution_count" -> _n,
-                                "metadata" -> Dict(), // qtconsole needs this
-                                "data" -> Map("text/plain" -> result))))
+                        send_ipython(publish, msg_pub(msg, MsgType.pyout,
+                            pyout(
+                                execution_count=_n,
+                                data=Data("text/plain" -> result),
+                                metadata=Metadata()))) // qtconsole needs this
                         // undisplay(result) // in case display was queued
                     }
 
@@ -302,22 +306,30 @@ object IScala extends App {
                     display() // flush pending display requests
                     */
 
-                    send_ipython(requests, msg_reply(msg, "execute_reply",
-                        Map("status" -> "ok",
-                            "execution_count" -> _n,
-                            "payload" -> Nil,
-                            "user_variables" -> user_variables,
-                            "user_expressions" -> user_expressions)))
+                    send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
+                        execute_ok_reply(
+                            // status=OK,
+                            execution_count=_n,
+                            payload=Nil,
+                            user_variables=user_variables,
+                            user_expressions=user_expressions)))
                 case IR.Error =>
                     // empty!(displayqueue) // discard pending display requests on an error
                     // val content = pyerr_content(e)
-                    val content = Map(
-                        "execution_count" -> _n,
-                        "ename" -> "",
-                        "evalue" -> "",
-                        "traceback" -> output.toString.split("\n").toList)
-                    send_ipython(publish, msg_pub(msg, "pyerr", content))
-                    send_ipython(requests, msg_reply(msg, "execute_reply", content + ("status" -> "error")))
+                    val traceback = output.toString.split("\n").toList
+                    send_ipython(publish, msg_pub(msg, MsgType.pyerr,
+                        pyerr(
+                            execution_count=_n,
+                            ename="",
+                            evalue="",
+                            traceback=traceback)))
+                    send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
+                        execute_error_reply(
+                            // status=Error,
+                            execution_count=_n,
+                            ename="",
+                            evalue="",
+                            traceback=traceback)))
                 case IR.Incomplete =>
                     // TODO
             }
@@ -325,62 +337,71 @@ object IScala extends App {
         } catch {
             case e: Exception =>
                 // empty!(displayqueue) // discard pending display requests on an error
-                val content = pyerr_content(e)
-                send_ipython(publish, msg_pub(msg, "pyerr", content))
-                send_ipython(requests, msg_reply(msg, "execute_reply", content + ("status" -> "error")))
+                //val content = pyerr_content(e)
+                //send_ipython(publish, msg_pub(msg, "pyerr", content))
+                //send_ipython(requests, msg_reply(msg, "execute_reply", content + ("status" -> "error")))
         } finally {
             output.getBuffer.setLength(0)
         }
 
-        send_status("idle")
+        send_status(Idle)
     }
 
-    def complete_request(socket: ZMQ.Socket, msg: Msg) {
-        send_ipython(socket, msg_reply(msg, "complete_reply",
-            Map("status" -> "ok",
-                "matches" -> Nil,
-                "matched_text" -> "")))
+    def handle_complete_request(socket: ZMQ.Socket, msg: Msg[complete_request]) {
+        send_ipython(socket, msg_reply(msg, MsgType.complete_reply,
+            complete_reply(
+                status=OK,
+                matches=Nil,
+                text="")))
     }
 
-    def kernel_info_request(socket: ZMQ.Socket, msg: Msg) {
-        send_ipython(socket, msg_reply(msg, "kernel_info_reply",
-            Map("protocol_version" -> List(4, 0),
-                "language_version" -> List(2, 10, 2),
-                "language" -> "scala" )))
+    def handle_kernel_info_request(socket: ZMQ.Socket, msg: Msg[kernel_info_request]) {
+        send_ipython(socket, msg_reply(msg, MsgType.kernel_info_reply,
+            kernel_info_reply(
+                protocol_version=(4, 0),
+                language_version=List(2, 10, 2),
+                language="scala")))
     }
 
-    def connect_request(socket: ZMQ.Socket, msg: Msg) {
-        send_ipython(socket, msg_reply(msg, "connect_reply",
-            Map("shell_port" -> profile.shell_port,
-                "iopub_port" -> profile.iopub_port,
-                "stdin_port" -> profile.stdin_port,
-                "hb_port"    -> profile.hb_port)))
+    def handle_connect_request(socket: ZMQ.Socket, msg: Msg[connect_request]) {
+        send_ipython(socket, msg_reply(msg, MsgType.connect_reply,
+            connect_reply(
+                shell_port=profile.shell_port,
+                iopub_port=profile.iopub_port,
+                stdin_port=profile.stdin_port,
+                hb_port=profile.hb_port)))
     }
 
-    def shutdown_request(socket: ZMQ.Socket, msg: Msg) {
-        send_ipython(socket, msg_reply(msg, "shutdown_reply", msg.content))
+    def handle_shutdown_request(socket: ZMQ.Socket, msg: Msg[shutdown_request]) {
+        send_ipython(socket, msg_reply(msg, MsgType.shutdown_reply,
+            shutdown_reply(
+                restart=msg.content.restart)))
         sys.exit()
     }
 
-    def object_info_request(socket: ZMQ.Socket, msg: Msg) {
-        send_ipython(socket, msg_reply(msg, "object_info_reply",
-            Map("oname" -> msg.content("oname"),
-                "found" -> false)))
+    def handle_object_info_request(socket: ZMQ.Socket, msg: Msg[object_info_request]) {
+        send_ipython(socket, msg_reply(msg, MsgType.object_info_reply,
+            object_info_notfound_reply(
+                name=msg.content.oname)))
     }
 
-    def history_request(socket: ZMQ.Socket, msg: Msg) {
-        send_ipython(socket, msg_reply(msg, "history_reply",
-            Map("history" -> Nil)))
+    def handle_history_request(socket: ZMQ.Socket, msg: Msg[history_request]) {
+        send_ipython(socket, msg_reply(msg, MsgType.history_reply,
+            history_reply(
+                history=Nil)))
     }
 
-    val handlers: Map[String, (ZMQ.Socket, Msg) => Unit] = Map(
-        "execute_request" -> execute_request,
-        "complete_request" -> complete_request,
-        "kernel_info_request" -> kernel_info_request,
-        "object_info_request" -> object_info_request,
-        "connect_request" -> connect_request,
-        "shutdown_request" -> shutdown_request,
-        "history_request" -> history_request)
+    /*
+    def handlers[T<:Content]: PartialFunction[MsgType, (ZMQ.Socket, Msg[T]) => Unit] = {
+        case MsgType.execute_request => handle_execute_request
+        case MsgType.complete_request => handle_complete_request
+        case MsgType.kernel_info_request => handle_kernel_info_request
+        case MsgType.object_info_request => handle_object_info_request
+        case MsgType.connect_request => handle_connect_request
+        case MsgType.shutdown_request => handle_shutdown_request
+        case MsgType.history_request => handle_history_request
+    }
+    */
 
     class HeartBeat(socket: ZMQ.Socket) extends Thread {
         override def run() {
@@ -400,9 +421,12 @@ object IScala extends App {
                     // s = readavailable(rd) // blocks until something available
                     val s = "abc"
                     log(s"STDIO($name) = $s")
-                    send_ipython(publish, msg_pub(execute_msg, "stream",
-                        Map("name" -> name,
-                            "data" -> s)))
+                    /*
+                    send_ipython(publish, msg_pub(execute_msg, MsgType.stream,
+                        stream(
+                            name=name,
+                            data=s)))
+                    */
                     Thread.sleep(100) // a little delay to accumulate output
                 }
             } catch {
@@ -420,7 +444,7 @@ object IScala extends App {
         // (new WatchStream(read_stderr, "stderr")).start()
     }
 
-    def pyerr_content(e: Exception): Dict = {
+    def pyerr_content(e: Exception): pyerr = {
         val s = new java.io.StringWriter
         val p = new java.io.PrintWriter(s)
         e.printStackTrace(p)
@@ -429,20 +453,29 @@ object IScala extends App {
         val evalue = e.getMessage
         val traceback = s.toString.split("\n").toList
 
-        Map("execution_count" -> _n,
-            "ename" -> ename,
-            "evalue" -> evalue,
-            "traceback" -> traceback)
+        pyerr(execution_count=_n,
+              ename=ename,
+              evalue=evalue,
+              traceback=traceback)
     }
 
     class EventLoop(socket: ZMQ.Socket) extends Thread {
         override def run() {
-            while (true) {
+            while (!Thread.interrupted) {
                 try {
                     val msg = recv_ipython(socket)
 
                     try {
-                        handlers(msg.header("msg_type").asInstanceOf[String])(socket, msg)
+                        //handlers(msg.header.msg_type)(socket, msg)
+                        msg.header.msg_type match {
+                            case MsgType.execute_request => handle_execute_request(socket, msg.asInstanceOf[Msg[execute_request]])
+                            case MsgType.complete_request => handle_complete_request(socket, msg.asInstanceOf[Msg[complete_request]])
+                            case MsgType.kernel_info_request => handle_kernel_info_request(socket, msg.asInstanceOf[Msg[kernel_info_request]])
+                            case MsgType.object_info_request => handle_object_info_request(socket, msg.asInstanceOf[Msg[object_info_request]])
+                            case MsgType.connect_request => handle_connect_request(socket, msg.asInstanceOf[Msg[connect_request]])
+                            case MsgType.shutdown_request => handle_shutdown_request(socket, msg.asInstanceOf[Msg[shutdown_request]])
+                            case MsgType.history_request => handle_history_request(socket, msg.asInstanceOf[Msg[history_request]])
+                        }
                     } catch {
                         // Try to keep going if we get an exception, but
                         // send the exception traceback to the front-ends.
@@ -454,10 +487,13 @@ object IScala extends App {
                             // Base.error_show(orig_STDERR, e, catch_backtrace())
                             // log(orig_STDERR)
                             send_ipython(publish, Msg("pyerr" :: Nil,
-                                Map("msg_id" -> uuid4(),
-                                    "username" -> "scala_kernel",
-                                    "session" -> uuid4(),
-                                    "msg_type" -> "pyerr"), pyerr_content(e)))
+                                Header(msg_id=uuid4(),
+                                       username="scala_kernel",
+                                       session=uuid4(),
+                                       msg_type=MsgType.pyerr),
+                                None,
+                                Metadata(),
+                                pyerr_content(e)))
                     }
                 } catch {
                     case _: InterruptedException =>
@@ -481,7 +517,7 @@ object IScala extends App {
     }
 
     start_heartbeat(heartbeat)
-    send_status("starting")
+    send_status(Starting)
 
     log("Starting kernel event loops.")
     watch_stdio()

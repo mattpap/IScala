@@ -1,18 +1,23 @@
 package org.refptr.iscala
 
-import java.util.UUID
+// import java.util.UUID
 
 package object msg {
+    type UUID = String
     type MIME = String
-    type Data = Map[MIME, String]
-    type Metadata = Map[String, String]
 
-    case class Msg(
+    type Data = Map[MIME, String]
+    val Data = Map
+
+    type Metadata = Map[String, Any] // String
+    val Metadata = Map
+
+    case class Msg[+T<:Content](
         idents: List[UUID],
         header: Header,
-        parent_header: Header,
+        parent_header: Option[Header],
         metadata: Metadata,
-        content: Content)
+        content: T)
 
     case class Header(
         msg_id: UUID,
@@ -70,7 +75,7 @@ package object msg {
         // A boolean flag which, if True, signals the kernel to populate history
         // The default is True if silent is False.  If silent is True, store_history
         // is forced to be False.
-        store_history: Boolean,
+        store_history: Option[Boolean]=None,
 
         // A list of variable names from the user's namespace to be retrieved.
         // What returns is a rich representation of each variable (dict keyed by name).
@@ -113,7 +118,7 @@ package object msg {
         payload: List[Map[String, String]],
 
         // Results for the user_variables and user_expressions.
-        user_variables: Map[String, String],
+        user_variables: List[String],
         user_expressions: Map[String, String]) extends execute_reply {
 
         val status = OK
@@ -168,13 +173,23 @@ package object msg {
         // value at all.
         defaults: List[String])
 
-    case class object_info_reply(
+    sealed trait object_info_reply extends Reply {
         // The name the object was requested under
-        name: String,
+        val name: String
 
         // Boolean flag indicating whether the named object was found or not.  If
         // it's false, all other fields will be empty.
-        found: Boolean,
+        val found: Boolean
+    }
+
+    case class object_info_notfound_reply(
+        name: String) extends object_info_reply {
+
+        val found = false
+    }
+
+    case class object_info_found_reply(
+        name: String,
 
         // Flags for magics and system aliases
         ismagic: Boolean,
@@ -237,7 +252,10 @@ package object msg {
         // If detail_level was 1, we also try to find the source code that
         // defines the object, if possible.  The string 'None' will indicate
         // that no source was found.
-        source: String) extends Reply
+        source: String) extends object_info_reply {
+
+        val found = true
+    }
 
     case class complete_request(
         // The text to be completed, such as 'a.is'
@@ -346,7 +364,7 @@ package object msg {
         // The last component is an extra field, which may be 'dev' or
         // 'rc1' in development version.  It is an empty string for
         // released version.
-        ipython_version: (Int, Int, Int, String),
+        ipython_version: Option[(Int, Int, Int, String)]=None,
 
         // Language version number (mandatory).
         // It is Python version number (e.g., [2, 7, 3]) for the kernel
