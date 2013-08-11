@@ -90,7 +90,9 @@ object IScala extends App {
 
             val file = new File(s"profile-${getpid()}.json")
             log(s"connect ipython with --existing ${file.getAbsolutePath}")
-            file.asOutput.write(toJSON(profile))
+            val io = file.asSeekable
+            io.truncate(0)
+            io.write(toJSON(profile))
 
             profile
         case _=>
