@@ -19,7 +19,7 @@ function usage {
 DEBUG=0
 JREBEL=1
 
-while getopts hDd:r:R OPT;
+while getopts hdR OPT;
 do
     case "$OPT" in
         h)
@@ -41,6 +41,17 @@ done
 
 shift `expr $OPTIND - 1`
 
+SEP=" -- "
+OPTS=$@
+
+SBT_OPTS="${OPTS%$SEP*}"
+
+if [ "$SBT_OPTS" != "$OPTS" ]; then
+    JVM_OPTS="${OPTS#*$SEP}"
+else
+    JVM_OPTS=""
+fi
+
 JAVA_OPTS="-Dfile.encoding=UTF-8 -Xss8M -Xmx2G -XX:MaxPermSize=1024M -XX:ReservedCodeCacheSize=64M -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled"
 
 if [ $DEBUG = 1 ];
@@ -58,13 +69,6 @@ then
 
     JREBEL_OPTS="-noverify -javaagent:$HOME/.jrebel/jrebel/jrebel.jar"
 
-    # JREBEL_OPTS="$JREBEL_OPTS -Drebel.packages="
-    # JREBEL_OPTS="$JREBEL_OPTS -Drebel.packages_include="
-    # JREBEL_OPTS="$JREBEL_OPTS -Drebel.packages_exclude="
-    # JREBEL_OPTS="$JREBEL_OPTS -Drebel.load_embedded_plugins="
-    # JREBEL_OPTS="$JREBEL_OPTS -Drebel.plugins="
-    # JREBEL_OPTS="$JREBEL_OPTS -Drebel.reload_bundles="
-
     JREBEL_OPTS="$JREBEL_OPTS -Drebel.usage_reporting=false"
     JREBEL_OPTS="$JREBEL_OPTS -Drebel.stats=true"
     JREBEL_OPTS="$JREBEL_OPTS -Drebel.log=true"
@@ -74,32 +78,12 @@ then
     JREBEL_OPTS="$JREBEL_OPTS -Drebel.log.file=$JREBEL_DIR/jrebel.log"
     JREBEL_OPTS="$JREBEL_OPTS -Drebel.temp.dir=$JREBEL_DIR"
 
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.lift_plugin=true"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.wink_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.click_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.metro_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.icefaces_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.jaxb_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.jbossaop_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.jackson_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.resteasy_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.seam_wicket_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.springws_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.webobjects_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.jruby_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.jersey_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.adf_core_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.adf_faces_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.myfaces_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.restlet_plugin=false"
-    JREBEL_OPTS="$JREBEL_OPTS -Drebel.spring_data_plugin=false"
-
     JAVA_OPTS="$JAVA_OPTS $JREBEL_OPTS"
 fi
 
-JAVA_OPTS="$JAVA_OPTS $@"
+JAVA_OPTS="$JAVA_OPTS $JVM_OPTS"
 
-SBT_VERSION="0.13.0-RC3"
+SBT_VERSION="0.13.0-RC5"
 SBT_LAUNCHER="$(dirname $0)/project/sbt-launch-$SBT_VERSION.jar"
 
 if [ ! -e "$SBT_LAUNCHER" ];
@@ -108,5 +92,5 @@ then
     wget -O $SBT_LAUNCHER $URL
 fi
 
-java $JAVA_OPTS -jar $SBT_LAUNCHER
+java $JAVA_OPTS -jar $SBT_LAUNCHER $SBT_OPTS
 echo
