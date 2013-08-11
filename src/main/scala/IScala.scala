@@ -220,10 +220,16 @@ object IScala extends App {
     val In = mutable.Map[Int, String]()
     val Out = mutable.Map[Int, Any]()
 
-    val command = new CommandLine(args.toList, println)
-    val istr = new java.io.StringWriter
-    val iout = new java.io.PrintWriter(istr)
-    val imain = new IMain(command.settings, iout)
+    def initInterpreter(args: Seq[String]) = {
+        val command = new CommandLine(args.toList, println)
+        command.settings.embeddedDefaults[this.type]
+        val istr = new java.io.StringWriter
+        val iout = new java.io.PrintWriter(istr)
+        val imain = new IMain(command.settings, iout)
+        (imain, istr)
+    }
+
+    lazy val (interpreter, output) = initInterpreter(args)
 
     def execute_request(socket: ZMQ.Socket, msg: Msg) {
         log(s"EXECUTING ${msg.content("code")}")
@@ -248,70 +254,79 @@ object IScala extends App {
         send_status("busy")
 
         try {
-            imain.interpret(code) match {
+            interpreter.interpret(code) match {
                 case IR.Success =>
+                    val result = {
+                        val result = output.toString
+
+                        if (silent) {
+                            ""
+                        } else {
+                            if (result.nonEmpty && store_history) {
+                                Out(_n) = result
+                            }
+
+                            result
+                        }
+                    }
+
+                    val user_variables = Dict()
+                    val user_expressions = Dict()
+
+                    /*
+                    for (v <- msg.content("user_variables")) {
+                        user_variables[v] = eval(Main, parse(v))
+                    }
+
+                    for ((v, ex) <- msg.content("user_expressions")) {
+                        user_expressions[v] = eval(Main, parse(ex))
+                    }
+
+                    for (hook <- postexecute_hooks) {
+                        hook()
+                    }
+                    */
+
+                    if (result.nonEmpty) {
+                        send_ipython(publish, msg_pub(msg, "pyout",
+                            Map("execution_count" -> _n,
+                                "metadata" -> Dict(), // qtconsole needs this
+                                "data" -> Map("text/plain" -> result))))
+                        // undisplay(result) // in case display was queued
+                    }
+
+                    /*
+                    display() // flush pending display requests
+                    */
+
+                    send_ipython(requests, msg_reply(msg, "execute_reply",
+                        Map("status" -> "ok",
+                            "execution_count" -> _n,
+                            "payload" -> Nil,
+                            "user_variables" -> user_variables,
+                            "user_expressions" -> user_expressions)))
                 case IR.Error =>
+                    // empty!(displayqueue) // discard pending display requests on an error
+                    // val content = pyerr_content(e)
+                    val content = Map(
+                        "execution_count" -> _n,
+                        "ename" -> "",
+                        "evalue" -> "",
+                        "traceback" -> output.toString.split("\n"))
+                    send_ipython(publish, msg_pub(msg, "pyerr", content))
+                    send_ipython(requests, msg_reply(msg, "execute_reply", content + ("status" -> "error")))
                 case IR.Incomplete =>
+                    // TODO
             }
 
-            /*
-            val result = include_string(code, s"In[${_n}]")
-            if (silent) {
-                result = nothing
-            } else if (result != nothing) {
-                if (store_history) {
-                    Out(_n) = result
-                    // eval(Main, :($(symbol(string("_",_n))) = Out[$_n]))
-                }
-            }
-            */
-
-            val user_variables = Dict()
-            val user_expressions = Dict()
-
-            /*
-            for (v <- msg.content("user_variables")) {
-                user_variables[v] = eval(Main, parse(v))
-            }
-
-            for ((v, ex) <- msg.content("user_expressions")) {
-                user_expressions[v] = eval(Main, parse(ex))
-            }
-
-            for (hook <- postexecute_hooks) {
-                hook()
-            }
-            */
-
-            /*
-            if (result != nothing) {
-                send_ipython(publish, msg_pub(msg, "pyout",
-                    Map("execution_count" -> _n,
-                        "metadata" -> Dict(), // qtconsole needs this
-                        "data" -> display_dict(result))))
-                undisplay(result) // in case display was queued
-            }
-            */
-
-            /*
-            display() // flush pending display requests
-            */
-
-            send_ipython(requests, msg_reply(msg, "execute_reply",
-                Map("status" -> "ok",
-                    "execution_count" -> _n,
-                    "payload" -> Nil,
-                    "user_variables" -> user_variables,
-                    "user_expressions" -> user_expressions)))
         } catch {
             case e: Exception =>
-                /*
-                empty!(displayqueue) // discard pending display requests on an error
-                content = pyerr_content(e)
+                // empty!(displayqueue) // discard pending display requests on an error
+                val content = pyerr_content(e)
                 send_ipython(publish, msg_pub(msg, "pyerr", content))
-                content["status"] = "error"
-                send_ipython(requests, msg_reply(msg, "execute_reply", content))
-                */
+                send_ipython(requests, msg_reply(msg, "execute_reply", content + ("status" -> "error")))
+        } finally {
+            output.getBuffer.setLength(0)
         }
 
         send_status("idle")
@@ -409,7 +424,7 @@ object IScala extends App {
 
         val ename = e.getClass.getName
         val evalue = e.getMessage
-        val traceback = s.toString
+        val traceback = s.toString.split("\n")
 
         Map("execution_count" -> _n,
             "ename" -> ename,
