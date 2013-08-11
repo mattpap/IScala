@@ -1,8 +1,13 @@
 *.sw[opn]
 *~
 
-target/
-project/sbt-launch-*.jar
+/target/
+/project/target/
+/project/project/target/
 
-.idea/
-.idea_modules/
+/project/sbt-launch-*.jar
+
+/.idea/
+/.idea_modules/
+
+/profile-*.json
