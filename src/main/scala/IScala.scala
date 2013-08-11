@@ -221,12 +221,13 @@ object IScala extends App {
     val Out = mutable.Map[Int, Any]()
 
     def initInterpreter(args: Seq[String]) = {
-        val command = new CommandLine(args.toList, println)
-        command.settings.embeddedDefaults[this.type]
-        val istr = new java.io.StringWriter
-        val iout = new java.io.PrintWriter(istr)
-        val imain = new IMain(command.settings, iout)
-        (imain, istr)
+        val commandLine = new CommandLine(args.toList, println)
+        commandLine.settings.embeddedDefaults[this.type]
+        commandLine.settings.usejavacp.value = true
+        val output = new java.io.StringWriter
+        val printer = new java.io.PrintWriter(output)
+        val interpreter = new IMain(commandLine.settings, printer)
+        (interpreter, output)
     }
 
     lazy val (interpreter, output) = initInterpreter(args)

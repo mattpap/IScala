@@ -44,7 +44,7 @@ object ProjectBuild extends Build {
     lazy val pluginSettings = SbtIdeaPlugin.settings
 
     lazy val projectSettings = Project.defaultSettings ++ pluginSettings ++ Seq(
-        // fork in run := true,
+        fork in run := true,
         jrebelRunning := {
             val jrebel = java.lang.Package.getPackage("com.zeroturnaround.javarebel") != null
             ConsoleLogger().log(Level.Info, s"JRebel is ${if (jrebel) "enabled" else "disabled"}")
