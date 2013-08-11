@@ -313,7 +313,7 @@ object IScala extends App {
                         "execution_count" -> _n,
                         "ename" -> "",
                         "evalue" -> "",
-                        "traceback" -> output.toString.split("\n"))
+                        "traceback" -> output.toString.split("\n").toList)
                     send_ipython(publish, msg_pub(msg, "pyerr", content))
                     send_ipython(requests, msg_reply(msg, "execute_reply", content + ("status" -> "error")))
                 case IR.Incomplete =>
@@ -425,7 +425,7 @@ object IScala extends App {
 
         val ename = e.getClass.getName
         val evalue = e.getMessage
-        val traceback = s.toString.split("\n")
+        val traceback = s.toString.split("\n").toList
 
         Map("execution_count" -> _n,
             "ename" -> ename,
