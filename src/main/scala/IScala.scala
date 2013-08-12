@@ -10,6 +10,7 @@ import scala.collection.mutable
 import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
 
 import scalax.io.JavaConverters._
+import scalax.file.Path
 
 import net.liftweb.json.{JsonAST,JsonParser,Extraction,DefaultFormats,ShortTypeHints}
 import net.liftweb.common.{Box,Full,Empty}
@@ -35,12 +36,14 @@ object Util {
 object JSONUtil {
     implicit val formats = DefaultFormats
 
-    def toJSON[T:Manifest](obj: T): String = {
+    def toJSON[T:Manifest](obj: T): String =
         JsonAST.compactRender(Extraction.decompose(obj))
-    }
 
-    def fromJSON[T:Manifest](json: String): T = {
+    def fromJSON[T:Manifest](json: String): T =
         JsonParser.parse(json).extract[T]
+
+    implicit class JsonString(json: String) {
+        def as[T:Manifest]: T = JSONUtil.fromJSON[T](json)
     }
 }
 
@@ -67,7 +70,7 @@ object IScala extends App {
 
     val profile = args.toList match {
         case path :: Nil =>
-            fromJSON[Profile](new File(path).asInput.string)
+            Path(path).string.as[Profile]
         case Nil =>
             val port0 = 5678
             val profile = Profile(
@@ -80,11 +83,9 @@ object IScala extends App {
                 iopub_port=port0+4,
                 key=uuid4())
 
-            val file = new File(s"profile-${getpid()}.json")
-            log(s"connect ipython with --existing ${file.getAbsolutePath}")
-            val io = file.asSeekable
-            io.truncate(0)
-            io.write(toJSON(profile))
+            val file = Path(s"profile-${getpid()}.json")
+            log(s"connect ipython with --existing ${file.toAbsolute.path}")
+            file.write(toJSON(profile))
 
             profile
         case _=>
