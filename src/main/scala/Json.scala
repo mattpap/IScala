@@ -1,5 +1,7 @@
 package org.refptr.iscala.json
 
+import scala.reflect.ClassTag
+
 import play.api.libs.json.{Json,Reads,Writes,OWrites,Format,JsPath}
 import play.api.libs.json.{JsResult,JsSuccess,JsError}
 import play.api.libs.json.{JsValue,JsString,JsArray,JsObject}
@@ -23,6 +25,27 @@ object PlayJson {
     def writes[A] = macro JsMacroImpl.writesImpl[A]
     // overrides Json.format
     def format[A] = macro JsMacroImpl.formatImpl[A]
+
+    def noFields[A:ClassTag] = NoFields.format
+}
+
+object NoFields {
+    def reads[T:ClassTag]: Reads[T] = new Reads[T] {
+        def reads(json: JsValue) = json match {
+            case JsObject(seq) if seq.isEmpty =>
+                JsSuccess(implicitly[ClassTag[T]].runtimeClass.newInstance.asInstanceOf[T])
+            case _ =>
+                JsError("Not an empty object")
+        }
+    }
+
+    def writes[T]: OWrites[T] = new OWrites[T] {
+        def writes(t: T) = JsObject(Nil)
+    }
+
+    def format[T:ClassTag]: Format[T] = {
+        Format(reads, writes)
+    }
 }
 
 object EnumJson {
@@ -299,7 +322,7 @@ object TestJson {
         list: ListCaseClass,
         map: MapCaseClass)
 
-    // case class NoFields()
+    case class NoFields()
     case class OneField(field: String)
 
     implicit val FooBarBazJSON = EnumJson.format(FooBarBaz)
@@ -311,6 +334,6 @@ object TestJson {
     implicit val ListCaseClassJSON = PlayJson.format[ListCaseClass]
     implicit val MapCaseClassJSON = PlayJson.format[MapCaseClass]
     implicit val CaseClassJSON = PlayJson.format[CaseClass]
-    // implicit val NoFieldsJSON = PlayJson.format[NoFields]
+    implicit val NoFieldsJSON = PlayJson.noFields[NoFields]
     implicit val OneFieldJSON = PlayJson.format[OneField]
 }
