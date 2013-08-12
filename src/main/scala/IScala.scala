@@ -16,6 +16,7 @@ import net.liftweb.json.{JsonAST,JsonParser,Extraction,DefaultFormats,MappingExc
 import net.liftweb.json.ext.EnumNameSerializer
 
 import org.refptr.iscala.msg._
+import org.refptr.iscala.json.PlayJson
 
 object Util {
     def uuid4(): String = UUID.randomUUID().toString
@@ -60,6 +61,10 @@ object IScala extends App {
         shell_port: Int,
         iopub_port: Int,
         key: String)
+
+    object Profile {
+        implicit val ProfileJSON = PlayJson.format[Profile]
+    }
 
     def parseJSON(json: String): Metadata = {
         JsonParser.parse(json) match {

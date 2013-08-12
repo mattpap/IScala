@@ -2,6 +2,7 @@
 *~
 
 /target/
+/macros/target/
 /project/target/
 /project/project/target/
 

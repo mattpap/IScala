@@ -62,7 +62,17 @@ object ProjectBuild extends Build {
         }
     )
 
-    lazy val IScala = Project(id="IScala", base=file("."), settings=projectSettings)
+    lazy val macrosSettings = Project.defaultSettings ++ pluginSettings ++ Seq(
+        libraryDependencies ++= {
+            import Dependencies._
+            Seq(play_json, specs2)
+        },
+        libraryDependencies <+= scalaVersion("org.scala-lang" % "scala-reflect" % _)
+    )
 
-    override def projects = Seq(IScala)
+    lazy val IScala = Project(id="IScala", base=file("."), settings=projectSettings) dependsOn(Macros)
+
+    lazy val Macros = Project(id="Macros", base=file("macros"), settings=macrosSettings)
+
+    override def projects = Seq(IScala, Macros)
 }
