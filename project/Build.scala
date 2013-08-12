@@ -15,8 +15,11 @@ object ProjectBuild extends Build {
         cancelable := true,
         resolvers ++= Seq(
             "Sonatype Releases" at "http://oss.sonatype.org/content/repositories/releases",
-            "Sonatype Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots"
-        )
+            "Sonatype Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots",
+            "Typesafe Releases" at "https://typesafe.artifactoryonline.com/typesafe/maven-releases/",
+            "Typesafe Snapshots" at "https://typesafe.artifactoryonline.com/typesafe/maven-snapshots/",
+            "Mandubian Releases" at "https://github.com/mandubian/mandubian-mvn/raw/master/releases/",
+            "Mandubian Snapshots" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/")
     )
 
     object Dependencies {
@@ -33,6 +36,8 @@ object ProjectBuild extends Build {
             Seq(namespace %% "scala-io-core" % version,
                 namespace %% "scala-io-file" % version)
         }
+
+        val play_json = "play" %% "play-json" % "2.2-SNAPSHOT"
 
         val jeromq = "org.jeromq" % "jeromq" % "0.3.0-SNAPSHOT"
 
@@ -52,7 +57,7 @@ object ProjectBuild extends Build {
         },
         libraryDependencies ++= {
             import Dependencies._
-            lift ++ scalaio ++ Seq(jeromq, specs2)
+            lift ++ scalaio ++ Seq(jeromq, play_json, specs2)
         }
     )
 
