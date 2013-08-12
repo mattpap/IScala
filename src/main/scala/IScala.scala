@@ -69,7 +69,7 @@ object IScala extends App {
     def parseJSON(json: String): Metadata = {
         JsonParser.parse(json) match {
             case obj: JsonAST.JObject => obj.values
-            case jv => sys.error("expected an object, got $jv")
+            case jv => sys.error(s"expected an object, got $jv")
         }
     }
 
