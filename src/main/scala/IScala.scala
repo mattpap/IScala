@@ -12,9 +12,8 @@ import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
 import scalax.io.JavaConverters._
 import scalax.file.Path
 
-import net.liftweb.json.{JsonAST,JsonParser,Extraction,DefaultFormats,ShortTypeHints}
-import net.liftweb.common.{Box,Full,Empty}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.json.{JsonAST,JsonParser,Extraction,DefaultFormats,MappingException}
+import net.liftweb.json.ext.EnumNameSerializer
 
 import org.refptr.iscala.msg._
 
@@ -34,7 +33,8 @@ object Util {
 }
 
 object JSONUtil {
-    implicit val formats = DefaultFormats
+    implicit val formats = DefaultFormats ++ Seq(
+        new EnumNameSerializer(MsgType))
 
     def toJSON[T:Manifest](obj: T): String =
         JsonAST.compactRender(Extraction.decompose(obj))
@@ -196,7 +196,7 @@ object IScala extends App {
         }
         val m = Msg(idents,
             fromJSON[Header](header),
-            fromJSON[Option[Header]](parent_header),
+            try { fromJSON[Option[Header]](parent_header) } catch { case _: MappingException => None },
             parseJSON(metadata),
             fromJSON[T](content))
             //parseJSON(header),

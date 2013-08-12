@@ -26,8 +26,9 @@ object ProjectBuild extends Build {
         val lift = {
             val namespace= "net.liftweb"
             val version = "2.5.1"
-            Seq(namespace %% "lift-util" % version,
-                namespace %% "lift-json" % version)
+            Seq(namespace %% "lift-util"     % version,
+                namespace %% "lift-json"     % version,
+                namespace %% "lift-json-ext" % version)
         }
 
         val scalaio = {
