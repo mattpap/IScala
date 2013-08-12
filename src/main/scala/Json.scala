@@ -49,7 +49,7 @@ object EnumJson {
     }
 }
 
-object EitherJson {
+trait EitherJson {
     implicit def EitherReads[T1:Reads, T2:Reads]: Reads[Either[T1, T2]] = new Reads[Either[T1, T2]] {
         def reads(json: JsValue) = {
             implicitly[Reads[T1]].reads(json) match {
@@ -71,7 +71,7 @@ object EitherJson {
     }
 }
 
-object TupleJson {
+trait TupleJson {
     implicit def Tuple1Reads[T1:Reads]: Reads[Tuple1[T1]] = new Reads[Tuple1[T1]] {
         def reads(json: JsValue) = json match {
             case JsArray(List(j1)) =>
@@ -151,7 +151,7 @@ object TupleJson {
     }
 }
 
-object MapJson {
+trait MapJson {
     implicit def MapReads[V:Reads]: Reads[Map[String, V]] = new Reads[Map[String, V]] {
         def reads(json: JsValue) = json match {
             case JsObject(obj) =>
@@ -181,13 +181,11 @@ object MapJson {
     }
 }
 
+trait JsonImplicits extends EitherJson with TupleJson with MapJson
+object JsonImplicits extends JsonImplicits
+
 object TestJson {
-    import MapJson.{MapReads,MapWrites}
-    import EitherJson.{EitherReads,EitherWrites}
-    import TupleJson.{Tuple1Reads,Tuple1Writes}
-    import TupleJson.{Tuple2Reads,Tuple2Writes}
-    import TupleJson.{Tuple3Reads,Tuple3Writes}
-    import TupleJson.{Tuple4Reads,Tuple4Writes}
+    import JsonImplicits._
 
     type MyType = Int
 
