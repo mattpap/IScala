@@ -2,9 +2,6 @@ package org.refptr.iscala
 
 // import java.util.UUID
 
-import org.refptr.iscala.json.{Json,EnumJson,JsonImplicits}
-import JsonImplicits._
-
 package object msg {
     type UUID = String
     type MIME = String
@@ -470,6 +467,10 @@ package object msg {
     case class input_reply(
         value: String) extends Reply
 
+    import org.refptr.iscala.json.{Json,EnumJson,JsonImplicits}
+    import play.api.libs.json.{Json=>PlayJson,Writes}
+    import JsonImplicits._
+
     implicit val MsgTypeFormat = EnumJson.format(MsgType)
     implicit val HeaderFormat = Json.format[Header]
 
@@ -480,13 +481,35 @@ package object msg {
     implicit val ArgSpecFormat = Json.format[ArgSpec]
 
     implicit val ExecuteRequestJSON = Json.format[execute_request]
-    implicit val ExecuteOkReplyJSON = Json.format[execute_ok_reply]
-    implicit val ExecuteErrorReplyJSON = Json.format[execute_error_reply]
-    implicit val ExecuteAbortReplyJSON = Json.format[execute_abort_reply]
+    implicit val ExecuteReplyJSON = new Writes[execute_reply] {
+        val execute_ok_reply_fmt = Json.writes[execute_ok_reply]
+        val execute_error_reply_fmt = Json.writes[execute_error_reply]
+        val execute_abort_reply_fmt = Json.writes[execute_abort_reply]
+
+        def writes(o: execute_reply) = (o match {
+            case o: execute_ok_reply => execute_ok_reply_fmt.writes(o)
+            case o: execute_error_reply => execute_error_reply_fmt.writes(o)
+            case o: execute_abort_reply => execute_abort_reply_fmt.writes(o)
+        }) + ("status" -> PlayJson.toJson(o.status))
+    }
+
+    // implicit val ExecuteOkReplyJSON = Json.format[execute_ok_reply]
+    // implicit val ExecuteErrorReplyJSON = Json.format[execute_error_reply]
+    // implicit val ExecuteAbortReplyJSON = Json.format[execute_abort_reply]
 
     implicit val ObjectInfoRequestJSON = Json.format[object_info_request]
-    implicit val ObjectInfoNotfoundReplyJSON = Json.format[object_info_notfound_reply]
-    implicit val ObjectInfoFoundReplyJSON = Json.format[object_info_found_reply]
+    implicit val ObjectInfoReplyJSON = new Writes[object_info_reply] {
+        val object_info_notfound_reply_fmt = Json.writes[object_info_notfound_reply]
+        val object_info_found_reply_fmt = Json.writes[object_info_found_reply]
+
+        def writes(o: object_info_reply) = (o match {
+            case o: object_info_notfound_reply => object_info_notfound_reply_fmt.writes(o)
+            case o: object_info_found_reply => object_info_found_reply_fmt.writes(o)
+        }) + ("found" -> PlayJson.toJson(o.found))
+    }
+
+    // implicit val ObjectInfoNotfoundReplyJSON = Json.format[object_info_notfound_reply]
+    // implicit val ObjectInfoFoundReplyJSON = Json.format[object_info_found_reply]
 
     implicit val CompleteRequestJSON = Json.format[complete_request]
     implicit val CompleteReplyJSON = Json.format[complete_reply]
