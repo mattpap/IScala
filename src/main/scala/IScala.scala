@@ -7,7 +7,7 @@ import java.lang.management.ManagementFactory
 import org.zeromq.ZMQ
 
 import scala.collection.mutable
-import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
+import scala.tools.nsc.interpreter.{IMain,JLineCompletion,CommandLine,IR}
 
 import scalax.io.JavaConverters._
 import scalax.file.Path
@@ -220,10 +220,11 @@ object IScala extends App {
         val output = new java.io.StringWriter
         val printer = new java.io.PrintWriter(output)
         val interpreter = new IMain(commandLine.settings, printer)
-        (interpreter, output)
+        val completion = new JLineCompletion(interpreter)
+        (interpreter, completion, output)
     }
 
-    lazy val (interpreter, output) = initInterpreter(args)
+    lazy val (interpreter, completion, output) = initInterpreter(args)
 
     def handle_execute_request(socket: ZMQ.Socket, msg: Msg[execute_request]) {
         val content = msg.content
@@ -337,10 +338,12 @@ object IScala extends App {
     }
 
     def handle_complete_request(socket: ZMQ.Socket, msg: Msg[complete_request]) {
+        val result = completion.completer.complete(msg.content.line, msg.content.cursor_pos)
+
         send_ipython(socket, msg_reply(msg, MsgType.complete_reply,
             complete_reply(
                 status=ExecutionStatus.ok,
-                matches=Nil,
+                matches=result.candidates,
                 text="")))
     }
 
