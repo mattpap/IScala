@@ -51,7 +51,7 @@ object IScala extends App {
 
     val profile = args.toList match {
         case path :: Nil =>
-            Path(path).string.as[Profile]
+            Path.fromString(path).string.as[Profile]
         case Nil =>
             val port0 = 5678
             val profile = Profile(
