@@ -23,14 +23,6 @@ object ProjectBuild extends Build {
     )
 
     object Dependencies {
-        val lift = {
-            val namespace= "net.liftweb"
-            val version = "2.5.1"
-            Seq(namespace %% "lift-util"     % version,
-                namespace %% "lift-json"     % version,
-                namespace %% "lift-json-ext" % version)
-        }
-
         val scalaio = {
             val namespace = "com.github.scala-incubator.io"
             val version = "0.4.2"
@@ -58,8 +50,9 @@ object ProjectBuild extends Build {
         },
         libraryDependencies ++= {
             import Dependencies._
-            lift ++ scalaio ++ Seq(jeromq, play_json, specs2)
-        }
+            scalaio ++ Seq(jeromq, play_json, specs2)
+        },
+        libraryDependencies <+= scalaVersion("org.scala-lang" % "scala-compiler" % _)
     )
 
     lazy val macrosSettings = Project.defaultSettings ++ pluginSettings ++ Seq(

@@ -12,11 +12,9 @@ import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
 import scalax.io.JavaConverters._
 import scalax.file.Path
 
-import net.liftweb.json.{JsonAST,JsonParser,Extraction,DefaultFormats,MappingException}
-import net.liftweb.json.ext.EnumNameSerializer
-
 import org.refptr.iscala.msg._
-import org.refptr.iscala.json.PlayJson
+import org.refptr.iscala.json.{Json,JsonUtil}
+import play.api.libs.json.{Reads,Writes,Format}
 
 object Util {
     def uuid4(): String = UUID.randomUUID().toString
@@ -33,24 +31,9 @@ object Util {
     }
 }
 
-object JSONUtil {
-    implicit val formats = DefaultFormats ++ Seq(
-        new EnumNameSerializer(MsgType))
-
-    def toJSON[T:Manifest](obj: T): String =
-        JsonAST.compactRender(Extraction.decompose(obj))
-
-    def fromJSON[T:Manifest](json: String): T =
-        JsonParser.parse(json).extract[T]
-
-    implicit class JsonString(json: String) {
-        def as[T:Manifest]: T = JSONUtil.fromJSON[T](json)
-    }
-}
-
 object IScala extends App {
     import Util._
-    import JSONUtil._
+    import JsonUtil._
 
     case class Profile(
         ip: String,
@@ -63,14 +46,7 @@ object IScala extends App {
         key: String)
 
     object Profile {
-        implicit val ProfileJSON = PlayJson.format[Profile]
-    }
-
-    def parseJSON(json: String): Metadata = {
-        JsonParser.parse(json) match {
-            case obj: JsonAST.JObject => obj.values
-            case jv => sys.error(s"expected an object, got $jv")
-        }
+        implicit val ProfileJSON = Json.format[Profile]
     }
 
     val profile = args.toList match {
@@ -152,7 +128,7 @@ object IScala extends App {
                    msg_type=msg_type),
             Some(m.header), metadata, content)
 
-    def send_ipython[T<:Content:Manifest](socket: ZMQ.Socket, m: Msg[T]) {
+    def send_ipython[T<:Reply:Writes](socket: ZMQ.Socket, m: Msg[T]) {
         log(s"SENDING $m")
         m.idents.foreach(socket.send(_, ZMQ.SNDMORE))
         /*
@@ -175,7 +151,7 @@ object IScala extends App {
         socket.send(content)
     }
 
-    def recv_ipython[T<:Content:Manifest](socket: ZMQ.Socket): Msg[T] = {
+    def recv_ipython(socket: ZMQ.Socket): Msg[Request] = {
         val idents = Stream.continually {
             val s = socket.recvStr()
             log(s"got msg part $s")
@@ -199,15 +175,22 @@ object IScala extends App {
         if (signature != hmac(header, parent_header, metadata, content)) {
             sys.error("Invalid HMAC signature") // What should we do here?
         }
+        val h = header.as[Header]
+        val c: Request = h.msg_type match {
+            case MsgType.execute_request => content.as[execute_request]
+            case MsgType.complete_request => content.as[complete_request]
+            case MsgType.kernel_info_request => content.as[kernel_info_request]
+            case MsgType.object_info_request => content.as[object_info_request]
+            case MsgType.connect_request => content.as[connect_request]
+            case MsgType.shutdown_request => content.as[shutdown_request]
+            case MsgType.history_request => content.as[history_request]
+        }
         val m = Msg(idents,
-            fromJSON[Header](header),
-            try { fromJSON[Option[Header]](parent_header) } catch { case _: MappingException => None },
-            parseJSON(metadata),
-            fromJSON[T](content))
-            //parseJSON(header),
-            //parseJSON(content),
-            //parseJSON(parent_header),
-            //parseJSON(metadata))
+            h,
+            parent_header.as[Option[Header]],
+            // try { fromJSON[Option[Header]](parent_header) } catch { case _: MappingException => None },
+            metadata.as[Metadata],
+            c)
         log(s"RECEIVED $m")
         m
     }
@@ -263,7 +246,7 @@ object IScala extends App {
             log("SILENT")
         }
 
-        send_status(Busy)
+        send_status(ExecutionState.busy)
 
         try {
             interpreter.interpret(code) match {
@@ -350,13 +333,13 @@ object IScala extends App {
             output.getBuffer.setLength(0)
         }
 
-        send_status(Idle)
+        send_status(ExecutionState.idle)
     }
 
     def handle_complete_request(socket: ZMQ.Socket, msg: Msg[complete_request]) {
         send_ipython(socket, msg_reply(msg, MsgType.complete_reply,
             complete_reply(
-                status=OK,
+                status=ExecutionStatus.ok,
                 matches=Nil,
                 text="")))
     }
@@ -396,18 +379,6 @@ object IScala extends App {
             history_reply(
                 history=Nil)))
     }
-
-    /*
-    def handlers[T<:Content]: PartialFunction[MsgType, (ZMQ.Socket, Msg[T]) => Unit] = {
-        case MsgType.execute_request => handle_execute_request
-        case MsgType.complete_request => handle_complete_request
-        case MsgType.kernel_info_request => handle_kernel_info_request
-        case MsgType.object_info_request => handle_object_info_request
-        case MsgType.connect_request => handle_connect_request
-        case MsgType.shutdown_request => handle_shutdown_request
-        case MsgType.history_request => handle_history_request
-    }
-    */
 
     class HeartBeat(socket: ZMQ.Socket) extends Thread {
         override def run() {
@@ -472,7 +443,6 @@ object IScala extends App {
                     val msg = recv_ipython(socket)
 
                     try {
-                        //handlers(msg.header.msg_type)(socket, msg)
                         msg.header.msg_type match {
                             case MsgType.execute_request => handle_execute_request(socket, msg.asInstanceOf[Msg[execute_request]])
                             case MsgType.complete_request => handle_complete_request(socket, msg.asInstanceOf[Msg[complete_request]])
@@ -523,7 +493,7 @@ object IScala extends App {
     }
 
     start_heartbeat(heartbeat)
-    send_status(Starting)
+    send_status(ExecutionState.starting)
 
     log("Starting kernel event loops.")
     watch_stdio()

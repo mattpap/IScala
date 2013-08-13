@@ -2,6 +2,9 @@ package org.refptr.iscala
 
 // import java.util.UUID
 
+import org.refptr.iscala.json.{Json,EnumJson,JsonImplicits}
+import JsonImplicits._
+
 package object msg {
     type UUID = String
     type MIME = String
@@ -9,7 +12,7 @@ package object msg {
     type Data = Map[MIME, String]
     val Data = Map
 
-    type Metadata = Map[String, Any] // String
+    type Metadata = Map[String, String]
     val Metadata = Map
 
     case class Msg[+T<:Content](
@@ -91,10 +94,13 @@ package object msg {
         // StdinNotImplementedError will be raised.
         allow_stdin: Boolean) extends Request
 
-    sealed abstract class ExecutionStatus(str: String)
-    case object OK extends ExecutionStatus("ok")
-    case object Error extends ExecutionStatus("error")
-    case object Abort extends ExecutionStatus("abort")
+    object ExecutionStatus extends Enumeration {
+        type ExecutionStatus = Value
+        val ok = Value
+        val error = Value
+        val abort = Value
+    }
+    type ExecutionStatus = ExecutionStatus.ExecutionStatus
 
     sealed trait execute_reply extends Reply {
         // One of: 'ok' OR 'error' OR 'abort'
@@ -121,7 +127,7 @@ package object msg {
         user_variables: List[String],
         user_expressions: Map[String, String]) extends execute_reply {
 
-        val status = OK
+        val status = ExecutionStatus.ok
     }
 
     case class execute_error_reply(
@@ -142,13 +148,13 @@ package object msg {
         // written.
         traceback: List[String]) extends execute_reply {
 
-        val status = Error
+        val status = ExecutionStatus.error
     }
 
     case class execute_abort_reply(
         execution_count: Int) extends execute_reply {
 
-        val status = Abort
+        val status = ExecutionStatus.abort
     }
 
     case class object_info_request(
@@ -295,10 +301,13 @@ package object msg {
         // in other messages.
         status: ExecutionStatus) extends Reply
 
-    sealed abstract class HistAccessType(str: String)
-    case object Range extends HistAccessType("range")
-    case object Tail extends HistAccessType("tail")
-    case object Search extends HistAccessType("search")
+    object HistAccessType extends Enumeration {
+        type HistAccessType = Value
+        val range = Value
+        val tail = Value
+        val search = Value
+    }
+    type HistAccessType = HistAccessType.HistAccessType
 
     case class history_request(
         // If True, also return output history in the resulting dict.
@@ -441,10 +450,13 @@ package object msg {
         // written.
         traceback: List[String]) extends Reply
 
-    sealed abstract class ExecutionState(str: String)
-    case object Busy extends ExecutionState("busy")
-    case object Idle extends ExecutionState("idle")
-    case object Starting extends ExecutionState("starting")
+    object ExecutionState extends Enumeration {
+        type ExecutionState = Value
+        val busy = Value
+        val idle = Value
+        val starting = Value
+    }
+    type ExecutionState = ExecutionState.ExecutionState
 
     case class status(
         // When the kernel starts to execute code, it will enter the 'busy'
@@ -457,4 +469,47 @@ package object msg {
 
     case class input_reply(
         value: String) extends Reply
+
+    implicit val MsgTypeFormat = EnumJson.format(MsgType)
+    implicit val HeaderFormat = Json.format[Header]
+
+    implicit val ExecutionStatusFormat = EnumJson.format(ExecutionStatus)
+    implicit val ExecutionStateFormat = EnumJson.format(ExecutionState)
+    implicit val HistAccessTypeFormat = EnumJson.format(HistAccessType)
+
+    implicit val ArgSpecFormat = Json.format[ArgSpec]
+
+    implicit val ExecuteRequestJSON = Json.format[execute_request]
+    implicit val ExecuteOkReplyJSON = Json.format[execute_ok_reply]
+    implicit val ExecuteErrorReplyJSON = Json.format[execute_error_reply]
+    implicit val ExecuteAbortReplyJSON = Json.format[execute_abort_reply]
+
+    implicit val ObjectInfoRequestJSON = Json.format[object_info_request]
+    implicit val ObjectInfoNotfoundReplyJSON = Json.format[object_info_notfound_reply]
+    implicit val ObjectInfoFoundReplyJSON = Json.format[object_info_found_reply]
+
+    implicit val CompleteRequestJSON = Json.format[complete_request]
+    implicit val CompleteReplyJSON = Json.format[complete_reply]
+
+    implicit val HistoryRequestJSON = Json.format[history_request]
+    implicit val HistoryReplyJSON = Json.format[history_reply]
+
+    implicit val ConnectRequestJSON = Json.noFields[connect_request]
+    implicit val ConnectReplyJSON = Json.format[connect_reply]
+
+    implicit val KernelInfoRequestJSON = Json.noFields[kernel_info_request]
+    implicit val KernelInfoReplyJSON = Json.format[kernel_info_reply]
+
+    implicit val ShutdownRequestJSON = Json.format[shutdown_request]
+    implicit val ShutdownReplyJSON = Json.format[shutdown_reply]
+
+    implicit val StreamJSON = Json.format[stream]
+    implicit val DisplayDataJSON = Json.format[display_data]
+    implicit val PyinJSON = Json.format[pyin]
+    implicit val PyoutJSON = Json.format[pyout]
+    implicit val PyerrJSON = Json.format[pyerr]
+    implicit val StatusJSON = Json.format[status]
+
+    implicit val InputRequestJSON = Json.format[input_request]
+    implicit val InputReplyJSON = Json.format[input_reply]
 }

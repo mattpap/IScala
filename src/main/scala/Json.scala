@@ -2,28 +2,28 @@ package org.refptr.iscala.json
 
 import scala.reflect.ClassTag
 
-import play.api.libs.json.{Json,Reads,Writes,OWrites,Format,JsPath}
+import play.api.libs.json.{Json=>PlayJson,Reads,Writes,OWrites,Format,JsPath}
 import play.api.libs.json.{JsResult,JsSuccess,JsError}
 import play.api.libs.json.{JsValue,JsString,JsArray,JsObject}
 
-object PlayJsonUtil {
+object JsonUtil {
     def toJSON[T:Writes](obj: T): String =
-        Json.stringify(Json.toJson(obj))
+        PlayJson.stringify(PlayJson.toJson(obj))
 
     def fromJSON[T:Reads](json: String): T =
-        Json.parse(json).as[T]
+        PlayJson.parse(json).as[T]
 
     implicit class JsonString(json: String) {
         def as[T:Reads] = fromJSON[T](json)
     }
 }
 
-object PlayJson {
-    // overrides Json.reads
+object Json {
+    // overrides PlayJson.reads
     def reads[A] = macro JsMacroImpl.readsImpl[A]
-    // overrides Json.writes
+    // overrides PlayJson.writes
     def writes[A] = macro JsMacroImpl.writesImpl[A]
-    // overrides Json.format
+    // overrides PlayJson.format
     def format[A] = macro JsMacroImpl.formatImpl[A]
 
     def noFields[A:ClassTag] = NoFields.format
@@ -326,14 +326,14 @@ object TestJson {
     case class OneField(field: String)
 
     implicit val FooBarBazJSON = EnumJson.format(FooBarBaz)
-    implicit val EmbeddedJSON = PlayJson.format[Embedded]
-    implicit val TupleCaseClassJSON = PlayJson.format[TupleCaseClass]
-    implicit val EitherCaseClassJSON = PlayJson.format[EitherCaseClass]
-    implicit val OptionCaseClassJSON = PlayJson.format[OptionCaseClass]
-    implicit val ArrayCaseClassJSON = PlayJson.format[ArrayCaseClass]
-    implicit val ListCaseClassJSON = PlayJson.format[ListCaseClass]
-    implicit val MapCaseClassJSON = PlayJson.format[MapCaseClass]
-    implicit val CaseClassJSON = PlayJson.format[CaseClass]
-    implicit val NoFieldsJSON = PlayJson.noFields[NoFields]
-    implicit val OneFieldJSON = PlayJson.format[OneField]
+    implicit val EmbeddedJSON = Json.format[Embedded]
+    implicit val TupleCaseClassJSON = Json.format[TupleCaseClass]
+    implicit val EitherCaseClassJSON = Json.format[EitherCaseClass]
+    implicit val OptionCaseClassJSON = Json.format[OptionCaseClass]
+    implicit val ArrayCaseClassJSON = Json.format[ArrayCaseClass]
+    implicit val ListCaseClassJSON = Json.format[ListCaseClass]
+    implicit val MapCaseClassJSON = Json.format[MapCaseClass]
+    implicit val CaseClassJSON = Json.format[CaseClass]
+    implicit val NoFieldsJSON = Json.noFields[NoFields]
+    implicit val OneFieldJSON = Json.format[OneField]
 }
