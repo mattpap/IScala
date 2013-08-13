@@ -315,13 +315,23 @@ object IScala extends App {
                             traceback=traceback)))
                     send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
                         execute_error_reply(
-                            // status=Error,
                             execution_count=_n,
                             ename="",
                             evalue="",
                             traceback=traceback)))
                 case IR.Incomplete =>
-                    // TODO
+                    send_ipython(publish, msg_pub(msg, MsgType.pyerr,
+                        pyerr(
+                            execution_count=_n,
+                            ename="",
+                            evalue="",
+                            traceback=List("incomplete"))))
+                    send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
+                        execute_error_reply(
+                            execution_count=_n,
+                            ename="",
+                            evalue="",
+                            traceback=List("incomplete"))))
             }
 
         } catch {
