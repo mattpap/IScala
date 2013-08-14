@@ -217,18 +217,52 @@ object IScala extends App {
         send_ipython(publish, msg)
     }
 
-    var executeMsg: Msg[Request] = _
+    def pyerr_content(e: Exception): pyerr = {
+        val s = new java.io.StringWriter
+        val p = new java.io.PrintWriter(s)
+        e.printStackTrace(p)
+
+        val ename = e.getClass.getName
+        val evalue = e.getMessage
+        val traceback = s.toString.split("\n").toList
+
+        pyerr(execution_count=_n,
+              ename=ename,
+              evalue=evalue,
+              traceback=traceback)
+    }
+
+    def send_error(msg: Msg[_], err: pyerr) {
+        send_ipython(publish, msg_pub(msg, MsgType.pyerr, err))
+        send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
+            execute_error_reply(
+                execution_count=err.execution_count,
+                ename=err.ename,
+                evalue=err.evalue,
+                traceback=err.traceback)))
+    }
 
     sealed abstract class Std(val name: String)
     object StdOut extends Std("stdout")
     object StdErr extends Std("stderr")
 
-    def send_stream(std: Std, data: String) {
-        send_ipython(publish, msg_pub(executeMsg, MsgType.stream,
+    def send_stream(msg: Msg[_], std: Std, data: String) {
+        send_ipython(publish, msg_pub(msg, MsgType.stream,
             stream(
                 name=std.name,
                 data=data)))
     }
+
+    def finish_stream(msg: Msg[_], std: Std, io: java.io.InputStream) {
+        val n = io.available
+        if (n > 0) {
+            val buffer = new Array[Byte](n)
+            io.read(buffer)
+            send_stream(msg, std, new String(buffer))
+        }
+    }
+
+    var executeMsg: Msg[Request] = _
 
     class WatchStream(io: java.io.InputStream, std: Std) extends Thread {
         override def run() {
@@ -237,7 +271,7 @@ object IScala extends App {
             try {
                 while (true) {
                     val n = io.read(buffer)
-                    send_stream(std, new String(buffer.take(n)))
+                    send_stream(executeMsg, std, new String(buffer.take(n)))
                     if (n < size) {
                         Thread.sleep(100) // a little delay to accumulate output
                     }
@@ -321,99 +355,49 @@ object IScala extends App {
 
             ir match {
                 case IR.Success =>
-                    val result = {
-                        val result = output.toString
+                    val value = {
+                        val request = interpreter.prevRequestList.last
+                        val handler = request.handlers.last
 
-                        if (silent) {
-                            ""
-                        } else {
-                            if (result.nonEmpty && store_history) {
-                                Out(_n) = result
-                            }
-
-                            result
-                        }
+                        if (!handler.definesValue) None
+                        else request.lineRep.callOpt("$result").filter(_ != null)
                     }
 
-                    def finish_stream(std: Std, io: java.io.InputStream) {
-                        val n = io.available
-                        if (n > 0) {
-                            val buffer = new Array[Byte](n)
-                            io.read(buffer)
-                            send_stream(std, new String(buffer))
-                        }
+                    if (!silent && store_history) {
+                        value.foreach(Out(_n) = _)
                     }
 
-                    finish_stream(StdOut, outIn)
-                    finish_stream(StdErr, errIn)
+                    val result =
+                        if (silent) None
+                        else value.map(_.toString)
 
                     val user_variables: List[String] = Nil
                     val user_expressions: Map[String, String] = Map()
 
-                    /*
-                    for (v <- msg.content("user_variables")) {
-                        user_variables[v] = eval(Main, parse(v))
-                    }
+                    finish_stream(msg, StdOut, outIn)
+                    finish_stream(msg, StdErr, errIn)
 
-                    for ((v, ex) <- msg.content("user_expressions")) {
-                        user_expressions[v] = eval(Main, parse(ex))
-                    }
-
-                    for (hook <- postexecute_hooks) {
-                        hook()
-                    }
-                    */
-
-                    if (result.nonEmpty) {
+                    result.foreach { data =>
                         send_ipython(publish, msg_pub(msg, MsgType.pyout,
                             pyout(
                                 execution_count=_n,
-                                data=Data("text/plain" -> result),
-                                metadata=Metadata()))) // qtconsole needs this
-                        // undisplay(result) // in case display was queued
+                                data=Data("text/plain" -> data))))
                     }
-
-                    /*
-                    display() // flush pending display requests
-                    */
 
                     send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
                         execute_ok_reply(
-                            // status=OK,
                             execution_count=_n,
                             payload=Nil,
                             user_variables=user_variables,
                             user_expressions=user_expressions)))
                 case IR.Error =>
-                    // empty!(displayqueue) // discard pending display requests on an error
-                    // val content = pyerr_content(e)
-                    val traceback = output.toString.split("\n").toList
-                    send_ipython(publish, msg_pub(msg, MsgType.pyerr,
-                        pyerr(
-                            execution_count=_n,
-                            ename="",
-                            evalue="",
-                            traceback=traceback)))
-                    send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
-                        execute_error_reply(
-                            execution_count=_n,
-                            ename="",
-                            evalue="",
-                            traceback=traceback)))
+                    send_error(msg, pyerr(_n, "", "", output.toString.split("\n").toList))
                 case IR.Incomplete =>
-                    send_ipython(publish, msg_pub(msg, MsgType.pyerr,
-                        pyerr(
-                            execution_count=_n,
-                            ename="",
-                            evalue="",
-                            traceback=List("incomplete"))))
-                    send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
-                        execute_error_reply(
-                            execution_count=_n,
-                            ename="",
-                            evalue="",
-                            traceback=List("incomplete"))))
+                    send_error(msg, pyerr(_n, "", "", List("incomplete")))
             }
+        } catch {
+            case e: Exception =>
+                send_error(msg, pyerr_content(e))
         } finally {
             output.getBuffer.setLength(0)
             send_status(ExecutionState.idle)
@@ -480,60 +464,19 @@ object IScala extends App {
         thread.start()
     }
 
-    def pyerr_content(e: Exception): pyerr = {
-        val s = new java.io.StringWriter
-        val p = new java.io.PrintWriter(s)
-        e.printStackTrace(p)
-
-        val ename = e.getClass.getName
-        val evalue = e.getMessage
-        val traceback = s.toString.split("\n").toList
-
-        pyerr(execution_count=_n,
-              ename=ename,
-              evalue=evalue,
-              traceback=traceback)
-    }
-
     class EventLoop(socket: ZMQ.Socket) extends Thread {
         override def run() {
             while (!Thread.interrupted) {
-                try {
-                    val msg = recv_ipython(socket)
+                val msg = recv_ipython(socket)
 
-                    try {
-                        msg.header.msg_type match {
-                            case MsgType.execute_request => handle_execute_request(socket, msg.asInstanceOf[Msg[execute_request]])
-                            case MsgType.complete_request => handle_complete_request(socket, msg.asInstanceOf[Msg[complete_request]])
-                            case MsgType.kernel_info_request => handle_kernel_info_request(socket, msg.asInstanceOf[Msg[kernel_info_request]])
-                            case MsgType.object_info_request => handle_object_info_request(socket, msg.asInstanceOf[Msg[object_info_request]])
-                            case MsgType.connect_request => handle_connect_request(socket, msg.asInstanceOf[Msg[connect_request]])
-                            case MsgType.shutdown_request => handle_shutdown_request(socket, msg.asInstanceOf[Msg[shutdown_request]])
-                            case MsgType.history_request => handle_history_request(socket, msg.asInstanceOf[Msg[history_request]])
-                        }
-                    } catch {
-                        // Try to keep going if we get an exception, but
-                        // send the exception traceback to the front-ends.
-                        // (Ignore SIGINT since this may just be a user-requested
-                        //  kernel interruption to interrupt long calculations.)
-                        case _: InterruptedException =>
-                        case e: Exception =>
-                            // log(orig_STDERR, "KERNEL EXCEPTION")
-                            // Base.error_show(orig_STDERR, e, catch_backtrace())
-                            // log(orig_STDERR)
-                            send_ipython(publish, Msg("pyerr" :: Nil,
-                                Header(msg_id=uuid4(),
-                                       username="scala_kernel",
-                                       session=uuid4(),
-                                       msg_type=MsgType.pyerr),
-                                None,
-                                Metadata(),
-                                pyerr_content(e)))
-                    }
-                } catch {
-                    case _: InterruptedException =>
-                        // the IPython manager may send us a SIGINT if the user
-                        // chooses to interrupt the kernel; don't crash on this
+                msg.header.msg_type match {
+                    case MsgType.execute_request => handle_execute_request(socket, msg.asInstanceOf[Msg[execute_request]])
+                    case MsgType.complete_request => handle_complete_request(socket, msg.asInstanceOf[Msg[complete_request]])
+                    case MsgType.kernel_info_request => handle_kernel_info_request(socket, msg.asInstanceOf[Msg[kernel_info_request]])
+                    case MsgType.object_info_request => handle_object_info_request(socket, msg.asInstanceOf[Msg[object_info_request]])
+                    case MsgType.connect_request => handle_connect_request(socket, msg.asInstanceOf[Msg[connect_request]])
+                    case MsgType.shutdown_request => handle_shutdown_request(socket, msg.asInstanceOf[Msg[shutdown_request]])
+                    case MsgType.history_request => handle_history_request(socket, msg.asInstanceOf[Msg[history_request]])
                 }
             }
         }

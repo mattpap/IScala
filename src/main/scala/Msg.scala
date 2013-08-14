@@ -427,7 +427,7 @@ package object msg {
         // the object being displayed is that passed to the display hook,
         // i.e. the *result* of the execution.
         data: Data,
-        metadata: Metadata) extends Reply
+        metadata: Metadata = Metadata()) extends Reply
 
     case class pyerr(
         execution_count: Int,
