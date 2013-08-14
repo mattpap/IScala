@@ -355,21 +355,25 @@ object IScala extends App {
 
             ir match {
                 case IR.Success =>
-                    val value = {
-                        val request = interpreter.prevRequestList.last
-                        val handler = request.handlers.last
+                    val request = interpreter.prevRequestList.last
+                    val handler = request.handlers.last
+                    val eval = request.lineRep
 
+                    val value =
                         if (!handler.definesValue) None
-                        else request.lineRep.callOpt("$result").filter(_ != null)
-                    }
-
-                    if (!silent && store_history) {
-                        value.foreach(Out(_n) = _)
-                    }
+                        else eval.callOpt("$result").filter(_ != null)
 
                     val result =
                         if (silent) None
                         else value.map(_.toString)
+
+                    if (!silent && store_history) {
+                        value.foreach(Out(_n) = _)
+
+                        interpreter.beSilentDuring {
+                            value.foreach(interpreter.bindValue("_" + _n, _))
+                        }
+                    }
 
                     val user_variables: List[String] = Nil
                     val user_expressions: Map[String, String] = Map()
