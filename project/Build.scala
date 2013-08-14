@@ -1,7 +1,8 @@
 import sbt._
 import Keys._
 
-import org.sbtidea.SbtIdeaPlugin
+import org.sbtidea.{SbtIdeaPlugin=>SbtIdea}
+import sbtassembly.{Plugin=>SbtAssembly}
 
 object ProjectBuild extends Build {
     override lazy val settings = super.settings ++ Seq(
@@ -37,15 +38,33 @@ object ProjectBuild extends Build {
         val specs2 = "org.specs2" %% "specs2" % "2.1.1" % "test"
     }
 
+    def info(msg: => String) {
+        ConsoleLogger().log(Level.Info, msg)
+    }
+
     val jrebelRunning = SettingKey[Boolean]("jrebel-running")
 
-    lazy val pluginSettings = SbtIdeaPlugin.settings
+    lazy val pluginSettings = SbtIdea.settings ++ SbtAssembly.assemblySettings ++ {
+        import SbtAssembly.AssemblyKeys._
+        Seq(test in assembly := {},
+            jarName in assembly := "IScala.jar",
+            assemblyDirectory in assembly := {
+                val tmpDir = IO.createTemporaryDirectory
+                info(s"Using $tmpDir for sbt-assembly temporary files")
+                tmpDir
+            },
+            assembly <<= (assembly, assemblyDirectory in assembly) map { (outputFile, tmpDir) =>
+                info(s"Cleaning up $tmpDir")
+                IO.delete(tmpDir)
+                outputFile
+            })
+    }
 
     lazy val projectSettings = Project.defaultSettings ++ pluginSettings ++ Seq(
         fork in run := true,
         jrebelRunning := {
             val jrebel = java.lang.Package.getPackage("com.zeroturnaround.javarebel") != null
-            ConsoleLogger().log(Level.Info, s"JRebel is ${if (jrebel) "enabled" else "disabled"}")
+            info(s"JRebel is ${if (jrebel) "enabled" else "disabled"}")
             jrebel
         },
         libraryDependencies ++= {
@@ -55,7 +74,7 @@ object ProjectBuild extends Build {
         libraryDependencies <+= scalaVersion("org.scala-lang" % "scala-compiler" % _)
     )
 
-    lazy val macrosSettings = Project.defaultSettings ++ pluginSettings ++ Seq(
+    lazy val macrosSettings = Project.defaultSettings ++ Seq(
         libraryDependencies ++= {
             import Dependencies._
             Seq(play_json, specs2)
