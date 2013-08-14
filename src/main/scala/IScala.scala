@@ -414,17 +414,10 @@ object IScala extends App {
                             evalue="",
                             traceback=List("incomplete"))))
             }
-        } catch {
-            case e: Exception =>
-                // empty!(displayqueue) // discard pending display requests on an error
-                //val content = pyerr_content(e)
-                //send_ipython(publish, msg_pub(msg, "pyerr", content))
-                //send_ipython(requests, msg_reply(msg, "execute_reply", content + ("status" -> "error")))
         } finally {
             output.getBuffer.setLength(0)
+            send_status(ExecutionState.idle)
         }
-
-        send_status(ExecutionState.idle)
     }
 
     def handle_complete_request(socket: ZMQ.Socket, msg: Msg[complete_request]) {
