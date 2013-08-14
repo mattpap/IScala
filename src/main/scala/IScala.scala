@@ -26,8 +26,11 @@ object Util {
         name.takeWhile(_ != '@').toInt
     }
 
-    def log(message: => String) {
-        println(message)
+    val origOut = System.out
+    val origErr = System.err
+
+    def log[T](message: => T) {
+        origOut.println(message)
     }
 }
 
@@ -111,22 +114,27 @@ object IScala extends App {
     raw_input.bind(uri(profile.stdin_port))
     heartbeat.bind(uri(profile.hb_port))
 
-    def msg_pub[T<:Content](m: Msg[_], msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] =
-        // TODO: Msg((if (msg_type == "stream") content("name").asInstanceOf[String] else msg_type) :: Nil,
-        Msg(msg_type.toString :: Nil,
+    def msg_pub[T<:Reply](m: Msg[_], msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] = {
+        val tpe = (msg_type, content) match {
+            case (MsgType.stream, content: stream) => content.name
+            case _ => msg_type.toString
+        }
+        Msg(tpe :: Nil,
             Header(msg_id=uuid4(),
                    username=m.header.username,
                    session=m.header.session,
                    msg_type=msg_type),
             Some(m.header), metadata, content)
+    }
 
-    def msg_reply[T<:Content](m: Msg[_], msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] =
+    def msg_reply[T<:Reply](m: Msg[_], msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] = {
         Msg(m.idents,
             Header(msg_id=uuid4(),
                    username=m.header.username,
                    session=m.header.session,
                    msg_type=msg_type),
             Some(m.header), metadata, content)
+    }
 
     def send_ipython[T<:Reply:Writes](socket: ZMQ.Socket, m: Msg[T]) {
         log(s"SENDING $m")
@@ -209,9 +217,60 @@ object IScala extends App {
         send_ipython(publish, msg)
     }
 
-    var _n: Int = 0
-    val In = mutable.Map[Int, String]()
-    val Out = mutable.Map[Int, Any]()
+    var executeMsg: Msg[Request] = _
+
+    sealed abstract class Std(val name: String)
+    object StdOut extends Std("stdout")
+    object StdErr extends Std("stderr")
+
+    def send_stream(std: Std, data: String) {
+        send_ipython(publish, msg_pub(executeMsg, MsgType.stream,
+            stream(
+                name=std.name,
+                data=data)))
+    }
+
+    class WatchStream(io: java.io.InputStream, std: Std) extends Thread {
+        override def run() {
+            val size = 10240
+            val buffer = new Array[Byte](size)
+            try {
+                while (true) {
+                    val n = io.read(buffer)
+                    send_stream(std, new String(buffer.take(n)))
+                    if (n < size) {
+                        Thread.sleep(100) // a little delay to accumulate output
+                    }
+                }
+            } catch {
+                case _: InterruptedException =>
+                    // the IPython manager may send us a SIGINT if the user
+                    // chooses to interrupt the kernel; don't crash on this
+            }
+        }
+    }
+
+    val outIn = new java.io.PipedInputStream()
+    val outPipe = new java.io.PipedOutputStream(outIn)
+    val newOut = new java.io.PrintStream(outPipe)
+
+    val errIn = new java.io.PipedInputStream()
+    val errPipe = new java.io.PipedOutputStream(errIn)
+    val newErr = new java.io.PrintStream(errPipe)
+
+    val watchOut = new WatchStream(outIn, StdOut)
+    val watchErr = new WatchStream(errIn, StdErr)
+
+    watchOut.start()
+    watchErr.start()
+
+    def capture[T](block: => T): T = {
+        Console.withOut(newOut) {
+            Console.withErr(newErr) {
+                block
+            }
+        }
+    }
 
     def initInterpreter(args: Seq[String]) = {
         val commandLine = new CommandLine(args.toList, println)
@@ -226,7 +285,13 @@ object IScala extends App {
 
     lazy val (interpreter, completion, output) = initInterpreter(args)
 
+    var _n: Int = 0
+    val In = mutable.Map[Int, String]()
+    val Out = mutable.Map[Int, Any]()
+
     def handle_execute_request(socket: ZMQ.Socket, msg: Msg[execute_request]) {
+        executeMsg = msg
+
         val content = msg.content
         val code = content.code
         val silent = content.silent || code.trim.endsWith(";")
@@ -250,7 +315,11 @@ object IScala extends App {
         send_status(ExecutionState.busy)
 
         try {
-            interpreter.interpret(code) match {
+            val ir = capture {
+                interpreter.interpret(code)
+            }
+
+            ir match {
                 case IR.Success =>
                     val result = {
                         val result = output.toString
@@ -265,6 +334,18 @@ object IScala extends App {
                             result
                         }
                     }
+
+                    def finish_stream(std: Std, io: java.io.InputStream) {
+                        val n = io.available
+                        if (n > 0) {
+                            val buffer = new Array[Byte](n)
+                            io.read(buffer)
+                            send_stream(std, new String(buffer))
+                        }
+                    }
+
+                    finish_stream(StdOut, outIn)
+                    finish_stream(StdErr, errIn)
 
                     val user_variables: List[String] = Nil
                     val user_expressions: Map[String, String] = Map()
@@ -333,7 +414,6 @@ object IScala extends App {
                             evalue="",
                             traceback=List("incomplete"))))
             }
-
         } catch {
             case e: Exception =>
                 // empty!(displayqueue) // discard pending display requests on an error
@@ -405,36 +485,6 @@ object IScala extends App {
     def start_heartbeat(socket: ZMQ.Socket) {
         val thread = new HeartBeat(socket)
         thread.start()
-    }
-
-    class WatchStream(rd: java.io.InputStream, name: String) extends Thread {
-        override def run() {
-            try {
-                while (true) {
-                    // s = readavailable(rd) // blocks until something available
-                    val s = "abc"
-                    log(s"STDIO($name) = $s")
-                    /*
-                    send_ipython(publish, msg_pub(execute_msg, MsgType.stream,
-                        stream(
-                            name=name,
-                            data=s)))
-                    */
-                    Thread.sleep(100) // a little delay to accumulate output
-                }
-            } catch {
-                case _: InterruptedException =>
-                    // the IPython manager may send us a SIGINT if the user
-                    // chooses to interrupt the kernel; don't crash on this
-            }
-        }
-    }
-
-    def watch_stdio() {
-        // val (read_stdout, write_stdout) = redirect_stdout()
-        // val (read_stderr, write_stderr) = redirect_stderr()
-        // (new WatchStream(read_stdout, "stdout")).start()
-        // (new WatchStream(read_stderr, "stderr")).start()
     }
 
     def pyerr_content(e: Exception): pyerr = {
@@ -512,7 +562,6 @@ object IScala extends App {
     send_status(ExecutionState.starting)
 
     log("Starting kernel event loops.")
-    watch_stdio()
 
     (new EventLoop(requests)).start()
     (new EventLoop(control)).start()
