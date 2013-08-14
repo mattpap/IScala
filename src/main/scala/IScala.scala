@@ -1,8 +1,9 @@
 package org.refptr.iscala
 
-import java.io.File
 import java.util.UUID
 import java.lang.management.ManagementFactory
+import java.io.{File,InputStream,PipedInputStream,OutputStream,
+    PipedOutputStream,PrintStream,StringWriter,PrintWriter}
 
 import org.zeromq.ZMQ
 
@@ -114,36 +115,26 @@ object IScala extends App {
     raw_input.bind(uri(profile.stdin_port))
     heartbeat.bind(uri(profile.hb_port))
 
+    def msg_header(m: Msg[_], msg_type: MsgType): Header =
+        Header(msg_id=uuid4(),
+               username=m.header.username,
+               session=m.header.session,
+               msg_type=msg_type)
+
     def msg_pub[T<:Reply](m: Msg[_], msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] = {
-        val tpe = (msg_type, content) match {
-            case (MsgType.stream, content: stream) => content.name
+        val tpe = content match {
+            case content: stream => content.name
             case _ => msg_type.toString
         }
-        Msg(tpe :: Nil,
-            Header(msg_id=uuid4(),
-                   username=m.header.username,
-                   session=m.header.session,
-                   msg_type=msg_type),
-            Some(m.header), metadata, content)
+        Msg(tpe :: Nil, msg_header(m, msg_type), Some(m.header), metadata, content)
     }
 
-    def msg_reply[T<:Reply](m: Msg[_], msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] = {
-        Msg(m.idents,
-            Header(msg_id=uuid4(),
-                   username=m.header.username,
-                   session=m.header.session,
-                   msg_type=msg_type),
-            Some(m.header), metadata, content)
-    }
+    def msg_reply[T<:Reply](m: Msg[_], msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] =
+        Msg(m.idents, msg_header(m, msg_type), Some(m.header), metadata, content)
 
     def send_ipython[T<:Reply:Writes](socket: ZMQ.Socket, m: Msg[T]) {
-        log(s"SENDING $m")
+        log(s"sending: $m")
         m.idents.foreach(socket.send(_, ZMQ.SNDMORE))
-        /*
-        for (i <- m.idents) {
-            socket.send(i, ZMQ.SNDMORE)
-        }
-        */
         socket.send("<IDS|MSG>", ZMQ.SNDMORE)
         val header = toJSON(m.header)
         val parent_header = m.parent_header match {
@@ -161,20 +152,8 @@ object IScala extends App {
 
     def recv_ipython(socket: ZMQ.Socket): Msg[Request] = {
         val idents = Stream.continually {
-            val s = socket.recvStr()
-            log(s"got msg part $s")
-            s
+            socket.recvStr()
         }.takeWhile(_ != "<IDS|MSG>").toList
-        /*
-        var idents = new ArrayBuffer()
-        var s = socket.recvStr()
-        log(s"got msg part $s")
-        while (s != "<IDS|MSG>") {
-            idents.append(s)
-            s = socket.recvStr()
-            log(s"got msg part $s")
-        }
-        */
         val signature = socket.recvStr()
         val header = socket.recvStr()
         val parent_header = socket.recvStr()
@@ -183,8 +162,10 @@ object IScala extends App {
         if (signature != hmac(header, parent_header, metadata, content)) {
             sys.error("Invalid HMAC signature") // What should we do here?
         }
-        val h = header.as[Header]
-        val c: Request = h.msg_type match {
+        val _header = header.as[Header]
+        val _parent_header = parent_header.as[Option[Header]]
+        val _metadata = metadata.as[Metadata]
+        val _content = _header.msg_type match {
             case MsgType.execute_request => content.as[execute_request]
             case MsgType.complete_request => content.as[complete_request]
             case MsgType.kernel_info_request => content.as[kernel_info_request]
@@ -193,14 +174,9 @@ object IScala extends App {
             case MsgType.shutdown_request => content.as[shutdown_request]
             case MsgType.history_request => content.as[history_request]
         }
-        val m = Msg(idents,
-            h,
-            parent_header.as[Option[Header]],
-            // try { fromJSON[Option[Header]](parent_header) } catch { case _: MappingException => None },
-            metadata.as[Metadata],
-            c)
-        log(s"RECEIVED $m")
-        m
+        val msg = Msg(idents, _header, _parent_header, _metadata, _content)
+        log(s"received: $msg")
+        msg
     }
 
     def send_status(state: ExecutionState) {
@@ -217,16 +193,16 @@ object IScala extends App {
         send_ipython(publish, msg)
     }
 
-    def pyerr_content(e: Exception): pyerr = {
-        val s = new java.io.StringWriter
-        val p = new java.io.PrintWriter(s)
+    def pyerr_content(e: Exception, execution_count: Int): pyerr = {
+        val s = new StringWriter
+        val p = new PrintWriter(s)
         e.printStackTrace(p)
 
         val ename = e.getClass.getName
         val evalue = e.getMessage
         val traceback = s.toString.split("\n").toList
 
-        pyerr(execution_count=_n,
+        pyerr(execution_count=execution_count,
               ename=ename,
               evalue=evalue,
               traceback=traceback)
@@ -242,9 +218,25 @@ object IScala extends App {
                 traceback=err.traceback)))
     }
 
-    sealed abstract class Std(val name: String)
-    object StdOut extends Std("stdout")
-    object StdErr extends Std("stderr")
+    sealed trait Std {
+        val name: String
+        val input: InputStream
+        val stream: PrintStream
+    }
+
+    object StdOut extends Std {
+        val name = "stdout"
+
+        val input = new PipedInputStream()
+        val stream = new PrintStream(new PipedOutputStream(input))
+    }
+
+    object StdErr extends Std {
+        val name = "stderr"
+
+        val input = new PipedInputStream()
+        val stream = new PrintStream(new PipedOutputStream(input))
+    }
 
     def send_stream(msg: Msg[_], std: Std, data: String) {
         send_ipython(publish, msg_pub(msg, MsgType.stream,
@@ -253,24 +245,24 @@ object IScala extends App {
                 data=data)))
     }
 
-    def finish_stream(msg: Msg[_], std: Std, io: java.io.InputStream) {
-        val n = io.available
+    def finish_stream(msg: Msg[_], std: Std) {
+        val n = std.input.available
         if (n > 0) {
             val buffer = new Array[Byte](n)
-            io.read(buffer)
+            std.input.read(buffer)
             send_stream(msg, std, new String(buffer))
         }
     }
 
     var executeMsg: Msg[Request] = _
 
-    class WatchStream(io: java.io.InputStream, std: Std) extends Thread {
+    class WatchStream(std: Std) extends Thread {
         override def run() {
             val size = 10240
             val buffer = new Array[Byte](size)
             try {
                 while (true) {
-                    val n = io.read(buffer)
+                    val n = std.input.read(buffer)
                     send_stream(executeMsg, std, new String(buffer.take(n)))
                     if (n < size) {
                         Thread.sleep(100) // a little delay to accumulate output
@@ -284,23 +276,15 @@ object IScala extends App {
         }
     }
 
-    val outIn = new java.io.PipedInputStream()
-    val outPipe = new java.io.PipedOutputStream(outIn)
-    val newOut = new java.io.PrintStream(outPipe)
-
-    val errIn = new java.io.PipedInputStream()
-    val errPipe = new java.io.PipedOutputStream(errIn)
-    val newErr = new java.io.PrintStream(errPipe)
-
-    val watchOut = new WatchStream(outIn, StdOut)
-    val watchErr = new WatchStream(errIn, StdErr)
+    val watchOut = new WatchStream(StdOut)
+    val watchErr = new WatchStream(StdErr)
 
     watchOut.start()
     watchErr.start()
 
     def capture[T](block: => T): T = {
-        Console.withOut(newOut) {
-            Console.withErr(newErr) {
+        Console.withOut(StdOut.stream) {
+            Console.withErr(StdErr.stream) {
                 block
             }
         }
@@ -331,8 +315,6 @@ object IScala extends App {
         val silent = content.silent || code.trim.endsWith(";")
         val store_history = content.store_history getOrElse !silent
 
-        log(s"EXECUTING $code")
-
         if (!silent) {
             _n += 1
             if (store_history) {
@@ -342,8 +324,6 @@ object IScala extends App {
                 pyin(
                     execution_count=_n,
                     code=code)))
-        } else {
-            log("SILENT")
         }
 
         send_status(ExecutionState.busy)
@@ -378,8 +358,8 @@ object IScala extends App {
                     val user_variables: List[String] = Nil
                     val user_expressions: Map[String, String] = Map()
 
-                    finish_stream(msg, StdOut, outIn)
-                    finish_stream(msg, StdErr, errIn)
+                    finish_stream(msg, StdOut)
+                    finish_stream(msg, StdErr)
 
                     result.foreach { data =>
                         send_ipython(publish, msg_pub(msg, MsgType.pyout,
@@ -401,7 +381,7 @@ object IScala extends App {
             }
         } catch {
             case e: Exception =>
-                send_error(msg, pyerr_content(e))
+                send_error(msg, pyerr_content(e, _n))
         } finally {
             output.getBuffer.setLength(0)
             send_status(ExecutionState.idle)
@@ -501,11 +481,12 @@ object IScala extends App {
     start_heartbeat(heartbeat)
     send_status(ExecutionState.starting)
 
-    log("Starting kernel event loops.")
+    log("Starting kernel event loops")
 
     (new EventLoop(requests)).start()
     (new EventLoop(control)).start()
 
+    log("Ready")
     waitloop()
 
     terminate()
