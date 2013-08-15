@@ -50,6 +50,7 @@ object ProjectBuild extends Build {
         import SbtAssembly.AssemblyKeys._
         Seq(test in assembly := {},
             jarName in assembly := "IScala.jar",
+            target in assembly := baseDirectory.value,
             assemblyDirectory in assembly := {
                 val tmpDir = IO.createTemporaryDirectory
                 info(s"Using $tmpDir for sbt-assembly temporary files")

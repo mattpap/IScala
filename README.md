@@ -9,9 +9,10 @@
 
 ## Usage
 
-First obtain a copy of IScala either by cloning this repository or download it from
-[here](https://github.com/mattpap/IScala/archive/master.zip). We use [SBT](http://www.scala-sbt.org/)
-for dependency management, compilation and deployment. In a terminal issue:
+First obtain a copy of IScala either by cloning [this](git@github.com:mattpap/IScala.git)
+repository or download it from [here](https://github.com/mattpap/IScala/archive/master.zip).
+We use [SBT](http://www.scala-sbt.org/) for dependency management, compilation and deployment.
+In a terminal issue:
 ```
 $ cd IScala
 $ ./sbt
@@ -36,16 +37,16 @@ Ignore any (deprecation) warnings you will get. To start IScala issue:
 To terminate a kernel press `Ctrl+C`. Finally to generate a JAR file with IScala's
 class files, data files and all dependencies, issue `assembly`. You can run it with:
 ```
-$ java -jar target/scala-2.10/IScala.jar
+$ java -jar IScala.jar
 ```
 You can pass command line argument to IScala after `run` command or after JAR file. e.g.:
 ```
-$ java -jar target/scala-2.10/IScala.jar --profile my_profile.json
+$ java -jar IScala.jar --profile my_profile.json
 ```
-It is also possible to customize Scala compiler by passing option directly to the
+It is also possible to customize Scala compiler by passing options directly to the
 compiler after `--` delimiter:
 ```
-$ java -jar target/scala-2.10/IScala.jar --profile my_profile.json -- -Xprint:typer
+$ java -jar IScala.jar --profile my_profile.json -- -Xprint:typer
 ```
 This will print Scala syntax trees after _typer_ compiler phase.
 

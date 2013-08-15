@@ -1,14 +1,11 @@
 *.sw[opn]
 *~
 
-/target/
-/macros/target/
-/project/target/
-/project/project/target/
-
+target/
 /project/sbt-launch-*.jar
 
 /.idea/
 /.idea_modules/
 
+/IScala.jar
 /profile*.json
