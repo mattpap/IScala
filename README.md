@@ -50,6 +50,32 @@ $ java -jar IScala.jar --profile my_profile.json -- -Xprint:typer
 ```
 This will print Scala syntax trees after _typer_ compiler phase.
 
+## Running IPython Notebook
+
+To start IPython Notebook, issue:
+```
+ipython notebook --KernelManager.kernel_cmd='["./iscala", "--profile", "{connection_file}"]'
+```
+or more explicitly:
+```
+ipython notebook --KernelManager.kernel_cmd='["java", "-jar", "IScala.jar", "--profile", "{connection_file}"]'
+```
+or just use `./notebook` script. Make sure that `IScala.jar` exists. If not, run `./sbt assembly`
+to generate it. Alternatively (and better in the long run) you can also create an IPython profile
+for Scala. To do this issue:
+```
+$ ipython profile craete scala
+[ProfileCreate] WARNING | Generating default config file: u'~/.config/ipython/profile_scala/ipython_config.py'
+[ProfileCreate] WARNING | Generating default config file: u'~/.config/ipython/profile_scala/ipython_qtconsole_config.py'
+[ProfileCreate] WARNING | Generating default config file: u'~/.config/ipython/profile_scala/ipython_notebook_config.py'
+```
+Then add the following line:
+```
+c.KernelManager.kernel_cmd = [\"java\", \"-jar\", \"$ISCALA_PATH/IScala.jar\", \"--profile\", \"{connection_file}\"]"
+```
+to `~/.config/ipython/profile_scala/ipython_config.py`. Replace `$ISCALA_PATH` with the actual
+location of `IScala.jar`.
+
 ## Example
 
 ```

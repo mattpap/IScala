@@ -1,0 +1,3 @@
+#! /bin/bash
+
+ipython notebook --KernelManager.kernel_cmd='["./iscala", "--profile", "{connection_file}"]'

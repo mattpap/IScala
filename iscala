@@ -1,0 +1,8 @@
+#! /bin/bash
+
+if [ -e "IScala.jar" ]; then
+    java -jar IScala.jar "$@"
+else
+    echo "IScala.jar doesn't exist. Run './sbt assembly' to generate it." >&2
+    exit 1
+fi

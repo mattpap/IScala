@@ -9,3 +9,6 @@ target/
 
 /IScala.jar
 /profile*.json
+
+/.ipynb_checkpoints/
+/*.ipynb
