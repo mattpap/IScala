@@ -42,6 +42,12 @@ You can pass command line argument to IScala after `run` command or after JAR fi
 ```
 $ java -jar target/scala-2.10/IScala.jar --profile my_profile.json
 ```
+It is also possible to customize Scala compiler by passing option directly to the
+compiler after `--` delimiter:
+```
+$ java -jar target/scala-2.10/IScala.jar --profile my_profile.json -- -Xprint:typer
+```
+This will print Scala syntax trees after _typer_ compiler phase.
 
 ## Example
 

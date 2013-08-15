@@ -31,9 +31,11 @@ object ProjectBuild extends Build {
                 namespace %% "scala-io-file" % version)
         }
 
-        val play_json = "play" %% "play-json" % "2.2-SNAPSHOT"
+        val jopt = "net.sf.jopt-simple" % "jopt-simple" % "4.5"
 
         val jeromq = "org.jeromq" % "jeromq" % "0.3.0-SNAPSHOT"
+
+        val play_json = "play" %% "play-json" % "2.2-SNAPSHOT"
 
         val specs2 = "org.specs2" %% "specs2" % "2.1.1" % "test"
     }
@@ -69,7 +71,7 @@ object ProjectBuild extends Build {
         },
         libraryDependencies ++= {
             import Dependencies._
-            scalaio ++ Seq(jeromq, play_json, specs2)
+            scalaio ++ Seq(jopt, jeromq, play_json, specs2)
         },
         libraryDependencies <+= scalaVersion("org.scala-lang" % "scala-compiler" % _)
     )

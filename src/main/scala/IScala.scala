@@ -13,6 +13,8 @@ import scala.tools.nsc.interpreter.{IMain,JLineCompletion,CommandLine,IR}
 import scalax.io.JavaConverters._
 import scalax.file.Path
 
+import joptsimple.{OptionParser,OptionSpec}
+
 import org.refptr.iscala.msg._
 import org.refptr.iscala.json.{Json,JsonUtil}
 import play.api.libs.json.{Reads,Writes,Format}
@@ -33,6 +35,28 @@ object Util {
     def log[T](message: => T) {
         origOut.println(message)
     }
+
+    def debug[T](message: => T) {
+        if (IScala.options.verbose) {
+            origOut.println(message)
+        }
+    }
+}
+
+class Options(args: Seq[String]) {
+    private val parser = new OptionParser()
+    private val _verbose = parser.accepts("verbose")
+    private val _profile = parser.accepts("profile").withRequiredArg().ofType(classOf[File])
+    private val options = parser.parse(args: _*)
+
+    private def has[T](spec: OptionSpec[T]): Boolean =
+        options.has(spec)
+
+    private def get[T](spec: OptionSpec[T]): Option[T] =
+        Some(options.valueOf(spec)).filter(_ != null)
+
+    val verbose: Boolean = has(_verbose)
+    val profile: Option[File] = get(_profile)
 }
 
 object IScala extends App {
@@ -53,10 +77,11 @@ object IScala extends App {
         implicit val ProfileJSON = Json.format[Profile]
     }
 
-    val profile = args.toList match {
-        case path :: Nil =>
-            Path.fromString(path).string.as[Profile]
-        case Nil =>
+    val options = new Options(args)
+
+    val profile = options.profile match {
+        case Some(path) => Path(path).string.as[Profile]
+        case None =>
             val port0 = 5678
             val profile = Profile(
                 ip="127.0.0.1",
@@ -73,8 +98,6 @@ object IScala extends App {
             file.write(toJSON(profile))
 
             profile
-        case _=>
-            throw new IllegalArgumentException("expected zero or one arguments")
     }
 
     val hmac = new HMAC(profile.key)
@@ -88,7 +111,7 @@ object IScala extends App {
     val heartbeat = ctx.socket(ZMQ.REP)
 
     def terminate() {
-        log("TERMINATING")
+        log("Shutting down")
 
         publish.close()
         raw_input.close()
@@ -133,7 +156,7 @@ object IScala extends App {
         Msg(m.idents, msg_header(m, msg_type), Some(m.header), metadata, content)
 
     def send_ipython[T<:Reply:Writes](socket: ZMQ.Socket, m: Msg[T]) {
-        log(s"sending: $m")
+        debug(s"sending: $m")
         m.idents.foreach(socket.send(_, ZMQ.SNDMORE))
         socket.send("<IDS|MSG>", ZMQ.SNDMORE)
         val header = toJSON(m.header)
@@ -175,7 +198,7 @@ object IScala extends App {
             case MsgType.history_request => content.as[history_request]
         }
         val msg = Msg(idents, _header, _parent_header, _metadata, _content)
-        log(s"received: $msg")
+        debug(s"received: $msg")
         msg
     }
 
@@ -290,8 +313,9 @@ object IScala extends App {
         }
     }
 
-    def initInterpreter(args: Seq[String]) = {
-        val commandLine = new CommandLine(args.toList, println)
+    def initInterpreter() = {
+        val intpArgs = args.toList.dropWhile(_ != "--").drop(1)
+        val commandLine = new CommandLine(intpArgs, println)
         commandLine.settings.embeddedDefaults[this.type]
         commandLine.settings.usejavacp.value = true
         val output = new java.io.StringWriter
@@ -301,7 +325,7 @@ object IScala extends App {
         (interpreter, completion, output)
     }
 
-    lazy val (interpreter, completion, output) = initInterpreter(args)
+    lazy val (interpreter, completion, output) = initInterpreter()
 
     var _n: Int = 0
     val In = mutable.Map[Int, String]()
