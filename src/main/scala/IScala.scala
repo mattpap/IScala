@@ -16,6 +16,8 @@ import scalax.file.Path
 import joptsimple.{OptionParser,OptionSpec}
 
 import org.refptr.iscala.msg._
+import org.refptr.iscala.formats._
+
 import org.refptr.iscala.json.{Json,JsonUtil,JsonImplicits}
 import play.api.libs.json.{Reads,Writes,Format}
 
