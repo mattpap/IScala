@@ -23,7 +23,7 @@ object Json {
     def toJson[T:Writes](obj: T): JsValue = PlayJson.toJson(obj)
 
     def reads[A] = macro JsMacroImpl.readsImpl[A]
-    def writes[A] = macro JsMacroImpl.writesImpl[A]
+    def writes[A] = macro JsMacroImpl.sealedWritesImpl[A]
     def format[A] = macro JsMacroImpl.formatImpl[A]
 
     def noFields[A:ClassTag] = NoFields.format
@@ -46,10 +46,6 @@ object NoFields {
     def format[T:ClassTag]: Format[T] = {
         Format(reads, writes)
     }
-}
-
-object SealedJson {
-    def writes[A] = macro JsMacroImpl.sealedWritesImpl[A]
 }
 
 object EnumJson {

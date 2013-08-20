@@ -1,6 +1,6 @@
 package org.refptr.iscala
 
-import org.refptr.iscala.json.{Json,SealedJson,EnumJson,JsonImplicits}
+import org.refptr.iscala.json.{Json,EnumJson,JsonImplicits}
 import org.refptr.iscala.msg._
 import JsonImplicits._
 
@@ -15,10 +15,10 @@ package object formats {
     implicit val ArgSpecFormat = Json.format[ArgSpec]
 
     implicit val ExecuteRequestJSON = Json.format[execute_request]
-    implicit val ExecuteReplyJSON = SealedJson.writes[execute_reply]
+    implicit val ExecuteReplyJSON = Json.writes[execute_reply]
 
     implicit val ObjectInfoRequestJSON = Json.format[object_info_request]
-    implicit val ObjectInfoReplyJSON = SealedJson.writes[object_info_reply]
+    implicit val ObjectInfoReplyJSON = Json.writes[object_info_reply]
 
     implicit val CompleteRequestJSON = Json.format[complete_request]
     implicit val CompleteReplyJSON = Json.format[complete_reply]

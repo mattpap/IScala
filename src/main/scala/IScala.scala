@@ -169,6 +169,7 @@ object IScala extends App {
         }
         val metadata = toJSON(m.metadata)
         val content = toJSON(m.content)
+        debug(s"json: $content")
         socket.send(hmac(header, parent_header, metadata, content), ZMQ.SNDMORE)
         socket.send(header, ZMQ.SNDMORE)
         socket.send(parent_header, ZMQ.SNDMORE)
