@@ -1,8 +1,6 @@
 package org.refptr.iscala
 
-import java.util.UUID
-import java.lang.management.ManagementFactory
-import java.io.{File,InputStream,PipedInputStream,OutputStream,
+import java.io.{InputStream,PipedInputStream,OutputStream,
     PipedOutputStream,PrintStream,StringWriter,PrintWriter}
 
 import org.zeromq.ZMQ
@@ -13,93 +11,25 @@ import scala.tools.nsc.interpreter.{IMain,JLineCompletion,CommandLine,IR}
 import scalax.io.JavaConverters._
 import scalax.file.Path
 
-import joptsimple.{OptionParser,OptionSpec}
-
 import org.refptr.iscala.msg._
 import org.refptr.iscala.formats._
 
-import org.refptr.iscala.json.{Json,JsonUtil,JsonImplicits}
+import org.refptr.iscala.json.{Json,JsonUtil}
 import play.api.libs.json.{Reads,Writes,Format}
-
-object Util {
-    def uuid4(): UUID = UUID.randomUUID()
-
-    def hex(bytes: Seq[Byte]): String = bytes.map("%02x" format _).mkString
-
-    def getpid(): Int = {
-        val name = ManagementFactory.getRuntimeMXBean().getName()
-        name.takeWhile(_ != '@').toInt
-    }
-
-    val origOut = System.out
-    val origErr = System.err
-
-    def log[T](message: => T) {
-        origOut.println(message)
-    }
-
-    def debug[T](message: => T) {
-        if (IScala.options.verbose) {
-            origOut.println(message)
-        }
-    }
-}
-
-class Options(args: Seq[String]) {
-    private val parser = new OptionParser()
-    private val _verbose = parser.accepts("verbose")
-    private val _profile = parser.accepts("profile").withRequiredArg().ofType(classOf[File])
-    private val options = parser.parse(args: _*)
-
-    private def has[T](spec: OptionSpec[T]): Boolean =
-        options.has(spec)
-
-    private def get[T](spec: OptionSpec[T]): Option[T] =
-        Some(options.valueOf(spec)).filter(_ != null)
-
-    val verbose: Boolean = has(_verbose)
-    val profile: Option[File] = get(_profile)
-}
 
 object IScala extends App {
     import Util._
     import JsonUtil._
-
-    case class Profile(
-        ip: String,
-        transport: String,
-        stdin_port: Int,
-        control_port: Int,
-        hb_port: Int,
-        shell_port: Int,
-        iopub_port: Int,
-        key: UUID)
-
-    object Profile {
-        import JsonImplicits._
-        implicit val ProfileJSON = Json.format[Profile]
-    }
 
     val options = new Options(args)
 
     val profile = options.profile match {
         case Some(path) => Path(path).string.as[Profile]
         case None =>
-            val port0 = 5678
-            val profile = Profile(
-                ip="127.0.0.1",
-                transport="tcp",
-                stdin_port=port0,
-                control_port=port0+1,
-                hb_port=port0+2,
-                shell_port=port0+3,
-                iopub_port=port0+4,
-                key=uuid4())
-
             val file = Path(s"profile-${getpid()}.json")
             log(s"connect ipython with --existing ${file.toAbsolute.path}")
+            val profile = Profile.default
             file.write(toJSON(profile))
-
             profile
     }
 
