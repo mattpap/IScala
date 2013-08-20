@@ -1,9 +1,8 @@
 package org.refptr.iscala
 
-// import java.util.UUID
+import java.util.UUID
 
 package object msg {
-    type UUID = String
     type MIME = String
 
     type Data = Map[MIME, String]
@@ -12,8 +11,8 @@ package object msg {
     type Metadata = Map[String, String]
     val Metadata = Map
 
-    case class Msg[+T<:Content](
-        idents: List[UUID],
+    case class Msg[+T <: Content](
+        idents: List[String], // XXX: Should be List[UUID]?
         header: Header,
         parent_header: Option[Header],
         metadata: Metadata,

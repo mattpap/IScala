@@ -16,11 +16,11 @@ import scalax.file.Path
 import joptsimple.{OptionParser,OptionSpec}
 
 import org.refptr.iscala.msg._
-import org.refptr.iscala.json.{Json,JsonUtil}
+import org.refptr.iscala.json.{Json,JsonUtil,JsonImplicits}
 import play.api.libs.json.{Reads,Writes,Format}
 
 object Util {
-    def uuid4(): String = UUID.randomUUID().toString
+    def uuid4(): UUID = UUID.randomUUID()
 
     def hex(bytes: Seq[Byte]): String = bytes.map("%02x" format _).mkString
 
@@ -71,9 +71,10 @@ object IScala extends App {
         hb_port: Int,
         shell_port: Int,
         iopub_port: Int,
-        key: String)
+        key: UUID)
 
     object Profile {
+        import JsonImplicits._
         implicit val ProfileJSON = Json.format[Profile]
     }
 

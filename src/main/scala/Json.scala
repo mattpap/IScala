@@ -1,5 +1,6 @@
 package org.refptr.iscala.json
 
+import java.util.UUID
 import scala.reflect.ClassTag
 
 import play.api.libs.json.{Json=>PlayJson,Reads,Writes,OWrites,Format,JsPath}
@@ -204,7 +205,26 @@ trait MapJson {
     }
 }
 
-trait JsonImplicits extends EitherJson with TupleJson with MapJson
+trait UUIDJson {
+    implicit val UUIDReads: Reads[UUID] = new Reads[UUID] {
+        def reads(json: JsValue) = json match {
+            case JsString(uuid) =>
+                try {
+                    JsSuccess(UUID.fromString(uuid))
+                } catch {
+                    case e: java.lang.IllegalArgumentException =>
+                        JsError(e.getMessage)
+                }
+            case _ => JsError("Not a string")
+        }
+    }
+
+    implicit val UUIDWrites: Writes[UUID] = new Writes[UUID] {
+        def writes(t: UUID) = JsString(t.toString)
+    }
+}
+
+trait JsonImplicits extends EitherJson with TupleJson with MapJson with UUIDJson
 object JsonImplicits extends JsonImplicits
 
 object TestJson {
@@ -229,6 +249,7 @@ object TestJson {
         enum: Tuple1[FooBarBaz.Value],
         embedded: Tuple1[Embedded],
         myType: Tuple1[MyType],
+        uuid: Tuple1[UUID],
         tuple: Tuple1[(String, Int)],
         either: Tuple1[Either[String, Int]],
         option: Tuple1[Option[String]],
@@ -255,6 +276,7 @@ object TestJson {
         optionEnum: Option[FooBarBaz.Value],
         optionEmbedded: Option[Embedded],
         optionMyType: Option[MyType],
+        optionUUID: Option[UUID],
         optionTuple: Option[(Boolean, String)],
         optionEither: Option[Either[Boolean, String]],
         optionOption: Option[Option[String]],
@@ -270,6 +292,7 @@ object TestJson {
         arrayEnum: Array[FooBarBaz.Value],
         arrayEmbedded: Array[Embedded],
         arrayMyType: Array[MyType],
+        arrayUUID: Array[UUID],
         arrayTuple: Array[(Boolean, String)],
         arrayEither: Array[Either[Boolean, String]],
         arrayOption: Array[Option[String]],
@@ -285,6 +308,7 @@ object TestJson {
         listEnum: List[FooBarBaz.Value],
         listEmbedded: List[Embedded],
         listMyType: List[MyType],
+        listUUID: List[UUID],
         listTuple: List[(Boolean, String)],
         listEither: List[Either[Boolean, String]],
         listOption: List[Option[String]],
@@ -300,6 +324,7 @@ object TestJson {
         mapEnum: Map[String, FooBarBaz.Value],
         mapEmbedded: Map[String, Embedded],
         mapMyType: Map[String, MyType],
+        mapUUID: Map[String, UUID],
         mapTuple: Map[String, (Boolean, String)],
         mapEither: Map[String, Either[Boolean, String]],
         mapOption: Map[String, Option[String]],
@@ -315,6 +340,7 @@ object TestJson {
         enum: FooBarBaz.Value,
         embedded: Embedded,
         myType: MyType,
+        uuid: UUID,
         tuple: TupleCaseClass,
         either: EitherCaseClass,
         option: OptionCaseClass,
