@@ -467,7 +467,7 @@ package object msg {
         value: String) extends Reply
 
     import org.refptr.iscala.json.{Json,EnumJson,JsonImplicits}
-    import play.api.libs.json.{Json=>PlayJson,Writes}
+    import play.api.libs.json.Writes
     import JsonImplicits._
 
     implicit val MsgTypeFormat = EnumJson.format(MsgType)
@@ -485,11 +485,11 @@ package object msg {
         val execute_error_reply_fmt = Json.writes[execute_error_reply]
         val execute_abort_reply_fmt = Json.writes[execute_abort_reply]
 
-        def writes(o: execute_reply) = (o match {
-            case o: execute_ok_reply => execute_ok_reply_fmt.writes(o)
-            case o: execute_error_reply => execute_error_reply_fmt.writes(o)
-            case o: execute_abort_reply => execute_abort_reply_fmt.writes(o)
-        }) + ("status" -> PlayJson.toJson(o.status))
+        def writes(obj: execute_reply) = (obj match {
+            case obj: execute_ok_reply => execute_ok_reply_fmt.writes(obj)
+            case obj: execute_error_reply => execute_error_reply_fmt.writes(obj)
+            case obj: execute_abort_reply => execute_abort_reply_fmt.writes(obj)
+        }) + ("status" -> Json.toJson(obj.status))
     }
 
     // implicit val ExecuteOkReplyJSON = Json.format[execute_ok_reply]
@@ -501,10 +501,10 @@ package object msg {
         val object_info_notfound_reply_fmt = Json.writes[object_info_notfound_reply]
         val object_info_found_reply_fmt = Json.writes[object_info_found_reply]
 
-        def writes(o: object_info_reply) = (o match {
-            case o: object_info_notfound_reply => object_info_notfound_reply_fmt.writes(o)
-            case o: object_info_found_reply => object_info_found_reply_fmt.writes(o)
-        }) + ("found" -> PlayJson.toJson(o.found))
+        def writes(obj: object_info_reply) = (obj match {
+            case obj: object_info_notfound_reply => object_info_notfound_reply_fmt.writes(obj)
+            case obj: object_info_found_reply => object_info_found_reply_fmt.writes(obj)
+        }) + ("found" -> Json.toJson(obj.found))
     }
 
     // implicit val ObjectInfoNotfoundReplyJSON = Json.format[object_info_notfound_reply]

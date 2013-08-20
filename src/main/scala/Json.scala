@@ -20,11 +20,10 @@ object JsonUtil {
 }
 
 object Json {
-    // overrides PlayJson.reads
+    def toJson[T:Writes](obj: T): JsValue = PlayJson.toJson(obj)
+
     def reads[A] = macro JsMacroImpl.readsImpl[A]
-    // overrides PlayJson.writes
     def writes[A] = macro JsMacroImpl.writesImpl[A]
-    // overrides PlayJson.format
     def format[A] = macro JsMacroImpl.formatImpl[A]
 
     def noFields[A:ClassTag] = NoFields.format
