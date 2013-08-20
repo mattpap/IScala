@@ -7,6 +7,149 @@ import scala.reflect.macros.Context
 import language.experimental.macros
 
 object JsMacroImpl {
+    private def debug(msg: => Any) = {
+        if (false) {
+            println(msg.toString.split("\n").map("[macro] " + _).mkString("\n"))
+        }
+    }
+
+    /* JSON writer for sealed traits.
+     *
+     * This macro generates code equivalent to:
+     * ```
+     * new Writes[T] {
+     *     val $writes$T_1 = Json.writes[T_1]
+     *     ...
+     *     val $writes$T_n = Json.writes[T_n]
+     *
+     *     def writes(obj: cls) = (obj match {
+     *         case o: T_1 => $writes$T_1.writes(o)
+     *         ...
+     *         case o: T_n => $writes$T_n.writes(o)
+     *     }) ++ JsObject(List(
+     *         ("field_1", Json.toJson(obj.field_1)),
+     *         ...
+     *         ("field_n", Json.toJson(obj.field_n))))
+     * }
+     * ```
+     *
+     * `T` is a sealed trait with case subclasses `T_1`, ... `T_n`. Fields `field_1`,
+     * ..., `field_n` are `T`'s vals that don't appear in `T_i` constructors.
+     *
+     * Make sure that trait and subclasses, and implicit val are in separate compilation
+     * units. Otherwise, due to a bug in the compiler (see SI-7048), `knownDirectSubclasses`
+     * will give an empty list even if subclasses exist.
+    */
+    def sealedWritesImpl[A: c.WeakTypeTag](c: Context): c.Expr[Writes[A]] = {
+        import c.universe._
+
+        val tpe = weakTypeOf[A]
+        val symbol = tpe.typeSymbol
+
+        if (!symbol.isClass) {
+            c.abort(c.enclosingPosition, "expected a class or trait")
+        }
+
+        val cls = symbol.asClass
+
+        if (!cls.isTrait) {
+            writesImpl(c)
+        } else if (!cls.isSealed) {
+            c.abort(c.enclosingPosition, "expected a sealed trait")
+        } else {
+            val children = cls.knownDirectSubclasses.toList
+
+            if (children.isEmpty) {
+                c.abort(c.enclosingPosition, "trait has no subclasses")
+            } else if (!children.forall(_.isClass) || !children.map(_.asClass).forall(_.isCaseClass)) {
+                c.abort(c.enclosingPosition, "all children must be case classes")
+            } else {
+                val playJson = Select(Select(Select(Ident(newTermName("play")), newTermName("api")), newTermName("libs")), newTermName("json"))
+                val collImmu = Select(Select(Ident(newTermName("scala")), newTermName("collection")), newTermName("immutable"))
+
+                val writesDefs = children.map { child =>
+                    ValDef(
+                        Modifiers(), newTermName("$writes$" + child.name.toString), TypeTree(),
+                        TypeApply(Select(Select(playJson, newTermName("Json")), newTermName("writes")),
+                                  List(Ident(child))))
+                }
+
+                val caseDefs = children.map { child =>
+                    CaseDef(
+                        Bind(newTermName("o"), Typed(Ident(nme.WILDCARD),
+                             Ident(child))),
+                        EmptyTree,
+                        Apply(
+                            Select(Select(This(newTypeName("$anon")), newTermName("$writes$" + child.name.toString)), newTermName("writes")),
+                            List(Ident(newTermName("o")))))
+                }
+
+                val names = children.flatMap(
+                    _.typeSignature
+                     .declaration(nme.CONSTRUCTOR)
+                     .asMethod
+                     .paramss(0)
+                     .map(_.name.toString)
+                 ).toSet
+
+                val fieldNames = cls.typeSignature
+                   .declarations
+                   .toList
+                   .filter(_.isMethod)
+                   .map(_.asMethod)
+                   .filter(_.isStable)
+                   .filter(_.isPublic)
+                   .map(_.name.toString)
+                   .filterNot(names contains _)
+
+                val fieldDefs = fieldNames.map { fieldName =>
+                    Apply(
+                        Select(Select(Ident(newTermName("scala")), newTermName("Tuple2")), newTermName("apply")),
+                        List(
+                            Literal(Constant(fieldName)),
+                            Apply(
+                                Select(Select(playJson, newTermName("Json")), newTermName("toJson")),
+                                List(Select(Ident(newTermName("obj")), newTermName(fieldName))))))
+                }
+
+                val expr = c.Expr[Writes[A]](
+                    Block(
+                        List(
+                            ClassDef(Modifiers(Flag.FINAL), newTypeName("$anon"), List(),
+                                Template(
+                                    List(AppliedTypeTree(Ident(weakTypeOf[Writes[A]].typeSymbol),
+                                                         List(Ident(symbol)))),
+                                    emptyValDef,
+                                    writesDefs ++ List(
+                                        DefDef(Modifiers(), nme.CONSTRUCTOR, List(),
+                                            List(List()), TypeTree(),
+                                            Block(
+                                                List(Apply(Select(Super(This(tpnme.EMPTY), tpnme.EMPTY), nme.CONSTRUCTOR), List())),
+                                                Literal(Constant(())))),
+                                        DefDef(Modifiers(), newTermName("writes"), List(),
+                                            List(List(ValDef(Modifiers(Flag.PARAM), newTermName("obj"), Ident(symbol), EmptyTree))), TypeTree(),
+                                            Apply(
+                                                Select(
+                                                    Match(
+                                                        Ident(newTermName("obj")),
+                                                        caseDefs),
+                                                    newTermName("$plus$plus")),
+                                                List(
+                                                    Apply(
+                                                        Select(Select(playJson, newTermName("JsObject")), newTermName("apply")),
+                                                        List(
+                                                            Apply(
+                                                                Select(Select(collImmu, newTermName("List")), newTermName("apply")),
+                                                                fieldDefs))))))
+                                    )))),
+                        Apply(Select(New(Ident(newTypeName("$anon"))), nme.CONSTRUCTOR), List())))
+
+                debug(show(expr))
+                expr
+            }
+        }
+    }
+
   def readsImpl[A: c.WeakTypeTag](c: Context): c.Expr[Reads[A]] = {
     import c.universe._
     import c.universe.Flag._

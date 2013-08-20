@@ -48,6 +48,10 @@ object NoFields {
     }
 }
 
+object SealedJson {
+    def writes[A] = macro JsMacroImpl.sealedWritesImpl[A]
+}
+
 object EnumJson {
     def reads[E <: Enumeration](enum: E): Reads[E#Value] = new Reads[E#Value] {
         def reads(json: JsValue): JsResult[E#Value] = json match {
