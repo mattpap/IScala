@@ -3,16 +3,22 @@ package org.refptr.iscala
 import java.util.UUID
 import java.lang.management.ManagementFactory
 
-object Util {
+trait UUIDUtil {
     def uuid4(): UUID = UUID.randomUUID()
+}
 
+trait ByteUtil {
     def hex(bytes: Seq[Byte]): String = bytes.map("%02x" format _).mkString
+}
 
+trait OSUtil {
     def getpid(): Int = {
         val name = ManagementFactory.getRuntimeMXBean().getName()
         name.takeWhile(_ != '@').toInt
     }
+}
 
+trait ConsoleUtil {
     val origOut = System.out
     val origErr = System.err
 
@@ -26,3 +32,38 @@ object Util {
         }
     }
 }
+
+trait StringUtil {
+    /** Find longest common prefix of a list of strings.
+     */
+    def commonPrefix(xs: List[String]): String = {
+        if (xs.isEmpty || xs.contains("")) ""
+        else xs.head.head match {
+            case ch =>
+                if (xs.tail forall (_.head == ch)) "" + ch + commonPrefix(xs map (_.tail))
+                else ""
+        }
+    }
+
+    /** Find longest string that is a suffix of `head` and prefix of `tail`.
+     *
+     *  Example:
+     *
+     *    isInstance
+     *  x.is
+     *    ^^
+     *
+     *  >>> Util.suffixPrefix("x.is", "isInstance")
+     *  "is"
+     */
+    def suffixPrefix(head: String, tail: String): String = {
+        var prefix = head
+        while (!tail.startsWith(prefix)) {
+            prefix = prefix.drop(1)
+        }
+        prefix
+    }
+}
+
+trait Util extends UUIDUtil with ByteUtil with OSUtil with ConsoleUtil with StringUtil
+object Util extends Util

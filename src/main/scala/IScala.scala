@@ -338,11 +338,15 @@ object IScala extends App {
 
     def handle_complete_request(socket: ZMQ.Socket, msg: Msg[complete_request]) {
         val text = msg.content.text
+        val completions = completion.completions(text)
+        val common = Util.commonPrefix(completions)
+        var prefix = Util.suffixPrefix(text, common)
+        val matches = completions.map(_.stripPrefix(prefix)).map(text + _)
 
         send_ipython(socket, msg_reply(msg, MsgType.complete_reply,
             complete_reply(
                 status=ExecutionStatus.ok,
-                matches=completion.completions(text),
+                matches=matches,
                 text=text)))
     }
 
