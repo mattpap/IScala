@@ -9,6 +9,8 @@ class Options(args: Seq[String]) {
     private val _profile = parser.accepts("profile").withRequiredArg().ofType(classOf[File])
     private val options = parser.parse(args: _*)
 
+    def tail = args.dropWhile(_ != "--").drop(1).toList
+
     private def has[T](spec: OptionSpec[T]): Boolean =
         options.has(spec)
 

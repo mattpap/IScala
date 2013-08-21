@@ -6,7 +6,7 @@ import java.io.{InputStream,PipedInputStream,OutputStream,
 import org.zeromq.ZMQ
 
 import scala.collection.mutable
-import scala.tools.nsc.interpreter.{IMain,JLineCompletion,CommandLine,IR}
+import scala.tools.nsc.interpreter.IR
 
 import scalax.io.JavaConverters._
 import scalax.file.Path
@@ -247,19 +247,7 @@ object IScala extends App {
         }
     }
 
-    def initInterpreter() = {
-        val intpArgs = args.toList.dropWhile(_ != "--").drop(1)
-        val commandLine = new CommandLine(intpArgs, println)
-        commandLine.settings.embeddedDefaults[this.type]
-        commandLine.settings.usejavacp.value = true
-        val output = new java.io.StringWriter
-        val printer = new java.io.PrintWriter(output)
-        val interpreter = new IMain(commandLine.settings, printer)
-        val completion = new JLineCompletion(interpreter)
-        (interpreter, completion, output)
-    }
-
-    lazy val (interpreter, completion, output) = initInterpreter()
+    lazy val (interpreter, completion, output) = Interpreter(options.tail)
 
     var _n: Int = 0
     val In = mutable.Map[Int, String]()
