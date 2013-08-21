@@ -74,7 +74,11 @@ object ProjectBuild extends Build {
             import Dependencies._
             scalaio ++ Seq(jopt, jeromq, play_json, specs2)
         },
-        libraryDependencies <+= scalaVersion("org.scala-lang" % "scala-compiler" % _)
+        libraryDependencies <+= scalaVersion("org.scala-lang" % "scala-compiler" % _),
+        initialCommands := """
+            import scala.reflect.runtime.{universe=>u}
+            import scala.tools.nsc.interpreter._
+            """
     )
 
     lazy val macrosSettings = Project.defaultSettings ++ Seq(
