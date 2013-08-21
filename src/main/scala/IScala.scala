@@ -351,8 +351,12 @@ object IScala extends App {
     }
 
     def handle_kernel_info_request(socket: ZMQ.Socket, msg: Msg[kernel_info_request]) {
-        val scalaVersion = scala.util.Properties.versionNumberString
-            .split(Array('.', '-')).take(3).map(_.toInt).toList
+        val scalaVersion = scala.util.Properties
+            .versionNumberString
+            .split(Array('.', '-'))
+            .take(3)
+            .map(_.toInt)
+            .toList
 
         send_ipython(socket, msg_reply(msg, MsgType.kernel_info_reply,
             kernel_info_reply(
