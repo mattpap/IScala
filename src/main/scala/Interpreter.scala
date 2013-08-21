@@ -1,6 +1,6 @@
 package org.refptr.iscala
 
-import scala.tools.nsc.interpreter.{IMain,JLineCompletion,CommandLine}
+import scala.tools.nsc.interpreter.{IMain,CommandLine}
 
 object Interpreter {
     def apply(args: Seq[String], usejavacp: Boolean=true) = {
@@ -10,7 +10,7 @@ object Interpreter {
         val output = new java.io.StringWriter
         val printer = new java.io.PrintWriter(output)
         val interpreter = new IMain(commandLine.settings, printer)
-        val completion = new JLineCompletion(interpreter)
+        val completion = new IScalaCompletion(interpreter)
         (interpreter, completion, output)
     }
 }

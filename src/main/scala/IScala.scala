@@ -337,13 +337,13 @@ object IScala extends App {
     }
 
     def handle_complete_request(socket: ZMQ.Socket, msg: Msg[complete_request]) {
-        val result = completion.completer.complete(msg.content.line, msg.content.cursor_pos)
+        val text = msg.content.text
 
         send_ipython(socket, msg_reply(msg, MsgType.complete_reply,
             complete_reply(
                 status=ExecutionStatus.ok,
-                matches=result.candidates,
-                text="")))
+                matches=completion.completions(text),
+                text=text)))
     }
 
     def handle_kernel_info_request(socket: ZMQ.Socket, msg: Msg[kernel_info_request]) {
