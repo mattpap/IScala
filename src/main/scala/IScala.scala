@@ -88,10 +88,12 @@ object IScala extends App {
     def msg_reply[T<:Reply](m: Msg[_], msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] =
         Msg(m.idents, msg_header(m, msg_type), Some(m.header), metadata, content)
 
+    val DELIMITER = "<IDS|MSG>"
+
     def send_ipython[T<:Reply:Writes](socket: ZMQ.Socket, m: Msg[T]) {
         debug(s"sending: $m")
         m.idents.foreach(socket.send(_, ZMQ.SNDMORE))
-        socket.send("<IDS|MSG>", ZMQ.SNDMORE)
+        socket.send(DELIMITER, ZMQ.SNDMORE)
         val header = toJSON(m.header)
         val parent_header = m.parent_header match {
             case Some(parent_header) => toJSON(parent_header)
@@ -110,7 +112,7 @@ object IScala extends App {
     def recv_ipython(socket: ZMQ.Socket): Msg[Request] = {
         val idents = Stream.continually {
             socket.recvStr()
-        }.takeWhile(_ != "<IDS|MSG>").toList
+        }.takeWhile(_ != DELIMITER).toList
         val signature = socket.recvStr()
         val header = socket.recvStr()
         val parent_header = socket.recvStr()
