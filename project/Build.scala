@@ -65,6 +65,7 @@ object ProjectBuild extends Build {
 
     lazy val projectSettings = Project.defaultSettings ++ pluginSettings ++ Seq(
         fork in run := true,
+        javaOptions in run ++= List("-Xdebug", "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5005"),
         jrebelRunning := {
             val jrebel = java.lang.Package.getPackage("com.zeroturnaround.javarebel") != null
             info(s"JRebel is ${if (jrebel) "enabled" else "disabled"}")

@@ -56,7 +56,7 @@ JAVA_OPTS="-Dfile.encoding=UTF-8 -Xss8M -Xmx2G -XX:MaxPermSize=1024M -XX:Reserve
 
 if [ $DEBUG = 1 ];
 then
-    JAVA_OPTS="$JAVA_OPTS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5005"
+    JAVA_OPTS="$JAVA_OPTS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5004"
 fi
 
 if [ $JREBEL = 1 -a -e "$HOME/.jrebel/jrebel/jrebel.jar" ];
