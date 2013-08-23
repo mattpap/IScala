@@ -119,6 +119,14 @@ java.lang.ArithmeticException: / by zero
 In [8]: java.util.UUID.fromString("abc")
 java.lang.IllegalArgumentException: Invalid UUID string: abc
     java.util.UUID.fromString(UUID.java:226)
+
+In [9]: class Foo(a: Int) { def bar(b: String) = b*a }
+
+In [10]: new Foo(5)
+Out[10]: Foo@70f4d063
+
+In [11]: _10.bar("xyz")
+Out[11]: xyzxyzxyzxyzxyz
 ```
 
 ## Magics

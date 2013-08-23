@@ -319,7 +319,7 @@ object IScala extends App {
 
                     ir match {
                         case Results.Success(value) =>
-                            val result = if (silent) None else value.map(_.toString)
+                            val result = if (silent) None else value.map(interpreter.stringify)
 
                             if (!silent && store_history) {
                                 value.foreach(Out(_n) = _)

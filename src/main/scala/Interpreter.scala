@@ -83,4 +83,6 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
                 else loadAndRunReq(req)
         }
     }
+
+    def stringify(obj: Any): String = intp.naming.unmangle(obj.toString)
 }
