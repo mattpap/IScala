@@ -259,6 +259,9 @@ object IScala extends App {
     val In = mutable.Map[Int, String]()
     val Out = mutable.Map[Int, Any]()
 
+    val magics = List(LibraryDependenciesMagic, ResolversMagic, UpdateMagic)
+    val magicPattern = "^%([a-zA-Z_][a-zA-Z0-9_]*)(.*)\n*$".r
+
     def handle_execute_request(socket: ZMQ.Socket, msg: Msg[execute_request]) {
         executeMsg = msg
 
@@ -280,56 +283,78 @@ object IScala extends App {
 
         send_status(ExecutionState.busy)
 
+        val user_variables: List[String] = Nil
+        val user_expressions: Map[String, String] = Map()
+
         try {
-            val ir = capture {
-                interpreter.interpret(code)
-            }
+            code match {
+                case magicPattern(name, input) =>
+                    magics.find(_.name.name == name) match {
+                        case Some(magic) =>
+                            capture { magic.apply(interpreter, input) } match {
+                                case Some(error) => send_error(msg, pyerr(_n, "", "", List(error)))
+                                case None =>
+                                    finish_stream(msg, StdOut)
+                                    finish_stream(msg, StdErr)
 
-            ir match {
-                case IR.Success =>
-                    val request = interpreter.prevRequestList.last
-                    val handler = request.handlers.last
-                    val eval = request.lineRep
-
-                    val value =
-                        if (!handler.definesValue) None
-                        else eval.callOpt("$result").filter(_ != null)
-
-                    val result =
-                        if (silent) None
-                        else value.map(_.toString)
-
-                    if (!silent && store_history) {
-                        value.foreach(Out(_n) = _)
-
-                        interpreter.beSilentDuring {
-                            value.foreach(interpreter.bindValue("_" + _n, _))
-                        }
+                                    send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
+                                        execute_ok_reply(
+                                            execution_count=_n,
+                                            payload=Nil,
+                                            user_variables=user_variables,
+                                            user_expressions=user_expressions)))
+                            }
+                        case None =>
+                            send_error(msg, pyerr(_n, "", "", List(s"ERROR: Line magic function `%$name` not found.")))
+                    }
+                case _ =>
+                    val ir = capture {
+                        interpreter.interpret(code)
                     }
 
-                    val user_variables: List[String] = Nil
-                    val user_expressions: Map[String, String] = Map()
+                    ir match {
+                        case IR.Success =>
+                            val request = interpreter.prevRequestList.last
+                            val handler = request.handlers.last
+                            val eval = request.lineRep
 
-                    finish_stream(msg, StdOut)
-                    finish_stream(msg, StdErr)
+                            val value =
+                                if (!handler.definesValue) None
+                                else eval.callOpt("$result").filter(_ != null)
 
-                    result.foreach { data =>
-                        send_ipython(publish, msg_pub(msg, MsgType.pyout,
-                            pyout(
-                                execution_count=_n,
-                                data=Data("text/plain" -> data))))
+                            val result =
+                                if (silent) None
+                                else value.map(_.toString)
+
+                            if (!silent && store_history) {
+                                value.foreach(Out(_n) = _)
+
+                                interpreter.beSilentDuring {
+                                    value.foreach(interpreter.bindValue("_" + _n, _))
+                                }
+                            }
+
+                            finish_stream(msg, StdOut)
+                            finish_stream(msg, StdErr)
+
+                            result.foreach { data =>
+                                send_ipython(publish, msg_pub(msg, MsgType.pyout,
+                                    pyout(
+                                        execution_count=_n,
+                                        data=Data("text/plain" -> data))))
+                            }
+
+                            send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
+                                execute_ok_reply(
+                                    execution_count=_n,
+                                    payload=Nil,
+                                    user_variables=user_variables,
+                                    user_expressions=user_expressions)))
+                        case IR.Error =>
+                            send_error(msg, pyerr(_n, "", "", output.toString.split("\n").toList))
+                        case IR.Incomplete =>
+                            send_error(msg, pyerr(_n, "", "", List("incomplete")))
                     }
-
-                    send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
-                        execute_ok_reply(
-                            execution_count=_n,
-                            payload=Nil,
-                            user_variables=user_variables,
-                            user_expressions=user_expressions)))
-                case IR.Error =>
-                    send_error(msg, pyerr(_n, "", "", output.toString.split("\n").toList))
-                case IR.Incomplete =>
-                    send_error(msg, pyerr(_n, "", "", List("incomplete")))
             }
         } catch {
             case e: Exception =>
@@ -357,8 +382,7 @@ object IScala extends App {
     }
 
     def handle_kernel_info_request(socket: ZMQ.Socket, msg: Msg[kernel_info_request]) {
-        val scalaVersion = scala.util.Properties
-            .versionNumberString
+        val scalaVersion = Util.scalaVersion
             .split(Array('.', '-'))
             .take(3)
             .map(_.toInt)
