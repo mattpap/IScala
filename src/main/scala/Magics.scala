@@ -79,6 +79,16 @@ abstract class Magic[T](val name: Symbol, parser: MagicParsers[T]) {
     def handle(interpreter: Interpreter, result: T): Unit
 }
 
+object Magic {
+    val magics = List(LibraryDependenciesMagic, ResolversMagic, UpdateMagic)
+    val pattern = "^%([a-zA-Z_][a-zA-Z0-9_]*)(.*)\n*$".r
+
+    def unapply(code: String): Option[(String, String, Option[Magic[_]])] = code match {
+        case pattern(name, input) => Some((name, input, magics.find(_.name.name == name)))
+        case _ => None
+    }
+}
+
 abstract class EmptyMagic(name: Symbol) extends Magic(name, EmptyParsers) {
     def handle(interpreter: Interpreter, unit: Unit) = handle(interpreter)
     def handle(interpreter: Interpreter): Unit

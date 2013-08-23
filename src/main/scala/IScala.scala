@@ -151,6 +151,18 @@ object IScala extends App {
         send_ipython(publish, msg)
     }
 
+    def send_ok(msg: Msg[_], execution_count: Int) {
+        val user_variables: List[String] = Nil
+        val user_expressions: Map[String, String] = Map()
+
+        send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
+            execute_ok_reply(
+                execution_count=execution_count,
+                payload=Nil,
+                user_variables=user_variables,
+                user_expressions=user_expressions)))
+    }
+
     def pyerr_content(exception: Throwable, execution_count: Int): pyerr = {
         val ename = exception.getClass.getName
         val evalue = exception.getMessage
@@ -166,6 +178,10 @@ object IScala extends App {
               ename=ename,
               evalue=evalue,
               traceback=traceback)
+    }
+
+    def send_error(msg: Msg[_], execution_count: Int, error: String) {
+        send_error(msg, pyerr(execution_count, "", "", error.split("\n").toList))
     }
 
     def send_error(msg: Msg[_], err: pyerr) {
@@ -289,35 +305,22 @@ object IScala extends App {
 
         send_status(ExecutionState.busy)
 
-        val user_variables: List[String] = Nil
-        val user_expressions: Map[String, String] = Map()
-
         try {
             code match {
-                case magicPattern(name, input) =>
-                    magics.find(_.name.name == name) match {
-                        case Some(magic) =>
-                            capture { magic.apply(interpreter, input) } match {
-                                case Some(error) => send_error(msg, pyerr(_n, "", "", List(error)))
-                                case None =>
-                                    finish_streams(msg)
-
-                                    send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
-                                        execute_ok_reply(
-                                            execution_count=_n,
-                                            payload=Nil,
-                                            user_variables=user_variables,
-                                            user_expressions=user_expressions)))
-                            }
+                case Magic(name, input, Some(magic)) =>
+                    capture { magic(interpreter, input) } match {
                         case None =>
-                            send_error(msg, pyerr(_n, "", "", List(s"ERROR: Line magic function `%$name` not found.")))
+                            finish_streams(msg)
+                            send_ok(msg, _n)
+                        case Some(error) =>
+                            finish_streams(msg)
+                            send_error(msg, _n, error)
                     }
+                case Magic(name, _, None) =>
+                    finish_streams(msg)
+                    send_error(msg, _n, s"ERROR: Line magic function `%$name` not found.")
                 case _ =>
-                    val ir = capture {
-                        interpreter.interpret(code)
-                    }
-
-                    ir match {
+                    capture { interpreter.interpret(code) } match {
                         case Results.Success(value) =>
                             val result = if (silent) None else value.map(interpreter.stringify)
 
@@ -338,21 +341,16 @@ object IScala extends App {
                                         data=Data("text/plain" -> data))))
                             }
 
-                            send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
-                                execute_ok_reply(
-                                    execution_count=_n,
-                                    payload=Nil,
-                                    user_variables=user_variables,
-                                    user_expressions=user_expressions)))
+                            send_ok(msg, _n)
                         case Results.Failure(exception) =>
                             finish_streams(msg)
                             send_error(msg, pyerr_content(exception, _n))
                         case Results.Error =>
                             finish_streams(msg)
-                            send_error(msg, pyerr(_n, "", "", interpreter.output.toString.split("\n").toList))
+                            send_error(msg, _n, interpreter.output.toString)
                         case Results.Incomplete =>
                             finish_streams(msg)
-                            send_error(msg, pyerr(_n, "", "", List("incomplete")))
+                            send_error(msg, _n, "incomplete")
                     }
             }
         } catch {
