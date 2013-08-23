@@ -280,9 +280,6 @@ object IScala extends App {
     val In = mutable.Map[Int, String]()
     val Out = mutable.Map[Int, Any]()
 
-    val magics = List(LibraryDependenciesMagic, ResolversMagic, UpdateMagic)
-    val magicPattern = "^%([a-zA-Z_][a-zA-Z0-9_]*)(.*)\n*$".r
-
     def handle_execute_request(socket: ZMQ.Socket, msg: Msg[execute_request]) {
         executeMsg = msg
 
