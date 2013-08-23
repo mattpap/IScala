@@ -64,7 +64,7 @@ or just use `./notebook` script. Make sure that `IScala.jar` exists. If not, run
 to generate it. Alternatively (and better in the long run) you can also create an IPython profile
 for Scala. To do this issue:
 ```
-$ ipython profile craete scala
+$ ipython profile create scala
 [ProfileCreate] WARNING | Generating default config file: u'~/.config/ipython/profile_scala/ipython_config.py'
 [ProfileCreate] WARNING | Generating default config file: u'~/.config/ipython/profile_scala/ipython_qtconsole_config.py'
 [ProfileCreate] WARNING | Generating default config file: u'~/.config/ipython/profile_scala/ipython_notebook_config.py'

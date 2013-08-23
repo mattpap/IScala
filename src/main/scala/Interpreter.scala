@@ -20,15 +20,21 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
     val printer = new java.io.PrintWriter(output)
 
     private var _intp: IMain = _
+    private var _n: Int = 0
+
     def intp = _intp
+    def n = _n
 
     reset()
 
     def settings = commandLine.settings
 
+    def increment = _n += 1
+
     def reset() {
         synchronized {
             _intp = new IMain(settings, printer)
+            _n = 0
         }
     }
 

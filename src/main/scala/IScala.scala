@@ -277,7 +277,6 @@ object IScala extends App {
 
     lazy val interpreter = new Interpreter(options.tail)
 
-    var _n: Int = 0
     val In = mutable.Map[Int, String]()
     val Out = mutable.Map[Int, Any]()
 
@@ -293,13 +292,15 @@ object IScala extends App {
         val store_history = content.store_history getOrElse !silent
 
         if (!silent) {
-            _n += 1
+            interpreter.increment
+
             if (store_history) {
-                In(_n) = code
+                In(interpreter.n) = code
             }
+
             send_ipython(publish, msg_pub(msg, MsgType.pyin,
                 pyin(
-                    execution_count=_n,
+                    execution_count=interpreter.n,
                     code=code)))
         }
 
@@ -311,24 +312,24 @@ object IScala extends App {
                     capture { magic(interpreter, input) } match {
                         case None =>
                             finish_streams(msg)
-                            send_ok(msg, _n)
+                            send_ok(msg, interpreter.n)
                         case Some(error) =>
                             finish_streams(msg)
-                            send_error(msg, _n, error)
+                            send_error(msg, interpreter.n, error)
                     }
                 case Magic(name, _, None) =>
                     finish_streams(msg)
-                    send_error(msg, _n, s"ERROR: Line magic function `%$name` not found.")
+                    send_error(msg, interpreter.n, s"ERROR: Line magic function `%$name` not found.")
                 case _ =>
                     capture { interpreter.interpret(code) } match {
                         case Results.Success(value) =>
                             val result = if (silent) None else value.map(interpreter.stringify)
 
                             if (!silent && store_history) {
-                                value.foreach(Out(_n) = _)
+                                value.foreach(Out(interpreter.n) = _)
 
                                 interpreter.intp.beSilentDuring {
-                                    value.foreach(interpreter.intp.bind("_" + _n, "Any", _))
+                                    value.foreach(interpreter.intp.bind("_" + interpreter.n, "Any", _))
                                 }
                             }
 
@@ -337,26 +338,26 @@ object IScala extends App {
                             result.foreach { data =>
                                 send_ipython(publish, msg_pub(msg, MsgType.pyout,
                                     pyout(
-                                        execution_count=_n,
+                                        execution_count=interpreter.n,
                                         data=Data("text/plain" -> data))))
                             }
 
-                            send_ok(msg, _n)
+                            send_ok(msg, interpreter.n)
                         case Results.Failure(exception) =>
                             finish_streams(msg)
-                            send_error(msg, pyerr_content(exception, _n))
+                            send_error(msg, pyerr_content(exception, interpreter.n))
                         case Results.Error =>
                             finish_streams(msg)
-                            send_error(msg, _n, interpreter.output.toString)
+                            send_error(msg, interpreter.n, interpreter.output.toString)
                         case Results.Incomplete =>
                             finish_streams(msg)
-                            send_error(msg, _n, "incomplete")
+                            send_error(msg, interpreter.n, "incomplete")
                     }
             }
         } catch {
             case exception: Throwable =>
                 finish_streams(msg)
-                send_error(msg, pyerr_content(exception, _n)) // Internal Error
+                send_error(msg, pyerr_content(exception, interpreter.n)) // Internal Error
         } finally {
             interpreter.resetOutput()
             send_status(ExecutionState.idle)

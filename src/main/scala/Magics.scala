@@ -84,7 +84,7 @@ abstract class Magic[T](val name: Symbol, parser: MagicParsers[T]) {
 }
 
 object Magic {
-    val magics = List(LibraryDependenciesMagic, ResolversMagic, UpdateMagic, TypeMagic, DeconstructMagic)
+    val magics = List(LibraryDependenciesMagic, ResolversMagic, UpdateMagic, TypeMagic, DeconstructMagic, ResetMagic)
     val pattern = "^%([a-zA-Z_][a-zA-Z0-9_]*)(.*)\n*$".r
 
     def unapply(code: String): Option[(String, String, Option[Magic[_]])] = code match {
@@ -145,5 +145,11 @@ object TypeMagic extends EntireMagic('type) {
 object DeconstructMagic extends EntireMagic('deconstruct) {
     def handle(interpreter: Interpreter, code: String) {
         interpreter.typeInfo(code, deconstruct=true).map(println)
+    }
+}
+
+object ResetMagic extends EmptyMagic('reset) {
+    def handle(interpreter: Interpreter) {
+        interpreter.reset()
     }
 }
