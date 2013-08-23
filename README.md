@@ -82,17 +82,12 @@ location of `IScala.jar`.
 In [1]: 1
 Out[1]: 1
 
-In [2]: (1 to 10).foreach { i => println(i); Thread.sleep(1000) }
+In [2]: (1 to 5).foreach { i => print(i); Thread.sleep(1000) }
 1
 2
 3
 4
 5
-6
-7
-8
-9
-10
 
 In [3]: 1/0
 java.lang.ArithmeticException: / by zero
@@ -120,7 +115,86 @@ java.lang.ArithmeticException: / by zero
 	at org.refptr.iscala.IScala$.capture(IScala.scala:302)
 	at org.refptr.iscala.IScala$.handle_execute_request(IScala.scala:352)
 	at org.refptr.iscala.IScala$EventLoop.run(IScala.scala:477)
+
+In [4]: val x = 1
+Out[4]: 1
+
+In [5]: x.<TAB>
+x.%             x.-             x.>>            x.isInstanceOf  x.toFloat       x.toString      x.|
+x.&             x./             x.>>>           x.toByte        x.toInt         x.unary_+
+x.*             x.>             x.^             x.toChar        x.toLong        x.unary_-
+x.+             x.>=            x.asInstanceOf  x.toDouble      x.toShort       x.unary_~
+
+In [5]: x.to<TAB>
+x.toByte    x.toChar    x.toDouble  x.toFloat   x.toInt     x.toLong    x.toShort   x.toString
+
+In [5]: x.toS<TAB>
+x.toShort   x.toString
 ```
+
+## Magics
+
+IScala supports magic commands similarly to IPython, but the set of magics is
+different to match the specifics of Scala and JVM. Magic commands consist of
+percent sign `%` followed by an identifier and optional input to a magic. Magic
+command's syntax may resemble valid Scala, but every magic implements its own
+domain specific parser.
+
+### Library management
+
+Library management is done by [sbt](http://www.scala-sbt.org/). There is no
+need for a build file, because settings are managed by IScala. To add a
+dependency use `%libraryDependencies += moduleID`, where `moduleID` follows
+`organization % name % revision` syntax. You can also use `%%` to track
+dependencies that have binary dependency on Scala. Scala version used is
+the same that IScala was compiled against.
+
+To resolve dependencies issue `%update`. If successful this will restart
+the interpreter to allow it to use the new classpath. Note that this
+will erase the state of the interpreter, so you will have to recompute
+all values from scratch.
+
+```
+In [1]: import scalaj.collection.Imports._
+<console>:7: error: not found: value scalaj
+       import scalaj.collection.Imports._
+              ^
+
+In [2]: %libraryDependencies += "org.scalaj" %% "scalaj-collection" % "1.5"
+
+In [3]: %update
+[info] Resolving org.scalaj#scalaj-collection_2.10;1.5 ...
+[info] Resolving org.scala-lang#scala-library;2.10.2 ...
+
+In [4]: import scalaj.collection.Imports._
+
+In [5]: List(1, 2, 3).asJava.isInstanceOf[java.util.List[Int]]
+Out[5]: true
+```
+
+If a dependency can't be resolved, `%update` will fail gracefully. For example,
+if we use `com.scalaj` organization instead of `org.scalaj`, then we will get
+the following error:
+
+```
+In [1]: %libraryDependencies += "com.scalaj" %% "scalaj-collection" % "1.5"
+
+In [2]: %update
+[info] Resolving com.scalaj#scalaj-collection_2.10;1.5 ...
+[warn] 	module not found: com.scalaj#scalaj-collection_2.10;1.5
+[warn] ==== sonatype-releases: tried
+[warn]   https://oss.sonatype.org/content/repositories/releases/com/scalaj/scalaj-collection_2.10/1.5/scalaj-collection_2.10-1.5.pom
+[warn] 	::::::::::::::::::::::::::::::::::::::::::::::
+[warn] 	::          UNRESOLVED DEPENDENCIES         ::
+[warn] 	::::::::::::::::::::::::::::::::::::::::::::::
+[warn] 	:: com.scalaj#scalaj-collection_2.10;1.5: not found
+[warn] 	::::::::::::::::::::::::::::::::::::::::::::::
+[error] unresolved dependency: com.scalaj#scalaj-collection_2.10;1.5: not found
+```
+
+By default IScala uses Sonatype's releases maven repository. To add more
+repositories use `%resolvers += "Repo Name" at "https://path/to/repository"`
+and run `%update` again.
 
 ## Status
 

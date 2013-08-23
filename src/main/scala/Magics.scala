@@ -1,8 +1,6 @@
 package org.refptr.iscala
 
 import scala.util.parsing.combinator.JavaTokenParsers
-
-import scala.tools.nsc.interpreter.IMain
 import scala.tools.nsc.util.ClassPath
 
 import sbt.{ModuleID,CrossVersion,Resolver,MavenRepository}
@@ -68,7 +66,7 @@ object Settings {
 }
 
 abstract class Magic[T](val name: Symbol, parser: MagicParsers[T]) {
-    def apply(interpreter: IMain, input: String) = {
+    def apply(interpreter: Interpreter, input: String) = {
         parser.parse(input) match {
             case Left(result) =>
                 handle(interpreter, result)
@@ -78,16 +76,16 @@ abstract class Magic[T](val name: Symbol, parser: MagicParsers[T]) {
         }
     }
 
-    def handle(interpreter: IMain, result: T): Unit
+    def handle(interpreter: Interpreter, result: T): Unit
 }
 
 abstract class EmptyMagic(name: Symbol) extends Magic(name, EmptyParsers) {
-    def handle(interpreter: IMain, unit: Unit) = handle(interpreter)
-    def handle(interpreter: IMain): Unit
+    def handle(interpreter: Interpreter, unit: Unit) = handle(interpreter)
+    def handle(interpreter: Interpreter): Unit
 }
 
 object LibraryDependenciesMagic extends Magic('libraryDependencies, LibraryDependenciesParser) {
-    def handle(interpreter: IMain, dependency: LibraryDependencies) {
+    def handle(interpreter: Interpreter, dependency: LibraryDependencies) {
         dependency match {
             case LibraryDependencies(Add, dependency) =>
                 Settings.libraryDependencies :+= dependency
@@ -98,7 +96,7 @@ object LibraryDependenciesMagic extends Magic('libraryDependencies, LibraryDepen
 }
 
 object ResolversMagic extends Magic('resolvers, ResolversParser) {
-    def handle(interpreter: IMain, resolver: Resolvers) {
+    def handle(interpreter: Interpreter, resolver: Resolvers) {
         resolver match {
             case Resolvers(Add, resolver) =>
                 Settings.resolvers :+= resolver
@@ -109,12 +107,13 @@ object ResolversMagic extends Magic('resolvers, ResolversParser) {
 }
 
 object UpdateMagic extends EmptyMagic('update) {
-    def handle(interpreter: IMain) {
-        val jars = Sbt.resolve(Settings.projectName, Settings.libraryDependencies, Settings.resolvers)
-        Settings.managedJars = jars.toList
-        val paths = jars.map(_.getAbsolutePath)
-        interpreter.settings.classpath.append(ClassPath.join(paths: _*))
-        // println(s"New classpath: ${interpreter.settings.classpath.value}")
-        interpreter.reset()
+    def handle(interpreter: Interpreter) {
+        Sbt.resolve(Settings.projectName, Settings.libraryDependencies, Settings.resolvers) map { jars =>
+            Settings.managedJars = jars.toList
+            val paths = jars.map(_.getAbsolutePath)
+            interpreter.settings.classpath.value = ClassPath.join(paths: _*)
+            Util.debug(s"New classpath: ${interpreter.settings.classpath.value}")
+            interpreter.reset()
+        }
     }
 }

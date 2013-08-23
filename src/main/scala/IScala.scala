@@ -253,7 +253,7 @@ object IScala extends App {
         }
     }
 
-    lazy val (interpreter, completion, output) = Interpreter(options.tail)
+    lazy val interpreter = new Interpreter(options.tail)
 
     var _n: Int = 0
     val In = mutable.Map[Int, String]()
@@ -309,12 +309,12 @@ object IScala extends App {
                     }
                 case _ =>
                     val ir = capture {
-                        interpreter.interpret(code)
+                        interpreter.intp.interpret(code)
                     }
 
                     ir match {
                         case IR.Success =>
-                            val request = interpreter.prevRequestList.last
+                            val request = interpreter.intp.prevRequestList.last
                             val handler = request.handlers.last
                             val eval = request.lineRep
 
@@ -329,8 +329,8 @@ object IScala extends App {
                             if (!silent && store_history) {
                                 value.foreach(Out(_n) = _)
 
-                                interpreter.beSilentDuring {
-                                    value.foreach(interpreter.bindValue("_" + _n, _))
+                                interpreter.intp.beSilentDuring {
+                                    value.foreach(interpreter.intp.bindValue("_" + _n, _))
                                 }
                             }
 
@@ -351,7 +351,7 @@ object IScala extends App {
                                     user_variables=user_variables,
                                     user_expressions=user_expressions)))
                         case IR.Error =>
-                            send_error(msg, pyerr(_n, "", "", output.toString.split("\n").toList))
+                            send_error(msg, pyerr(_n, "", "", interpreter.output.toString.split("\n").toList))
                         case IR.Incomplete =>
                             send_error(msg, pyerr(_n, "", "", List("incomplete")))
                     }
@@ -362,14 +362,14 @@ object IScala extends App {
                 finish_stream(msg, StdErr)
                 send_error(msg, pyerr_content(e, _n))
         } finally {
-            output.getBuffer.setLength(0)
+            interpreter.resetOutput()
             send_status(ExecutionState.idle)
         }
     }
 
     def handle_complete_request(socket: ZMQ.Socket, msg: Msg[complete_request]) {
         val text = msg.content.text
-        val completions = completion.completions(text)
+        val completions = interpreter.completion.completions(text)
         val common = Util.commonPrefix(completions)
         var prefix = Util.suffixPrefix(text, common)
         val matches = completions.map(_.stripPrefix(prefix)).map(text + _)
