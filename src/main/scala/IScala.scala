@@ -180,6 +180,7 @@ object IScala extends App {
     sealed trait Std {
         val name: String
         val input: InputStream
+        val output: OutputStream
         val stream: PrintStream
     }
 
@@ -187,14 +188,16 @@ object IScala extends App {
         val name = "stdout"
 
         val input = new PipedInputStream()
-        val stream = new PrintStream(new PipedOutputStream(input))
+        val output = new PipedOutputStream(input)
+        val stream = new PrintStream(output)
     }
 
     object StdErr extends Std {
         val name = "stderr"
 
         val input = new PipedInputStream()
-        val stream = new PrintStream(new PipedOutputStream(input))
+        val output = new PipedOutputStream(input)
+        val stream = new PrintStream(output)
     }
 
     def send_stream(msg: Msg[_], std: Std, data: String) {
@@ -205,6 +208,7 @@ object IScala extends App {
     }
 
     def finish_stream(msg: Msg[_], std: Std) {
+        std.output.flush()
         val n = std.input.available
         if (n > 0) {
             val buffer = new Array[Byte](n)
@@ -329,6 +333,8 @@ object IScala extends App {
             }
         } catch {
             case e: Exception =>
+                finish_stream(msg, StdOut)
+                finish_stream(msg, StdErr)
                 send_error(msg, pyerr_content(e, _n))
         } finally {
             output.getBuffer.setLength(0)
