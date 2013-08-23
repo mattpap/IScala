@@ -217,6 +217,11 @@ object IScala extends App {
         }
     }
 
+    def finish_streams(msg: Msg[_]) {
+        finish_stream(msg, StdOut)
+        finish_stream(msg, StdErr)
+    }
+
     var executeMsg: Msg[Request] = _
 
     class WatchStream(std: Std) extends Thread {
@@ -294,8 +299,7 @@ object IScala extends App {
                             capture { magic.apply(interpreter, input) } match {
                                 case Some(error) => send_error(msg, pyerr(_n, "", "", List(error)))
                                 case None =>
-                                    finish_stream(msg, StdOut)
-                                    finish_stream(msg, StdErr)
+                                    finish_streams(msg)
 
                                     send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
                                         execute_ok_reply(
@@ -334,8 +338,7 @@ object IScala extends App {
                                 }
                             }
 
-                            finish_stream(msg, StdOut)
-                            finish_stream(msg, StdErr)
+                            finish_streams(msg)
 
                             result.foreach { data =>
                                 send_ipython(publish, msg_pub(msg, MsgType.pyout,
@@ -358,8 +361,7 @@ object IScala extends App {
             }
         } catch {
             case e: Exception =>
-                finish_stream(msg, StdOut)
-                finish_stream(msg, StdErr)
+                finish_streams(msg)
                 send_error(msg, pyerr_content(e, _n))
         } finally {
             interpreter.resetOutput()
