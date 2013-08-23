@@ -325,7 +325,7 @@ object IScala extends App {
                                 value.foreach(Out(_n) = _)
 
                                 interpreter.intp.beSilentDuring {
-                                    value.foreach(interpreter.intp.bindValue("_" + _n, _))
+                                    value.foreach(interpreter.intp.bind("_" + _n, "Any", _))
                                 }
                             }
 
