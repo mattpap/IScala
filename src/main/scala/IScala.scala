@@ -6,7 +6,6 @@ import java.io.{InputStream,PipedInputStream,OutputStream,
 import org.zeromq.ZMQ
 
 import scala.collection.mutable
-import scala.tools.nsc.interpreter.IR
 
 import scalax.io.JavaConverters._
 import scalax.file.Path
@@ -152,14 +151,16 @@ object IScala extends App {
         send_ipython(publish, msg)
     }
 
-    def pyerr_content(e: Exception, execution_count: Int): pyerr = {
-        val s = new StringWriter
-        val p = new PrintWriter(s)
-        e.printStackTrace(p)
-
-        val ename = e.getClass.getName
-        val evalue = e.getMessage
-        val traceback = s.toString.split("\n").toList
+    def pyerr_content(exception: Throwable, execution_count: Int): pyerr = {
+        val ename = exception.getClass.getName
+        val evalue = exception.getMessage
+        val traceback =
+            s"$ename: $evalue" ::
+            exception
+                .getStackTrace()
+                .takeWhile(_.getFileName != "<console>")
+                .map("    " + _)
+                .toList
 
         pyerr(execution_count=execution_count,
               ename=ename,
@@ -313,22 +314,12 @@ object IScala extends App {
                     }
                 case _ =>
                     val ir = capture {
-                        interpreter.intp.interpret(code)
+                        interpreter.interpret(code)
                     }
 
                     ir match {
-                        case IR.Success =>
-                            val request = interpreter.intp.prevRequestList.last
-                            val handler = request.handlers.last
-                            val eval = request.lineRep
-
-                            val value =
-                                if (!handler.definesValue) None
-                                else eval.callOpt("$result").filter(_ != null)
-
-                            val result =
-                                if (silent) None
-                                else value.map(_.toString)
+                        case Results.Success(value) =>
+                            val result = if (silent) None else value.map(_.toString)
 
                             if (!silent && store_history) {
                                 value.foreach(Out(_n) = _)
@@ -353,16 +344,21 @@ object IScala extends App {
                                     payload=Nil,
                                     user_variables=user_variables,
                                     user_expressions=user_expressions)))
-                        case IR.Error =>
+                        case Results.Failure(exception) =>
+                            finish_streams(msg)
+                            send_error(msg, pyerr_content(exception, _n))
+                        case Results.Error =>
+                            finish_streams(msg)
                             send_error(msg, pyerr(_n, "", "", interpreter.output.toString.split("\n").toList))
-                        case IR.Incomplete =>
+                        case Results.Incomplete =>
+                            finish_streams(msg)
                             send_error(msg, pyerr(_n, "", "", List("incomplete")))
                     }
             }
         } catch {
-            case e: Exception =>
+            case exception: Throwable =>
                 finish_streams(msg)
-                send_error(msg, pyerr_content(e, _n))
+                send_error(msg, pyerr_content(exception, _n)) // Internal Error
         } finally {
             interpreter.resetOutput()
             send_status(ExecutionState.idle)

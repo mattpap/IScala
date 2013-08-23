@@ -82,54 +82,43 @@ location of `IScala.jar`.
 In [1]: 1
 Out[1]: 1
 
-In [2]: (1 to 5).foreach { i => print(i); Thread.sleep(1000) }
+In [2]: 1 + 2 + 3
+Out[2]: 6
+
+In [3]: (1 to 5).foreach { i => println(i); Thread.sleep(1000) }
 1
 2
 3
 4
 5
 
-In [3]: 1/0
-java.lang.ArithmeticException: / by zero
-	at .<init>(<console>:8)
-	at .<clinit>(<console>)
-	at .<init>(<console>:7)
-	at .<clinit>(<console>)
-	at $print(<console>)
-	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
-	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:57)
-	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
-	at java.lang.reflect.Method.invoke(Method.java:616)
-	at scala.tools.nsc.interpreter.IMain$ReadEvalPrint.call(IMain.scala:734)
-	at scala.tools.nsc.interpreter.IMain$Request.loadAndRun(IMain.scala:983)
-	at scala.tools.nsc.interpreter.IMain.loadAndRunReq$1(IMain.scala:573)
-	at scala.tools.nsc.interpreter.IMain.interpret(IMain.scala:604)
-	at scala.tools.nsc.interpreter.IMain.interpret(IMain.scala:568)
-	at org.refptr.iscala.IScala$$anonfun$8.apply(IScala.scala:353)
-	at org.refptr.iscala.IScala$$anonfun$8.apply(IScala.scala:353)
-	at scala.util.DynamicVariable.withValue(DynamicVariable.scala:57)
-	at scala.Console$.withErr(Console.scala:148)
-	at org.refptr.iscala.IScala$$anonfun$capture$1.apply(IScala.scala:303)
-	at scala.util.DynamicVariable.withValue(DynamicVariable.scala:57)
-	at scala.Console$.withOut(Console.scala:107)
-	at org.refptr.iscala.IScala$.capture(IScala.scala:302)
-	at org.refptr.iscala.IScala$.handle_execute_request(IScala.scala:352)
-	at org.refptr.iscala.IScala$EventLoop.run(IScala.scala:477)
-
 In [4]: val x = 1
 Out[4]: 1
 
-In [5]: x.<TAB>
+In [5]: x
+Out[5]: 1
+
+In [6]: 100*x + 17
+Out[6]: 117
+
+In [7]: x.<TAB>
 x.%             x.-             x.>>            x.isInstanceOf  x.toFloat       x.toString      x.|
 x.&             x./             x.>>>           x.toByte        x.toInt         x.unary_+
 x.*             x.>             x.^             x.toChar        x.toLong        x.unary_-
 x.+             x.>=            x.asInstanceOf  x.toDouble      x.toShort       x.unary_~
 
-In [5]: x.to<TAB>
+In [7]: x.to<TAB>
 x.toByte    x.toChar    x.toDouble  x.toFloat   x.toInt     x.toLong    x.toShort   x.toString
 
-In [5]: x.toS<TAB>
+In [7]: x.toS<TAB>
 x.toShort   x.toString
+
+In [7]: 1/0
+java.lang.ArithmeticException: / by zero
+
+In [8]: java.util.UUID.fromString("abc")
+java.lang.IllegalArgumentException: Invalid UUID string: abc
+    java.util.UUID.fromString(UUID.java:226)
 ```
 
 ## Magics
