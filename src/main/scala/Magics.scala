@@ -15,7 +15,7 @@ trait MagicParsers[T] extends JavaTokenParsers {
     def parse(input: String): Either[T, String] = {
         parseAll(magic, input) match {
             case Success(result, _) => Left(result)
-            case failure: NoSuccess => Right(failure.msg)
+            case failure: NoSuccess => Right(failure.toString)
         }
     }
 }
