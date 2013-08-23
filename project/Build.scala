@@ -31,6 +31,8 @@ object ProjectBuild extends Build {
                 namespace %% "scala-io-file" % version)
         }
 
+        val sbt = "org.scala-sbt" % "sbt" % "0.13.0-RC5"
+
         val jopt = "net.sf.jopt-simple" % "jopt-simple" % "4.5"
 
         val jeromq = "org.jeromq" % "jeromq" % "0.3.0-SNAPSHOT"
@@ -73,7 +75,7 @@ object ProjectBuild extends Build {
         },
         libraryDependencies ++= {
             import Dependencies._
-            scalaio ++ Seq(jopt, jeromq, play_json, specs2)
+            scalaio ++ Seq(sbt, jopt, jeromq, play_json, specs2)
         },
         libraryDependencies <+= scalaVersion("org.scala-lang" % "scala-compiler" % _),
         initialCommands := """
