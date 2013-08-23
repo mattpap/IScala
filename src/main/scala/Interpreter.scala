@@ -85,4 +85,20 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
     }
 
     def stringify(obj: Any): String = intp.naming.unmangle(obj.toString)
+
+    def typeInfo(code: String, deconstruct: Boolean): Option[String] = {
+        val intp0 = intp
+        import intp0.global._
+
+        val symbol = intp0.symbolOfLine(code)
+        if (symbol.exists) {
+            Some(afterTyper {
+                val info = symbol.info match {
+                    case NullaryMethodType(restpe) if symbol.isAccessor => restpe
+                    case info                                           => info
+                }
+                stringify(if (deconstruct) intp0.deconstruct.show(info) else info)
+            })
+        } else None
+    }
 }

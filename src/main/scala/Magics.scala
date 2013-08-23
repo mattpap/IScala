@@ -24,6 +24,10 @@ object EmptyParsers extends MagicParsers[Unit] {
     def magic: Parser[Unit] = "" ^^^ ()
 }
 
+object EntireParsers extends MagicParsers[String] {
+    def magic: Parser[String] = ".*".r
+}
+
 sealed trait Op
 case object Add extends Op
 case object Del extends Op
@@ -80,7 +84,7 @@ abstract class Magic[T](val name: Symbol, parser: MagicParsers[T]) {
 }
 
 object Magic {
-    val magics = List(LibraryDependenciesMagic, ResolversMagic, UpdateMagic)
+    val magics = List(LibraryDependenciesMagic, ResolversMagic, UpdateMagic, TypeMagic, DeconstructMagic)
     val pattern = "^%([a-zA-Z_][a-zA-Z0-9_]*)(.*)\n*$".r
 
     def unapply(code: String): Option[(String, String, Option[Magic[_]])] = code match {
@@ -92,6 +96,10 @@ object Magic {
 abstract class EmptyMagic(name: Symbol) extends Magic(name, EmptyParsers) {
     def handle(interpreter: Interpreter, unit: Unit) = handle(interpreter)
     def handle(interpreter: Interpreter): Unit
+}
+
+abstract class EntireMagic(name: Symbol) extends Magic(name, EntireParsers) {
+    def handle(interpreter: Interpreter, code: String)
 }
 
 object LibraryDependenciesMagic extends Magic('libraryDependencies, LibraryDependenciesParser) {
@@ -125,5 +133,17 @@ object UpdateMagic extends EmptyMagic('update) {
             Util.debug(s"New classpath: ${interpreter.settings.classpath.value}")
             interpreter.reset()
         }
+    }
+}
+
+object TypeMagic extends EntireMagic('type) {
+    def handle(interpreter: Interpreter, code: String) {
+        interpreter.typeInfo(code, deconstruct=false).map(println)
+    }
+}
+
+object DeconstructMagic extends EntireMagic('deconstruct) {
+    def handle(interpreter: Interpreter, code: String) {
+        interpreter.typeInfo(code, deconstruct=true).map(println)
     }
 }

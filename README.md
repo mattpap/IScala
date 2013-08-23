@@ -137,6 +137,35 @@ percent sign `%` followed by an identifier and optional input to a magic. Magic
 command's syntax may resemble valid Scala, but every magic implements its own
 domain specific parser.
 
+### Type information
+
+To infer the type of an expression use `%type expr`. This doesn't require
+evaluation of `expr`, only compilation up to _typer_ phase. You can also
+get compiler's internal type trees with `%deconstruct expr`.
+
+```
+In [1]: %type 1
+Int
+
+In [2]: %deconstruct 1
+TypeRef(TypeSymbol(final abstract class Int extends AnyVal))
+
+In [3]: val x = "" + 1
+Out[3]: 1
+
+In [4]: %type x
+String
+
+In [5]: %type List(1, 2, 3)
+List[Int]
+
+In [6]: %type List("x" -> 1, "y" -> 2, "z" -> 3)
+List[(String, Int)]
+
+In [7]: %type List("x" -> 1, "y" -> 2, "z" -> 3.0)
+List[(String, AnyVal)]
+```
+
 ### Library management
 
 Library management is done by [sbt](http://www.scala-sbt.org/). There is no
