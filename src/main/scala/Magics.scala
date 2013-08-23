@@ -31,8 +31,9 @@ object EntireParsers extends MagicParsers[String] {
 sealed trait Op
 case object Add extends Op
 case object Del extends Op
-case class LibraryDependencies(op: Op, module: ModuleID)
-case class Resolvers(op: Op, resolver: Resolver)
+case object Show extends Op
+case class LibraryDependencies(op: Op, modules: List[ModuleID]=Nil)
+case class Resolvers(op: Op, resolvers: List[Resolver]=Nil)
 
 object LibraryDependenciesParser extends MagicParsers[LibraryDependencies] {
     def crossVersion: Parser[CrossVersion] = "%%" ^^^ CrossVersion.binary | "%" ^^^ CrossVersion.Disabled
@@ -44,9 +45,13 @@ object LibraryDependenciesParser extends MagicParsers[LibraryDependencies] {
 
     def op: Parser[Op] = "+=" ^^^ Add | "-=" ^^^ Del
 
-    def magic: Parser[LibraryDependencies] = op ~ module ^^ {
-        case op ~ module => LibraryDependencies(op, module)
+    def modify: Parser[LibraryDependencies] = op ~ module ^^ {
+        case op ~ module => LibraryDependencies(op, List(module))
     }
+
+    def show: Parser[LibraryDependencies] = "" ^^^ LibraryDependencies(Show)
+
+    def magic: Parser[LibraryDependencies] = modify | show
 }
 
 object ResolversParser extends MagicParsers[Resolvers] {
@@ -57,9 +62,13 @@ object ResolversParser extends MagicParsers[Resolvers] {
 
     def op: Parser[Op] = "+=" ^^^ Add | "-=" ^^^ Del
 
-    def magic: Parser[Resolvers] = op ~ resolver ^^ {
-        case op ~ resolver => Resolvers(op, resolver)
+    def modify: Parser[Resolvers] = op ~ resolver ^^ {
+        case op ~ resolver => Resolvers(op, List(resolver))
     }
+
+    def show: Parser[Resolvers] = "" ^^^ Resolvers(Show)
+
+    def magic: Parser[Resolvers] = modify | show
 }
 
 object Settings {
@@ -103,23 +112,27 @@ abstract class EntireMagic(name: Symbol) extends Magic(name, EntireParsers) {
 }
 
 object LibraryDependenciesMagic extends Magic('libraryDependencies, LibraryDependenciesParser) {
-    def handle(interpreter: Interpreter, dependency: LibraryDependencies) {
-        dependency match {
-            case LibraryDependencies(Add, dependency) =>
-                Settings.libraryDependencies :+= dependency
-            case LibraryDependencies(Del, dependency) =>
-                Settings.libraryDependencies = Settings.libraryDependencies.filter(_ != dependency)
+    def handle(interpreter: Interpreter, dependencies: LibraryDependencies) {
+        dependencies match {
+            case LibraryDependencies(Show, _) =>
+                println(Settings.libraryDependencies)
+            case LibraryDependencies(Add, dependencies) =>
+                Settings.libraryDependencies ++= dependencies
+            case LibraryDependencies(Del, dependencies) =>
+                Settings.libraryDependencies = Settings.libraryDependencies.filterNot(dependencies contains _)
         }
     }
 }
 
 object ResolversMagic extends Magic('resolvers, ResolversParser) {
-    def handle(interpreter: Interpreter, resolver: Resolvers) {
-        resolver match {
-            case Resolvers(Add, resolver) =>
-                Settings.resolvers :+= resolver
-            case Resolvers(Del, resolver) =>
-                Settings.resolvers = Settings.resolvers.filter(_ != resolver)
+    def handle(interpreter: Interpreter, resolvers: Resolvers) {
+        resolvers match {
+            case Resolvers(Show, _) =>
+                println(Settings.resolvers)
+            case Resolvers(Add, resolvers) =>
+                Settings.resolvers ++= resolvers
+            case Resolvers(Del, resolvers) =>
+                Settings.resolvers = Settings.resolvers.filterNot(resolvers contains _)
         }
     }
 }
