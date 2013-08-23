@@ -178,7 +178,7 @@ the same that IScala was compiled against.
 To resolve dependencies issue `%update`. If successful this will restart
 the interpreter to allow it to use the new classpath. Note that this
 will erase the state of the interpreter, so you will have to recompute
-all values from scratch.
+all values from scratch. Restarts don't affect interpreter's settings.
 
 ```
 In [1]: import scalaj.collection.Imports._
@@ -192,10 +192,13 @@ In [3]: %update
 [info] Resolving org.scalaj#scalaj-collection_2.10;1.5 ...
 [info] Resolving org.scala-lang#scala-library;2.10.2 ...
 
-In [4]: import scalaj.collection.Imports._
+In [1]: import scalaj.collection.Imports._
 
-In [5]: List(1, 2, 3).asJava.isInstanceOf[java.util.List[Int]]
-Out[5]: true
+In [2]: List(1, 2, 3).asJava.isInstanceOf[java.util.List[Int]]
+Out[2]: true
+
+In [3]: %libraryDependencies
+List(org.scalaj:scalaj-collection:1.5)
 ```
 
 If a dependency can't be resolved, `%update` will fail gracefully. For example,
