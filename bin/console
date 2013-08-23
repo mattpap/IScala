@@ -1,0 +1,3 @@
+#! /bin/bash
+
+ipython console --KernelManager.kernel_cmd="[\"$(dirname $0)/iscala\", \"--profile\", \"{connection_file}\"]"
