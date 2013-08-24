@@ -1,5 +1,7 @@
 package org.refptr.iscala
 
+import scala.collection.mutable
+
 import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
 import scala.tools.nsc.util.Exceptional.unwrap
 
@@ -20,7 +22,10 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
     val printer = new java.io.PrintWriter(output)
 
     private var _intp: IMain = _
-    private var _n: Int = 0
+    private var _n: Int = _
+
+    var In: mutable.Map[Int, String] = _
+    var Out: mutable.Map[Int, Any] = _
 
     def intp = _intp
     def n = _n
@@ -35,6 +40,8 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
         synchronized {
             _intp = new IMain(settings, printer)
             _n = 0
+            In = mutable.Map()
+            Out = mutable.Map()
         }
     }
 

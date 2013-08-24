@@ -5,8 +5,6 @@ import java.io.{InputStream,PipedInputStream,OutputStream,
 
 import org.zeromq.ZMQ
 
-import scala.collection.mutable
-
 import scalax.io.JavaConverters._
 import scalax.file.Path
 
@@ -282,9 +280,6 @@ object IScala extends App {
 
     lazy val interpreter = new Interpreter(options.tail)
 
-    val In = mutable.Map[Int, String]()
-    val Out = mutable.Map[Int, Any]()
-
     def handle_execute_request(socket: ZMQ.Socket, msg: Msg[execute_request]) {
         executeMsg = msg
 
@@ -297,7 +292,7 @@ object IScala extends App {
             interpreter.increment
 
             if (store_history) {
-                In(interpreter.n) = code
+                interpreter.In(interpreter.n) = code
             }
 
             send_ipython(publish, msg_pub(msg, MsgType.pyin,
@@ -328,7 +323,7 @@ object IScala extends App {
                             val result = if (silent) None else value.map(interpreter.stringify)
 
                             if (!silent && store_history) {
-                                value.foreach(Out(interpreter.n) = _)
+                                value.foreach(interpreter.Out(interpreter.n) = _)
 
                                 interpreter.intp.beSilentDuring {
                                     value.foreach(interpreter.intp.bind("_" + interpreter.n, "Any", _))
