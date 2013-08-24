@@ -42,6 +42,11 @@ object IScala extends App {
     val control = ctx.socket(ZMQ.ROUTER)
     val heartbeat = ctx.socket(ZMQ.REP)
 
+    def welcome() {
+        import scala.util.Properties._
+        log(s"Welcome to Scala $versionNumberString ($javaVmName, Java $javaVersion)")
+    }
+
     def terminate() {
         log("Shutting down")
 
@@ -467,12 +472,12 @@ object IScala extends App {
     start_heartbeat(heartbeat)
     send_status(ExecutionState.starting)
 
-    log("Starting kernel event loops")
+    debug("Starting kernel event loops")
 
     (new EventLoop(requests)).start()
     (new EventLoop(control)).start()
 
-    log("Ready")
+    welcome()
     waitloop()
 
     terminate()

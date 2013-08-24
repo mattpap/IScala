@@ -80,6 +80,9 @@ with `ipython notebook --profile scala`.
 ## Example
 
 ```
+$ ipython console --profile scala
+Welcome to Scala 2.10.2 (OpenJDK 64-Bit Server VM, Java 1.6.0_27)
+
 In [1]: 1
 Out[1]: 1
 
