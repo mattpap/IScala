@@ -32,7 +32,7 @@ Ignore any (deprecation) warnings you will get. To start IScala issue:
 > run
 [info] Running org.refptr.iscala.IScala
 [info] connect ipython with --existing profile-18271.json
-[info] Starting kernel event loops.
+[info] Welcome to Scala 2.10.2 (OpenJDK 64-Bit Server VM, Java 1.6.0_27)
 ```
 To terminate a kernel press `Ctrl+C`. Finally to generate a JAR file with IScala's
 class files, data files and all dependencies, issue `assembly`. You can run it with:
@@ -67,7 +67,7 @@ $ ipython profile create scala
 ```
 Then add the following line:
 ```
-c.KernelManager.kernel_cmd = [\"java\", \"-jar\", \"$ISCALA_PATH/IScala.jar\", \"--profile\", \"{connection_file}\", \"--parent\"]"
+c.KernelManager.kernel_cmd = ["java", "-jar", "$ISCALA_PATH/IScala.jar", "--profile", "{connection_file}", "--parent"]"
 ```
 to `~/.config/ipython/profile_scala/ipython_config.py`. Replace `$ISCALA_PATH`
 with the actual location of `IScala.jar`. Then you can run IPython notebook
