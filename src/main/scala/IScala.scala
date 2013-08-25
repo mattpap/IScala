@@ -1,5 +1,7 @@
 package org.refptr.iscala
 
+import sun.misc.{Signal,SignalHandler}
+
 import org.zeromq.ZMQ
 
 import scalax.io.JavaConverters._
@@ -44,6 +46,17 @@ object IScala extends App {
         }
     })
 
+    Signal.handle(new Signal("INT"), new SignalHandler {
+        private var previously: Long = 0
+
+        def handle(signal: Signal) {
+            if (!options.parent) {
+                val now = System.currentTimeMillis
+                if (now - previously < 500) sys.exit() else previously = now
+            }
+        }
+    })
+
     def finish_stream(msg: Msg[_], std: Std) {
         std.output.flush()
         val n = std.input.available
@@ -65,18 +78,14 @@ object IScala extends App {
         override def run() {
             val size = 10240
             val buffer = new Array[Byte](size)
-            try {
-                while (true) {
-                    val n = std.input.read(buffer)
-                    ipy.send_stream(executeMsg, std, new String(buffer.take(n)))
-                    if (n < size) {
-                        Thread.sleep(100) // a little delay to accumulate output
-                    }
+
+            while (true) {
+                val n = std.input.read(buffer)
+                ipy.send_stream(executeMsg, std, new String(buffer.take(n)))
+
+                if (n < size) {
+                    Thread.sleep(100) // a little delay to accumulate output
                 }
-            } catch {
-                case _: InterruptedException =>
-                    // the IPython manager may send us a SIGINT if the user
-                    // chooses to interrupt the kernel; don't crash on this
             }
         }
     }
@@ -225,6 +234,7 @@ object IScala extends App {
         ipy.send(socket, ipy.msg_reply(msg, MsgType.shutdown_reply,
             shutdown_reply(
                 restart=msg.content.restart)))
+        sys.exit()
     }
 
     def handle_object_info_request(socket: ZMQ.Socket, msg: Msg[object_info_request]) {
@@ -270,13 +280,7 @@ object IScala extends App {
 
     def waitloop() {
         while (true) {
-            try {
-                Thread.sleep(1000*60)
-            } catch {
-                case _: InterruptedException =>
-                    // the IPython manager may send us a SIGINT if the user
-                    // chooses to interrupt the kernel; don't crash on this
-            }
+            Thread.sleep(1000*60)
         }
     }
 
