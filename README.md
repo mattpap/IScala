@@ -54,11 +54,7 @@ This will print Scala syntax trees after _typer_ compiler phase.
 
 To start IPython Notebook, issue:
 ```
-ipython notebook --KernelManager.kernel_cmd='["bin/iscala", "--profile", "{connection_file}"]'
-```
-or more explicitly:
-```
-ipython notebook --KernelManager.kernel_cmd='["java", "-jar", "IScala.jar", "--profile", "{connection_file}"]'
+ipython notebook --KernelManager.kernel_cmd='["java", "-jar", "IScala.jar", "--profile", "{connection_file}", "--parent"]'
 ```
 or just use `bin/notebook` script. Make sure that `IScala.jar` exists. If not, run `./sbt assembly`
 to generate it. Alternatively (and better in the long run) you can also create an IPython profile
@@ -71,7 +67,7 @@ $ ipython profile create scala
 ```
 Then add the following line:
 ```
-c.KernelManager.kernel_cmd = [\"java\", \"-jar\", \"$ISCALA_PATH/IScala.jar\", \"--profile\", \"{connection_file}\"]"
+c.KernelManager.kernel_cmd = [\"java\", \"-jar\", \"$ISCALA_PATH/IScala.jar\", \"--profile\", \"{connection_file}\", \"--parent\"]"
 ```
 to `~/.config/ipython/profile_scala/ipython_config.py`. Replace `$ISCALA_PATH`
 with the actual location of `IScala.jar`. Then you can run IPython notebook

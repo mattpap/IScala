@@ -1,3 +1,17 @@
 #! /bin/bash
 
-ipython notebook --KernelManager.kernel_cmd="[\"$(dirname $0)/iscala\", \"--profile\", \"{connection_file}\"]"
+JAR_NAME="IScala.jar"
+JAR_PATH="$(dirname $0)/$JAR_NAME"
+
+if [ ! -e "$JAR_PATH" ]; then
+    JAR_PATH="$(pwd)/$JAR_NAME"
+
+    if [ ! -e "$JAR_PATH" ]; then
+        echo "$JAR doesn't exist. Run './sbt assembly' to generate it." >&2
+        exit 1
+    fi
+fi
+
+KERNEL_CMD="[\"java\", \"-jar\", \"$JAR_PATH\", \"--profile\", \"{connection_file}\", \"--parent\", \"$@\"]"
+
+ipython notebook --KernelManager.kernel_cmd="$KERNEL_CMD"
