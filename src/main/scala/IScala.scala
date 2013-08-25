@@ -197,7 +197,7 @@ object IScala extends App {
             complete_reply(
                 status=ExecutionStatus.ok,
                 matches=matches,
-                text=text)))
+                matched_text=text)))
     }
 
     def handle_kernel_info_request(socket: ZMQ.Socket, msg: Msg[kernel_info_request]) {
