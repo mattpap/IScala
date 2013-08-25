@@ -246,16 +246,24 @@ object IScala extends App {
     class EventLoop(socket: ZMQ.Socket) extends Thread {
         override def run() {
             while (true) {
-                val msg = ipy.recv(socket)
+                val msg = try {
+                    Some(ipy.recv(socket))
+                } catch {
+                    case e: play.api.libs.json.JsResultException =>
+                        Util.log(s"JSON deserialization error: ${e.getMessage}")
+                        None
+                }
 
-                msg.header.msg_type match {
-                    case MsgType.execute_request => handle_execute_request(socket, msg.asInstanceOf[Msg[execute_request]])
-                    case MsgType.complete_request => handle_complete_request(socket, msg.asInstanceOf[Msg[complete_request]])
-                    case MsgType.kernel_info_request => handle_kernel_info_request(socket, msg.asInstanceOf[Msg[kernel_info_request]])
-                    case MsgType.object_info_request => handle_object_info_request(socket, msg.asInstanceOf[Msg[object_info_request]])
-                    case MsgType.connect_request => handle_connect_request(socket, msg.asInstanceOf[Msg[connect_request]])
-                    case MsgType.shutdown_request => handle_shutdown_request(socket, msg.asInstanceOf[Msg[shutdown_request]])
-                    case MsgType.history_request => handle_history_request(socket, msg.asInstanceOf[Msg[history_request]])
+                msg.foreach { msg =>
+                    msg.header.msg_type match {
+                        case MsgType.execute_request => handle_execute_request(socket, msg.asInstanceOf[Msg[execute_request]])
+                        case MsgType.complete_request => handle_complete_request(socket, msg.asInstanceOf[Msg[complete_request]])
+                        case MsgType.kernel_info_request => handle_kernel_info_request(socket, msg.asInstanceOf[Msg[kernel_info_request]])
+                        case MsgType.object_info_request => handle_object_info_request(socket, msg.asInstanceOf[Msg[object_info_request]])
+                        case MsgType.connect_request => handle_connect_request(socket, msg.asInstanceOf[Msg[connect_request]])
+                        case MsgType.shutdown_request => handle_shutdown_request(socket, msg.asInstanceOf[Msg[shutdown_request]])
+                        case MsgType.history_request => handle_history_request(socket, msg.asInstanceOf[Msg[history_request]])
+                    }
                 }
             }
         }
