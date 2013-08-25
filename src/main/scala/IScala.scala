@@ -34,15 +34,9 @@ object IScala extends App {
         log(s"Welcome to Scala $versionNumberString ($javaVmName, Java $javaVersion)")
     }
 
-    def terminate() {
-        log("Shutting down")
-        zmq.terminate()
-    }
-
     Runtime.getRuntime().addShutdownHook(new Thread() {
         override def run() {
             log("Terminating IScala")
-            // terminate()
         }
     })
 
@@ -89,12 +83,6 @@ object IScala extends App {
             }
         }
     }
-
-    val watchOut = new WatchStream(StdOut)
-    val watchErr = new WatchStream(StdErr)
-
-    watchOut.start()
-    watchErr.start()
 
     def capture[T](block: => T): T = {
         Console.withOut(StdOut.stream) {
@@ -249,15 +237,10 @@ object IScala extends App {
                 history=Nil)))
     }
 
-    class HeartBeat(socket: ZMQ.Socket) extends Thread {
+    class HeartBeat extends Thread {
         override def run() {
-            ZMQ.proxy(socket, socket, null)
+            ZMQ.proxy(zmq.heartbeat, zmq.heartbeat, null)
         }
-    }
-
-    def start_heartbeat(socket: ZMQ.Socket) {
-        val thread = new HeartBeat(socket)
-        thread.start()
     }
 
     class EventLoop(socket: ZMQ.Socket) extends Thread {
@@ -284,7 +267,10 @@ object IScala extends App {
         }
     }
 
-    start_heartbeat(zmq.heartbeat)
+    (new WatchStream(StdOut)).start()
+    (new WatchStream(StdErr)).start()
+
+    (new HeartBeat).start()
     ipy.send_status(ExecutionState.starting)
 
     debug("Starting kernel event loops")
@@ -294,6 +280,4 @@ object IScala extends App {
 
     welcome()
     waitloop()
-
-    terminate()
 }
