@@ -31,14 +31,7 @@ object IScala extends App {
     }
 
     val hmac = new HMAC(profile.key)
-
-    val ctx = ZMQ.context(1)
-
-    val publish = ctx.socket(ZMQ.PUB)
-    val raw_input = ctx.socket(ZMQ.ROUTER)
-    val requests = ctx.socket(ZMQ.ROUTER)
-    val control = ctx.socket(ZMQ.ROUTER)
-    val heartbeat = ctx.socket(ZMQ.REP)
+    val zmq = new Sockets(profile)
 
     def welcome() {
         import scala.util.Properties._
@@ -47,31 +40,15 @@ object IScala extends App {
 
     def terminate() {
         log("Shutting down")
-
-        publish.close()
-        raw_input.close()
-        requests.close()
-        control.close()
-        heartbeat.close()
-
-        ctx.term()
+        zmq.terminate()
     }
 
-    /*
     Runtime.getRuntime().addShutdownHook(new Thread() {
         override def run() {
-            terminate()
+            log("Terminating IScala")
+            // terminate()
         }
     })
-    */
-
-    def uri(port: Int) = s"${profile.transport}://${profile.ip}:$port"
-
-    publish.bind(uri(profile.iopub_port))
-    requests.bind(uri(profile.shell_port))
-    control.bind(uri(profile.control_port))
-    raw_input.bind(uri(profile.stdin_port))
-    heartbeat.bind(uri(profile.hb_port))
 
     def msg_header(m: Msg[_], msg_type: MsgType): Header =
         Header(msg_id=uuid4(),
@@ -151,14 +128,14 @@ object IScala extends App {
             Metadata(),
             status(
                 execution_state=state))
-        send_ipython(publish, msg)
+        send_ipython(zmq.publish, msg)
     }
 
     def send_ok(msg: Msg[_], execution_count: Int) {
         val user_variables: List[String] = Nil
         val user_expressions: Map[String, String] = Map()
 
-        send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
+        send_ipython(zmq.requests, msg_reply(msg, MsgType.execute_reply,
             execute_ok_reply(
                 execution_count=execution_count,
                 payload=Nil,
@@ -188,8 +165,8 @@ object IScala extends App {
     }
 
     def send_error(msg: Msg[_], err: pyerr) {
-        send_ipython(publish, msg_pub(msg, MsgType.pyerr, err))
-        send_ipython(requests, msg_reply(msg, MsgType.execute_reply,
+        send_ipython(zmq.publish, msg_pub(msg, MsgType.pyerr, err))
+        send_ipython(zmq.requests, msg_reply(msg, MsgType.execute_reply,
             execute_error_reply(
                 execution_count=err.execution_count,
                 ename=err.ename,
@@ -221,7 +198,7 @@ object IScala extends App {
     }
 
     def send_stream(msg: Msg[_], std: Std, data: String) {
-        send_ipython(publish, msg_pub(msg, MsgType.stream,
+        send_ipython(zmq.publish, msg_pub(msg, MsgType.stream,
             stream(
                 name=std.name,
                 data=data)))
@@ -295,7 +272,7 @@ object IScala extends App {
                 interpreter.In(interpreter.n) = code
             }
 
-            send_ipython(publish, msg_pub(msg, MsgType.pyin,
+            send_ipython(zmq.publish, msg_pub(msg, MsgType.pyin,
                 pyin(
                     execution_count=interpreter.n,
                     code=code)))
@@ -333,7 +310,7 @@ object IScala extends App {
                             finish_streams(msg)
 
                             result.foreach { data =>
-                                send_ipython(publish, msg_pub(msg, MsgType.pyout,
+                                send_ipython(zmq.publish, msg_pub(msg, MsgType.pyout,
                                     pyout(
                                         execution_count=interpreter.n,
                                         data=Data("text/plain" -> data))))
@@ -464,13 +441,13 @@ object IScala extends App {
         }
     }
 
-    start_heartbeat(heartbeat)
+    start_heartbeat(zmq.heartbeat)
     send_status(ExecutionState.starting)
 
     debug("Starting kernel event loops")
 
-    (new EventLoop(requests)).start()
-    (new EventLoop(control)).start()
+    (new EventLoop(zmq.requests)).start()
+    (new EventLoop(zmq.control)).start()
 
     welcome()
     waitloop()
