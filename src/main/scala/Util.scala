@@ -1,14 +1,9 @@
 package org.refptr.iscala
 
-import java.util.UUID
 import java.lang.management.ManagementFactory
 
 trait ScalaUtil {
     def scalaVersion = scala.util.Properties.versionNumberString
-}
-
-trait UUIDUtil {
-    def uuid4(): UUID = UUID.randomUUID()
 }
 
 trait ByteUtil {
@@ -69,5 +64,5 @@ trait StringUtil {
     }
 }
 
-trait Util extends ScalaUtil with UUIDUtil with ByteUtil with OSUtil with ConsoleUtil with StringUtil
+trait Util extends ScalaUtil with ByteUtil with OSUtil with ConsoleUtil with StringUtil
 object Util extends Util

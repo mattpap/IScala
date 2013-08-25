@@ -1,11 +1,12 @@
 package org.refptr.iscala.json
 
-import java.util.UUID
 import scala.reflect.ClassTag
 
 import play.api.libs.json.{Json=>PlayJson,Reads,Writes,OWrites,Format,JsPath}
 import play.api.libs.json.{JsResult,JsSuccess,JsError}
 import play.api.libs.json.{JsValue,JsString,JsArray,JsObject}
+
+import org.refptr.iscala.UUID
 
 object JsonUtil {
     def toJSON[T:Writes](obj: T): String =
@@ -208,12 +209,9 @@ trait UUIDJson {
     implicit val UUIDReads: Reads[UUID] = new Reads[UUID] {
         def reads(json: JsValue) = json match {
             case JsString(uuid) =>
-                try {
-                    JsSuccess(UUID.fromString(uuid))
-                } catch {
-                    case e: java.lang.IllegalArgumentException =>
-                        JsError(e.getMessage)
-                }
+                UUID.fromString(uuid)
+                    .map(JsSuccess(_))
+                    .getOrElse{JsError(s"Invalid UUID string: $uuid")}
             case _ => JsError("Not a string")
         }
     }

@@ -1,7 +1,5 @@
 package org.refptr.iscala
 
-import java.util.UUID
-
 import org.refptr.iscala.json.{Json,JsonImplicits}
 
 case class Profile(
@@ -27,6 +25,6 @@ object Profile {
                 hb_port=port0+2,
                 shell_port=port0+3,
                 iopub_port=port0+4,
-                key=Util.uuid4())
+                key=UUID.uuid4())
     }
 }

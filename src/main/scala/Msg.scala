@@ -1,7 +1,5 @@
 package org.refptr.iscala
 
-import java.util.UUID
-
 package object msg {
     type MIME = String
 

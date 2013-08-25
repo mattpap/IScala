@@ -7,7 +7,7 @@ import play.api.libs.json.{Reads,Writes}
 import org.refptr.iscala.msg._
 import org.refptr.iscala.formats._
 
-import org.refptr.iscala.Util.{uuid4,log,debug}
+import org.refptr.iscala.Util.{log,debug}
 import org.refptr.iscala.json.JsonUtil._
 
 class Communication(zmq: Sockets, profile: Profile) {
@@ -15,7 +15,7 @@ class Communication(zmq: Sockets, profile: Profile) {
 
     // TODO: move msg_header, msg_pub and msg_reply to Msg when knownDirectSubclasses is fixed.
     private def msg_header(m: Msg[_], msg_type: MsgType): Header =
-        Header(msg_id=uuid4(),
+        Header(msg_id=UUID.uuid4(),
                username=m.header.username,
                session=m.header.session,
                msg_type=msg_type)
@@ -84,9 +84,9 @@ class Communication(zmq: Sockets, profile: Profile) {
     def send_status(state: ExecutionState) {
         val msg = Msg(
             "status" :: Nil,
-            Header(msg_id=uuid4(),
+            Header(msg_id=UUID.uuid4(),
                    username="scala_kernel",
-                   session=uuid4(),
+                   session=UUID.uuid4(),
                    msg_type=MsgType.status),
             None,
             Metadata(),

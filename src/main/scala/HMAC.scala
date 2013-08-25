@@ -1,7 +1,5 @@
 package org.refptr.iscala
 
-import java.util.UUID
-
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
