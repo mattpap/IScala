@@ -274,16 +274,12 @@ object IScala extends App {
         }
     }
 
-    def waitloop() {
-        while (true) {
-            Thread.sleep(1000*60)
-        }
-    }
-
     (new WatchStream(StdOut)).start()
     (new WatchStream(StdErr)).start()
 
-    (new HeartBeat).start()
+    val heartBeat = new HeartBeat
+    heartBeat.start()
+
     ipy.send_status(ExecutionState.starting)
 
     debug("Starting kernel event loops")
@@ -292,5 +288,5 @@ object IScala extends App {
     (new EventLoop(zmq.control)).start()
 
     welcome()
-    waitloop()
+    heartBeat.join()
 }
