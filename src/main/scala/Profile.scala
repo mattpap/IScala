@@ -10,7 +10,7 @@ case class Profile(
     hb_port: Int,
     shell_port: Int,
     iopub_port: Int,
-    key: UUID)
+    key: String)
 
 object Profile {
     import JsonImplicits._
@@ -25,6 +25,6 @@ object Profile {
                 hb_port=port0+2,
                 shell_port=port0+3,
                 iopub_port=port0+4,
-                key=UUID.uuid4())
+                key=UUID.uuid4().toString)
     }
 }

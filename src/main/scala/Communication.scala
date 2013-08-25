@@ -11,7 +11,7 @@ import org.refptr.iscala.Util.{log,debug}
 import org.refptr.iscala.json.JsonUtil._
 
 class Communication(zmq: Sockets, profile: Profile) {
-    private val hmac = new HMAC(profile.key)
+    private val hmac = HMAC(profile.key)
 
     // TODO: move msg_header, msg_pub and msg_reply to Msg when knownDirectSubclasses is fixed.
     private def msg_header(m: Msg[_], msg_type: MsgType): Header =
