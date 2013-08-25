@@ -102,6 +102,11 @@ object IScala extends App {
         val silent = content.silent || code.trim.endsWith(";")
         val store_history = content.store_history getOrElse !silent
 
+        if (code.trim.isEmpty) {
+            ipy.send_ok(msg, interpreter.n)
+            return
+        }
+
         if (!silent) {
             interpreter.increment
 
