@@ -42,7 +42,7 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
 
     def settings = commandLine.settings
 
-    def increment = _n += 1
+    def ++ = _n += 1
 
     def reset() {
         synchronized {

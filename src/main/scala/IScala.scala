@@ -97,6 +97,8 @@ object IScala extends App {
     lazy val interpreter = new Interpreter(options.tail)
 
     def handle_execute_request(socket: ZMQ.Socket, msg: Msg[execute_request]) {
+        import interpreter.{n,In,Out}
+
         executeMsg = msg
 
         val content = msg.content
@@ -110,15 +112,15 @@ object IScala extends App {
         }
 
         if (!silent) {
-            interpreter.increment
+            interpreter++
 
             if (store_history) {
-                interpreter.In(interpreter.n) = code
+                In(n) = code
             }
 
             ipy.send(zmq.publish, ipy.msg_pub(msg, MsgType.pyin,
                 pyin(
-                    execution_count=interpreter.n,
+                    execution_count=n,
                     code=code)))
         }
 
@@ -130,21 +132,21 @@ object IScala extends App {
                     capture { magic(interpreter, input) } match {
                         case None =>
                             finish_streams(msg)
-                            ipy.send_ok(msg, interpreter.n)
+                            ipy.send_ok(msg, n)
                         case Some(error) =>
                             finish_streams(msg)
-                            ipy.send_error(msg, interpreter.n, error)
+                            ipy.send_error(msg, n, error)
                     }
                 case Magic(name, _, None) =>
                     finish_streams(msg)
-                    ipy.send_error(msg, interpreter.n, s"ERROR: Line magic function `%$name` not found.")
+                    ipy.send_error(msg, n, s"ERROR: Line magic function `%$name` not found.")
                 case _ =>
                     capture { interpreter.interpret(code) } match {
                         case Results.Success(value) =>
                             val result = if (silent) None else value.map(interpreter.stringify)
 
                             if (!silent && store_history) {
-                                value.foreach(interpreter.Out(interpreter.n) = _)
+                                value.foreach(Out(n) = _)
 
                                 interpreter.intp.beSilentDuring {
                                     value.foreach(interpreter.intp.bind("_" + interpreter.n, "Any", _))
@@ -156,29 +158,29 @@ object IScala extends App {
                             result.foreach { data =>
                                 ipy.send(zmq.publish, ipy.msg_pub(msg, MsgType.pyout,
                                     pyout(
-                                        execution_count=interpreter.n,
+                                        execution_count=n,
                                         data=Data("text/plain" -> data))))
                             }
 
-                            ipy.send_ok(msg, interpreter.n)
+                            ipy.send_ok(msg, n)
                         case Results.Failure(exception) =>
                             finish_streams(msg)
-                            ipy.send_error(msg, ipy.pyerr_content(exception, interpreter.n))
+                            ipy.send_error(msg, ipy.pyerr_content(exception, n))
                         case Results.Error =>
                             finish_streams(msg)
-                            ipy.send_error(msg, interpreter.n, interpreter.output.toString)
+                            ipy.send_error(msg, n, interpreter.output.toString)
                         case Results.Incomplete =>
                             finish_streams(msg)
-                            ipy.send_error(msg, interpreter.n, "incomplete")
+                            ipy.send_error(msg, n, "incomplete")
                         case Results.Cancelled =>
                             finish_streams(msg)
-                            ipy.send_error(msg, interpreter.n, "cancelled")
+                            ipy.send_error(msg, n, "cancelled")
                     }
             }
         } catch {
             case exception: Throwable =>
                 finish_streams(msg)
-                ipy.send_error(msg, ipy.pyerr_content(exception, interpreter.n)) // Internal Error
+                ipy.send_error(msg, ipy.pyerr_content(exception, n)) // Internal Error
         } finally {
             interpreter.resetOutput()
             ipy.send_status(ExecutionState.idle)
