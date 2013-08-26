@@ -109,23 +109,6 @@ class Communication(zmq: Sockets, profile: Profile) {
                 user_expressions=user_expressions)))
     }
 
-    def pyerr_content(exception: Throwable, execution_count: Int): pyerr = {
-        val ename = exception.getClass.getName
-        val evalue = exception.getMessage
-        val traceback =
-            s"$ename: $evalue" ::
-            exception
-                .getStackTrace()
-                .takeWhile(_.getFileName != "<console>")
-                .map("    " + _)
-                .toList
-
-        pyerr(execution_count=execution_count,
-              ename=ename,
-              evalue=evalue,
-              traceback=traceback)
-    }
-
     def send_error(msg: Msg[_], execution_count: Int, error: String) {
         send_error(msg, pyerr(execution_count, "", "", error.split("\n").toList))
     }

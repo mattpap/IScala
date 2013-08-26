@@ -42,6 +42,23 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
         }
     }
 
+    def pyerr_content(exception: Throwable, execution_count: Int): pyerr = {
+        val ename = interpreter.stringify(exception.getClass.getName)
+        val evalue = interpreter.stringify(exception.getMessage)
+        val stacktrace = exception
+             .getStackTrace()
+             .takeWhile(_.getFileName != "<console>")
+             .map(interpreter.stringify)
+             .map("    " + _)
+             .toList
+        val traceback = s"$ename: $evalue" :: stacktrace
+
+        pyerr(execution_count=execution_count,
+              ename=ename,
+              evalue=evalue,
+              traceback=traceback)
+    }
+
     def apply(socket: ZMQ.Socket, msg: Msg[execute_request]) {
         import interpreter.{n,In,Out}
 
@@ -111,7 +128,7 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                             ipy.send_ok(msg, n)
                         case Results.Failure(exception) =>
                             finish_streams(msg)
-                            ipy.send_error(msg, ipy.pyerr_content(exception, n))
+                            ipy.send_error(msg, pyerr_content(exception, n))
                         case Results.Error =>
                             finish_streams(msg)
                             ipy.send_error(msg, n, interpreter.output.toString)
@@ -126,7 +143,7 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
         } catch {
             case exception: Throwable =>
                 finish_streams(msg)
-                ipy.send_error(msg, ipy.pyerr_content(exception, n)) // Internal Error
+                ipy.send_error(msg, pyerr_content(exception, n)) // Internal Error
         } finally {
             interpreter.resetOutput()
             ipy.send_status(ExecutionState.idle)
