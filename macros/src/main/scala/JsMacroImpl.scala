@@ -35,11 +35,7 @@ object JsMacroImpl {
      *
      * `T` is a sealed trait with case subclasses `T_1`, ... `T_n`. Fields `field_1`,
      * ..., `field_n` are `T`'s vals that don't appear in `T_i` constructors.
-     *
-     * Make sure that trait and subclasses, and implicit val are in separate compilation
-     * units. Otherwise, due to a bug in the compiler (see SI-7048), `knownDirectSubclasses`
-     * will give an empty list even if subclasses exist.
-    */
+     */
     def sealedWritesImpl[A: c.WeakTypeTag](c: Context): c.Expr[Writes[A]] = {
         import c.universe._
 

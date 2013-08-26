@@ -5,7 +5,7 @@ import org.zeromq.ZMQ
 import play.api.libs.json.{Reads,Writes}
 
 import org.refptr.iscala.msg._
-import org.refptr.iscala.formats._
+import org.refptr.iscala.msg.formats._
 
 import org.refptr.iscala.Util.{log,debug}
 import org.refptr.iscala.json.JsonUtil._

@@ -3,7 +3,7 @@ package org.refptr.iscala
 import org.zeromq.ZMQ
 
 import org.refptr.iscala.msg._
-import org.refptr.iscala.formats._
+import org.refptr.iscala.msg.formats._
 
 import Util.{log,debug}
 

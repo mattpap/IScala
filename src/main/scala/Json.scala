@@ -23,11 +23,11 @@ object JsonUtil {
 object Json {
     def toJson[T:Writes](obj: T): JsValue = PlayJson.toJson(obj)
 
-    def reads[A] = macro JsMacroImpl.readsImpl[A]
-    def writes[A] = macro JsMacroImpl.sealedWritesImpl[A]
-    def format[A] = macro JsMacroImpl.formatImpl[A]
+    def reads[A]:  Reads[A]  = macro JsMacroImpl.readsImpl[A]
+    def writes[A]: Writes[A] = macro JsMacroImpl.sealedWritesImpl[A]
+    def format[A]: Format[A] = macro JsMacroImpl.formatImpl[A]
 
-    def noFields[A:ClassTag] = NoFields.format
+    def noFields[A:ClassTag]: Format[A] = NoFields.format
 }
 
 object NoFields {

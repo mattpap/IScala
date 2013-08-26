@@ -452,3 +452,57 @@ case class input_request(
 
 case class input_reply(
     value: String) extends Reply
+
+// XXX: This was originally in src/main/scala/Formats.scala, but due to
+// a bug in the compiler related to `knownDirectSubclasses` and possibly
+// also other bugs (e.g. `isCaseClass`), formats had to be moved here
+// and explicit type annotations had to be added for formats of sealed
+// traits. Otherwise no known subclasses will be reported.
+
+import org.refptr.iscala.json.{Json,EnumJson,JsonImplicits}
+import org.refptr.iscala.msg._
+import JsonImplicits._
+
+import play.api.libs.json.Writes
+
+package object formats {
+    implicit val MsgTypeFormat = EnumJson.format(MsgType)
+    implicit val HeaderFormat = Json.format[Header]
+
+    implicit val ExecutionStatusFormat = EnumJson.format(ExecutionStatus)
+    implicit val ExecutionStateFormat = EnumJson.format(ExecutionState)
+    implicit val HistAccessTypeFormat = EnumJson.format(HistAccessType)
+
+    implicit val ArgSpecFormat = Json.format[ArgSpec]
+
+    implicit val ExecuteRequestJSON = Json.format[execute_request]
+    implicit val ExecuteReplyJSON: Writes[execute_reply] = Json.writes[execute_reply]
+
+    implicit val ObjectInfoRequestJSON = Json.format[object_info_request]
+    implicit val ObjectInfoReplyJSON: Writes[object_info_reply] = Json.writes[object_info_reply]
+
+    implicit val CompleteRequestJSON = Json.format[complete_request]
+    implicit val CompleteReplyJSON = Json.format[complete_reply]
+
+    implicit val HistoryRequestJSON = Json.format[history_request]
+    implicit val HistoryReplyJSON = Json.format[history_reply]
+
+    implicit val ConnectRequestJSON = Json.noFields[connect_request]
+    implicit val ConnectReplyJSON = Json.format[connect_reply]
+
+    implicit val KernelInfoRequestJSON = Json.noFields[kernel_info_request]
+    implicit val KernelInfoReplyJSON = Json.format[kernel_info_reply]
+
+    implicit val ShutdownRequestJSON = Json.format[shutdown_request]
+    implicit val ShutdownReplyJSON = Json.format[shutdown_reply]
+
+    implicit val StreamJSON = Json.format[stream]
+    implicit val DisplayDataJSON = Json.format[display_data]
+    implicit val PyinJSON = Json.format[pyin]
+    implicit val PyoutJSON = Json.format[pyout]
+    implicit val PyerrJSON = Json.format[pyerr]
+    implicit val StatusJSON = Json.format[status]
+
+    implicit val InputRequestJSON = Json.format[input_request]
+    implicit val InputReplyJSON = Json.format[input_reply]
+}
