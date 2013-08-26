@@ -83,7 +83,7 @@ fi
 
 JAVA_OPTS="$JAVA_OPTS $JVM_OPTS"
 
-SBT_VERSION="0.13.0-RC5"
+SBT_VERSION="0.13.0"
 SBT_LAUNCHER="$(dirname $0)/project/sbt-launch-$SBT_VERSION.jar"
 
 if [ ! -e "$SBT_LAUNCHER" ];

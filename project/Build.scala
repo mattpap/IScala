@@ -29,7 +29,7 @@ object ProjectBuild extends Build {
                 namespace %% "scala-io-file" % version)
         }
 
-        val ivy = "org.scala-sbt" % "ivy" % "0.13.0-RC5"
+        val ivy = "org.scala-sbt" % "ivy" % "0.13.0"
 
         val jopt = "net.sf.jopt-simple" % "jopt-simple" % "4.5"
 
