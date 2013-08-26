@@ -81,6 +81,8 @@ class Communication(zmq: Sockets, profile: Profile) {
         msg
     }
 
+    def publish[T<:Reply:Writes](msg: Msg[T]) = send(zmq.publish, msg)
+
     def send_status(state: ExecutionState) {
         val msg = Msg(
             "status" :: Nil,
