@@ -44,6 +44,8 @@ object IScala extends App {
         private var previously: Long = 0
 
         def handle(signal: Signal) {
+            interpreter.cancel()
+
             if (!options.parent) {
                 val now = System.currentTimeMillis
                 if (now - previously < 500) sys.exit() else previously = now
@@ -168,6 +170,9 @@ object IScala extends App {
                         case Results.Incomplete =>
                             finish_streams(msg)
                             ipy.send_error(msg, interpreter.n, "incomplete")
+                        case Results.Cancelled =>
+                            finish_streams(msg)
+                            ipy.send_error(msg, interpreter.n, "cancelled")
                     }
             }
         } catch {

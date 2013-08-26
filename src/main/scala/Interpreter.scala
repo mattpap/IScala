@@ -1,9 +1,14 @@
 package org.refptr.iscala
 
+import java.util.concurrent.locks.ReentrantLock
+
 import scala.collection.mutable
 
 import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
 import scala.tools.nsc.util.Exceptional.unwrap
+import scala.tools.nsc.io
+
+import Util.{log,debug}
 
 object Results {
     sealed trait Result
@@ -11,6 +16,7 @@ object Results {
     final case class Failure(exception: Throwable) extends Result
     final case object Error extends Result
     final case object Incomplete extends Result
+    final case object Cancelled extends Result
 }
 
 class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
@@ -22,12 +28,14 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
     val printer = new java.io.PrintWriter(output)
 
     private var _intp: IMain = _
+    private var _runner: Runner = _
     private var _n: Int = _
 
     var In: mutable.Map[Int, String] = _
     var Out: mutable.Map[Int, Any] = _
 
     def intp = _intp
+    def runner = _runner
     def n = _n
 
     reset()
@@ -39,6 +47,7 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
     def reset() {
         synchronized {
             _intp = new IMain(settings, printer)
+            _runner = new Runner(_intp.classLoader)
             _n = 0
             In = mutable.Map()
             Out = mutable.Map()
@@ -75,13 +84,22 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
             val name = if (definesValue) result else print
 
             try {
-                val value = req.lineRep.call(name)
-                intp0.recordRequest(req)
-                Results.Success(if (definesValue && value != null) Some(value) else None)
-            } catch {
-                case exception: Throwable =>
-                    req.lineRep.bindError(exception)
-                    Results.Failure(unwrap(exception))
+                val execution = runner.execute {
+                    try {
+                        val value = req.lineRep.call(name)
+                        Results.Success(if (definesValue && value != null) Some(value) else None)
+                    } catch {
+                        case exception: Throwable =>
+                            req.lineRep.bindError(exception)
+                            Results.Failure(unwrap(exception))
+                    }
+                }
+
+                val outcome = execution.result()
+                if (outcome.isInstanceOf[Results.Success]) intp0.recordRequest(req)
+                outcome
+            } finally {
+                runner.clear()
             }
         }
 
@@ -96,6 +114,8 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
                 else loadAndRunReq(req)
         }
     }
+
+    def cancel() = runner.cancel()
 
     def stringify(obj: Any): String = intp.naming.unmangle(obj.toString)
 
@@ -113,5 +133,71 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
                 stringify(if (deconstruct) intp0.deconstruct.show(info) else info)
             })
         } else None
+    }
+}
+
+class Runner(classLoader: ClassLoader) {
+    class Execution(body: => Results.Result) {
+        private var _result: Option[Results.Result] = None
+
+        private val lock     = new ReentrantLock()
+        private val finished = lock.newCondition()
+
+        private def withLock[T](body: => T) = {
+            lock.lock()
+            try body
+            finally lock.unlock()
+        }
+
+        private def setResult(result: Results.Result) = withLock {
+            _result = Some(result)
+            finished.signal()
+        }
+
+        private val _thread = io.newThread {
+            _.setContextClassLoader(classLoader)
+        } {
+            setResult(body)
+        }
+
+        private[Runner] def cancel() = if (running) setResult(Results.Cancelled)
+
+        private[Runner] def interrupt() = _thread.interrupt()
+        private[Runner] def stop()      = Threading.stop(_thread)
+
+        def alive   = _thread.isAlive
+        def running = !_result.isDefined
+
+        def await()  = withLock { while (running) finished.await() }
+        def result() = { await(); _result.getOrElse(sys.exit) }
+
+        override def toString = s"Execution(thread=${_thread})"
+    }
+
+    private var _current: Option[Execution] = None
+    def current = _current
+
+    def execute(body: => Results.Result): Execution = {
+        val execution = new Execution(body)
+        _current = Some(execution)
+        execution
+    }
+
+    def clear() {
+        _current.foreach(_.cancel())
+        _current = None
+    }
+
+    def cancel() {
+        current.foreach { execution =>
+            execution.interrupt()
+            execution.cancel()
+            io.timer(5) {
+                if (execution.alive) {
+                    debug(s"Forcefully stopping ${execution}")
+                    execution.stop()
+                }
+            }
+        }
     }
 }
