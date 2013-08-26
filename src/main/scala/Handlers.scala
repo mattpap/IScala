@@ -17,7 +17,7 @@ trait Parent {
 abstract class Handler[T <: Request](parent: Parent) extends ((ZMQ.Socket, Msg[T]) => Unit)
 
 class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
-    import parent.{interpreter,ipy}
+    import parent.{ipy,interpreter}
 
     private def finish_stream(msg: Msg[_], std: Std) {
         std.output.flush()
@@ -25,7 +25,7 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
         if (count > 0) {
             val buffer = new Array[Byte](count)
             std.input.read(buffer)
-            ipy.send_stream(msg, std, new String(buffer))
+            ipy.send_stream(msg, std.name, new String(buffer))
         }
     }
 
@@ -152,7 +152,7 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
 }
 
 class CompleteHandler(parent: Parent) extends Handler[complete_request](parent) {
-    import parent.{interpreter,ipy}
+    import parent.{ipy,interpreter}
 
     def apply(socket: ZMQ.Socket, msg: Msg[complete_request]) {
         val text = msg.content.text

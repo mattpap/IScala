@@ -64,7 +64,7 @@ object IScala extends App with Parent {
                 val n = std.input.read(buffer)
 
                 executeMsg.foreach {
-                    ipy.send_stream(_, std, new String(buffer.take(n)))
+                    ipy.send_stream(_, std.name, new String(buffer.take(n)))
                 }
 
                 if (n < size) {

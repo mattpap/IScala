@@ -123,10 +123,10 @@ class Communication(zmq: Sockets, profile: Profile) {
                 traceback=err.traceback)))
     }
 
-    def send_stream(msg: Msg[_], std: Std, data: String) {
+    def send_stream(msg: Msg[_], name: String, data: String) {
         send(zmq.publish, msg_pub(msg, MsgType.stream,
             stream(
-                name=std.name,
+                name=name,
                 data=data)))
     }
 }
