@@ -18,9 +18,7 @@ object ProjectBuild extends Build {
             "Sonatype Releases" at "http://oss.sonatype.org/content/repositories/releases",
             "Sonatype Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots",
             "Mandubian Releases" at "https://github.com/mandubian/mandubian-mvn/raw/master/releases/",
-            "Mandubian Snapshots" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/",
-            "Typesafe Releases" at "https://typesafe.artifactoryonline.com/typesafe/maven-releases/",
-            "Typesafe Snapshots" at "https://typesafe.artifactoryonline.com/typesafe/maven-snapshots/")
+            "Mandubian Snapshots" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/")
     )
 
     object Dependencies {
