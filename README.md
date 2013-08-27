@@ -251,9 +251,10 @@ and run `%update` again.
 
 ## Status
 
-This is a very early work in progress. It works but many features are not implemented
-(e.g. introspection, interrupting kernel) or are very limited/buggy (e.g. completion).
-All this will be improved in (hopefully) near future.
+This is an early work in progress. Main features and majority of IPython's message
+specification were implemented, however certain features are not yet available
+(e.g. introspection) or are limited in functionality and subject to major changes.
+Report any problems and enhancement proposals [here](https://github.com/mattpap/IScala/issues).
 
 ## Acknowledgment
 
