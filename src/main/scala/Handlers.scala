@@ -42,16 +42,15 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
         }
     }
 
-    def pyerr_content(exception: Throwable, execution_count: Int): pyerr = {
+    private def pyerr_content(exception: Throwable, execution_count: Int): pyerr = {
         val ename = interpreter.stringify(exception.getClass.getName)
         val evalue = interpreter.stringify(exception.getMessage)
         val stacktrace = exception
              .getStackTrace()
              .takeWhile(_.getFileName != "<console>")
              .map(interpreter.stringify)
-             .map("    " + _)
              .toList
-        val traceback = s"$ename: $evalue" :: stacktrace
+        val traceback = s"$ename: $evalue" :: stacktrace.map("    " + _)
 
         pyerr(execution_count=execution_count,
               ename=ename,
