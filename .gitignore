@@ -9,6 +9,6 @@ target/
 
 /IScala.jar
 /profile*.json
-
+/history.sqlite
 /.ipynb_checkpoints/
 /*.ipynb

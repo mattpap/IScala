@@ -37,6 +37,12 @@ object ProjectBuild extends Build {
 
         val play_json = "play" %% "play-json" % "2.2-SNAPSHOT"
 
+        val slick = "com.typesafe.slick" %% "slick" % "1.0.1"
+
+        val h2 = "com.h2database" % "h2" % "1.3.173"
+
+        val sqlite = "org.xerial" % "sqlite-jdbc" % "3.7.2"
+
         val specs2 = "org.specs2" %% "specs2" % "2.1.1" % "test"
     }
 
@@ -73,12 +79,14 @@ object ProjectBuild extends Build {
         },
         libraryDependencies ++= {
             import Dependencies._
-            scalaio ++ Seq(ivy, jopt, jeromq, play_json, specs2)
+            scalaio ++ Seq(ivy, jopt, jeromq, play_json, slick, h2, sqlite, specs2)
         },
         libraryDependencies <+= scalaVersion("org.scala-lang" % "scala-compiler" % _),
         initialCommands := """
             import scala.reflect.runtime.{universe=>u}
             import scala.tools.nsc.interpreter._
+            import scala.slick.driver.SQLiteDriver.simple._
+            import Database.threadLocalSession
             """
     )
 
