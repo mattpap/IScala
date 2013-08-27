@@ -33,34 +33,34 @@ class Communication(zmq: Sockets, profile: Profile) {
 
     private val DELIMITER = "<IDS|MSG>"
 
-    def send[T<:Reply:Writes](socket: ZMQ.Socket, m: Msg[T]) {
-        debug(s"sending: $m")
-        m.idents.foreach(socket.send(_, ZMQ.SNDMORE))
-        socket.send(DELIMITER, ZMQ.SNDMORE)
-        val header = toJSON(m.header)
-        val parent_header = m.parent_header match {
-            case Some(parent_header) => toJSON(parent_header)
-            case None => "{}"
+    def send[T<:Reply:Writes](socket: ZMQ.Socket, msg: Msg[T]) {
+        val idents = msg.idents
+        val header = toJSON(msg.header)
+        val parent_header = msg.parent_header.map(toJSON(_)).getOrElse("{}")
+        val metadata = toJSON(msg.metadata)
+        val content = toJSON(msg.content)
+
+        socket.synchronized {
+            debug(s"sending: $msg")
+            idents.foreach(socket.send(_, ZMQ.SNDMORE))
+            socket.send(DELIMITER, ZMQ.SNDMORE)
+            socket.send(hmac(header, parent_header, metadata, content), ZMQ.SNDMORE)
+            socket.send(header, ZMQ.SNDMORE)
+            socket.send(parent_header, ZMQ.SNDMORE)
+            socket.send(metadata, ZMQ.SNDMORE)
+            socket.send(content)
         }
-        val metadata = toJSON(m.metadata)
-        val content = toJSON(m.content)
-        debug(s"json: $content")
-        socket.send(hmac(header, parent_header, metadata, content), ZMQ.SNDMORE)
-        socket.send(header, ZMQ.SNDMORE)
-        socket.send(parent_header, ZMQ.SNDMORE)
-        socket.send(metadata, ZMQ.SNDMORE)
-        socket.send(content)
     }
 
     def recv(socket: ZMQ.Socket): Msg[Request] = {
-        val idents = Stream.continually {
-            socket.recvStr()
-        }.takeWhile(_ != DELIMITER).toList
-        val signature = socket.recvStr()
-        val header = socket.recvStr()
-        val parent_header = socket.recvStr()
-        val metadata = socket.recvStr()
-        val content = socket.recvStr()
+        val (idents, signature, header, parent_header, metadata, content) = socket.synchronized {
+            (Stream.continually { socket.recvStr() }.takeWhile(_ != DELIMITER).toList,
+             socket.recvStr(),
+             socket.recvStr(),
+             socket.recvStr(),
+             socket.recvStr(),
+             socket.recvStr())
+        }
         if (signature != hmac(header, parent_header, metadata, content)) {
             sys.error("Invalid HMAC signature") // What should we do here?
         }
