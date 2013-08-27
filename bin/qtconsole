@@ -14,4 +14,4 @@ fi
 
 KERNEL_CMD="[\"java\", \"-jar\", \"$JAR_PATH\", \"--profile\", \"{connection_file}\", \"--parent\", \"$@\"]"
 
-ipython qtconsole --KernelManager.kernel_cmd="$KERNEL_CMD"
+ipython qtconsole --profile scala --KernelManager.kernel_cmd="$KERNEL_CMD"

@@ -14,4 +14,4 @@ fi
 
 KERNEL_CMD="[\"java\", \"-jar\", \"$JAR_PATH\", \"--profile\", \"{connection_file}\", \"--parent\", \"$@\"]"
 
-ipython notebook --KernelManager.kernel_cmd="$KERNEL_CMD"
+ipython notebook --profile scala --KernelManager.kernel_cmd="$KERNEL_CMD"
