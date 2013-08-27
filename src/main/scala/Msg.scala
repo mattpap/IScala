@@ -50,12 +50,9 @@ object MsgType extends Enumeration {
         input_reply = Value
 }
 
-case class Msg[+T <: Content](
-    idents: List[String], // XXX: Should be List[UUID]?
-    header: Header,
-    parent_header: Option[Header],
-    metadata: Metadata,
-    content: T)
+sealed trait Content
+sealed trait Request extends Content
+sealed trait Reply extends Content
 
 case class Header(
     msg_id: UUID,
@@ -63,9 +60,30 @@ case class Header(
     session: UUID,
     msg_type: MsgType)
 
-sealed trait Content
-sealed trait Request extends Content
-sealed trait Reply extends Content
+case class Msg[+T <: Content](
+    idents: List[String], // XXX: Should be List[UUID]?
+    header: Header,
+    parent_header: Option[Header],
+    metadata: Metadata,
+    content: T) {
+
+    private def replyHeader(msg_type: MsgType): Header =
+        header.copy(msg_id=UUID.uuid4(), msg_type=msg_type)
+
+    private def replyMsg[T <: Reply](idents: List[String], msg_type: MsgType, content: T, metadata: Metadata): Msg[T] =
+        Msg(idents, replyHeader(msg_type), Some(header), metadata, content)
+
+    def pub[T <: Reply](msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] = {
+        val tpe = content match {
+            case content: stream => content.name
+            case _               => msg_type.toString
+        }
+        replyMsg(tpe :: Nil, msg_type, content, metadata)
+    }
+
+    def reply[T <: Reply](msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] =
+        replyMsg(idents, msg_type, content, metadata)
+}
 
 case class execute_request(
     // Source code to be executed by the kernel, one or more lines.

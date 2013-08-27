@@ -13,24 +13,6 @@ import org.refptr.iscala.json.JsonUtil._
 class Communication(zmq: Sockets, profile: Profile) {
     private val hmac = HMAC(profile.key)
 
-    // TODO: move msg_header, msg_pub and msg_reply to Msg when knownDirectSubclasses is fixed.
-    private def msg_header(m: Msg[_], msg_type: MsgType): Header =
-        Header(msg_id=UUID.uuid4(),
-               username=m.header.username,
-               session=m.header.session,
-               msg_type=msg_type)
-
-    def msg_pub[T<:Reply](m: Msg[_], msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] = {
-        val tpe = content match {
-            case content: stream => content.name
-            case _ => msg_type.toString
-        }
-        Msg(tpe :: Nil, msg_header(m, msg_type), Some(m.header), metadata, content)
-    }
-
-    def msg_reply[T<:Reply](m: Msg[_], msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] =
-        Msg(m.idents, msg_header(m, msg_type), Some(m.header), metadata, content)
-
     private val DELIMITER = "<IDS|MSG>"
 
     def send[T<:Reply:Writes](socket: ZMQ.Socket, msg: Msg[T]) {
@@ -101,7 +83,7 @@ class Communication(zmq: Sockets, profile: Profile) {
         val user_variables: List[String] = Nil
         val user_expressions: Map[String, String] = Map()
 
-        send(zmq.requests, msg_reply(msg, MsgType.execute_reply,
+        send(zmq.requests, msg.reply(MsgType.execute_reply,
             execute_ok_reply(
                 execution_count=execution_count,
                 payload=Nil,
@@ -114,8 +96,8 @@ class Communication(zmq: Sockets, profile: Profile) {
     }
 
     def send_error(msg: Msg[_], err: pyerr) {
-        send(zmq.publish, msg_pub(msg, MsgType.pyerr, err))
-        send(zmq.requests, msg_reply(msg, MsgType.execute_reply,
+        send(zmq.publish, msg.pub(MsgType.pyerr, err))
+        send(zmq.requests, msg.reply(MsgType.execute_reply,
             execute_error_reply(
                 execution_count=err.execution_count,
                 ename=err.ename,
@@ -124,7 +106,7 @@ class Communication(zmq: Sockets, profile: Profile) {
     }
 
     def send_stream(msg: Msg[_], name: String, data: String) {
-        send(zmq.publish, msg_pub(msg, MsgType.stream,
+        send(zmq.publish, msg.pub(MsgType.stream,
             stream(
                 name=name,
                 data=data)))
