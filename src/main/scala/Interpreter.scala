@@ -86,9 +86,8 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
         }
 
         def loadAndRunReq(req: Request): Results.Result = {
-            intp0.classLoader.setAsContext()
-
             import intp0.naming.sessionNames.{result,print}
+
             val definesValue = req.handlers.last.definesValue
             val name = if (definesValue) result else print
 
