@@ -61,14 +61,18 @@ object IScala extends App with Parent {
             val buffer = new Array[Byte](size)
 
             while (true) {
-                val n = std.input.read(buffer)
+                try {
+                    val n = std.input.read(buffer)
 
-                executeMsg.foreach {
-                    ipy.send_stream(_, std.name, new String(buffer.take(n)))
-                }
+                    executeMsg.foreach {
+                        ipy.send_stream(_, std.name, new String(buffer.take(n)))
+                    }
 
-                if (n < size) {
-                    Thread.sleep(100) // a little delay to accumulate output
+                    if (n < size) {
+                        Thread.sleep(100) // a little delay to accumulate output
+                    }
+                } catch {
+                    case _: java.io.IOException =>
                 }
             }
         }
