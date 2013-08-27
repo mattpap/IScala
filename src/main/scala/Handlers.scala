@@ -11,7 +11,6 @@ trait Parent {
     val profile: Profile
     val ipy: Communication
     val interpreter: Interpreter
-    var executeMsg: Option[Msg[Request]]
 }
 
 abstract class Handler[T <: Request](parent: Parent) extends ((ZMQ.Socket, Msg[T]) => Unit)
@@ -19,26 +18,71 @@ abstract class Handler[T <: Request](parent: Parent) extends ((ZMQ.Socket, Msg[T
 class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
     import parent.{ipy,interpreter}
 
-    private def finish_stream(msg: Msg[_], std: Std) {
-        std.output.flush()
-        val count = std.input.available
-        if (count > 0) {
-            val buffer = new Array[Byte](count)
-            std.input.read(buffer)
-            ipy.send_stream(msg, std.name, new String(buffer))
-        }
-    }
+    private def capture[T](msg: Msg[_])(block: => T): T = {
+        val size = 10240
 
-    private def finish_streams(msg: Msg[_]) {
-        finish_stream(msg, StdOut)
-        finish_stream(msg, StdErr)
-    }
+        class WatchStream(input: java.io.InputStream, name: String) extends Thread {
+            override def run() {
+                val buffer = new Array[Byte](size)
 
-    private def capture[T](block: => T): T = {
-        Console.withOut(StdOut.stream) {
-            Console.withErr(StdErr.stream) {
-                block
+                try {
+                    while (true) {
+                        val n = input.read(buffer)
+                        ipy.send_stream(msg, name, new String(buffer.take(n)))
+
+                        if (n < size) {
+                            Thread.sleep(50) // a little delay to accumulate output
+                        }
+                    }
+                } catch {
+                    case _: java.io.IOException => // stream was closed so job is done
+                }
             }
+        }
+
+        val stdoutIn = new java.io.PipedInputStream(size)
+        val stdoutOut = new java.io.PipedOutputStream(stdoutIn)
+        val stdout = new java.io.PrintStream(stdoutOut)
+
+        val stderrIn = new java.io.PipedInputStream(size)
+        val stderrOut = new java.io.PipedOutputStream(stderrIn)
+        val stderr = new java.io.PrintStream(stderrOut)
+
+        // This is a heavyweight solution to start stream watch threads per
+        // input, but currently it's the cheapest approach that works well in
+        // multiple thread setup. Note that piped streams work only in thread
+        // pairs (producer -> consumer) and we start one thread per execution,
+        // so technically speaking we have multiple producers, which completely
+        // breaks the earlier intuitive approach.
+
+        (new WatchStream(stdoutIn, "stdout")).start()
+        (new WatchStream(stderrIn, "stderr")).start()
+
+        try {
+            val result =
+                Console.withOut(stdout) {
+                    Console.withErr(stderr) {
+                        block
+                    }
+                }
+
+            stdoutOut.flush()
+            stderrOut.flush()
+
+            // Wait until both streams get dry because we have to
+            // send messages with streams' data before execute_reply
+            // is send. Otherwise there will be no output in clients
+            // or it will be incomplete.
+            while (stdoutIn.available > 0 || stderrIn.available > 0)
+                Thread.sleep(10)
+
+            result
+        } finally {
+            // This will effectively terminate threads.
+            stdoutOut.close()
+            stderrOut.close()
+            stdoutIn.close()
+            stderrIn.close()
         }
     }
 
@@ -60,8 +104,6 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
 
     def apply(socket: ZMQ.Socket, msg: Msg[execute_request]) {
         import interpreter.{n,In,Out}
-
-        parent.executeMsg = Some(msg)
 
         val content = msg.content
         val code = content.code.replaceAll("\\s+$", "")
@@ -92,19 +134,16 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
         try {
             code match {
                 case Magic(name, input, Some(magic)) =>
-                    capture { magic(interpreter, input) } match {
+                    capture(msg) { magic(interpreter, input) } match {
                         case None =>
-                            finish_streams(msg)
                             ipy.send_ok(msg, n)
                         case Some(error) =>
-                            finish_streams(msg)
                             ipy.send_error(msg, n, error)
                     }
                 case Magic(name, _, None) =>
-                    finish_streams(msg)
                     ipy.send_error(msg, n, s"ERROR: Line magic function `%$name` not found.")
                 case _ =>
-                    capture { interpreter.interpret(code) } match {
+                    capture(msg) { interpreter.interpret(code) } match {
                         case Results.Success(value) =>
                             val result = if (silent) None else value.map(interpreter.stringify)
 
@@ -117,8 +156,6 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                                 }
                             }
 
-                            finish_streams(msg)
-
                             result.foreach { data =>
                                 ipy.publish(msg.pub(MsgType.pyout,
                                     pyout(
@@ -128,22 +165,17 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
 
                             ipy.send_ok(msg, n)
                         case Results.Failure(exception) =>
-                            finish_streams(msg)
                             ipy.send_error(msg, pyerr_content(exception, n))
                         case Results.Error =>
-                            finish_streams(msg)
                             ipy.send_error(msg, n, interpreter.output.toString)
                         case Results.Incomplete =>
-                            finish_streams(msg)
                             ipy.send_error(msg, n, "incomplete")
                         case Results.Cancelled =>
-                            finish_streams(msg)
                             ipy.send_error(msg, n, "cancelled")
                     }
             }
         } catch {
             case exception: Throwable =>
-                finish_streams(msg)
                 ipy.send_error(msg, pyerr_content(exception, n)) // Internal Error
         } finally {
             interpreter.resetOutput()

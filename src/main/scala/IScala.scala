@@ -29,8 +29,6 @@ object IScala extends App with Parent {
 
     lazy val interpreter = new Interpreter(options.tail)
 
-    var executeMsg: Option[Msg[Request]] = None
-
     def welcome() {
         import scala.util.Properties._
         log(s"Welcome to Scala $versionNumberString ($javaVmName, Java $javaVersion)")
@@ -55,29 +53,6 @@ object IScala extends App with Parent {
             }
         }
     })
-
-    class WatchStream(std: Std) extends Thread {
-        override def run() {
-            val size = 10240
-            val buffer = new Array[Byte](size)
-
-            while (true) {
-                try {
-                    val n = std.input.read(buffer)
-
-                    executeMsg.foreach {
-                        ipy.send_stream(_, std.name, new String(buffer.take(n)))
-                    }
-
-                    if (n < size) {
-                        Thread.sleep(100) // a little delay to accumulate output
-                    }
-                } catch {
-                    case _: java.io.IOException =>
-                }
-            }
-        }
-    }
 
     class HeartBeat extends Thread {
         override def run() {
@@ -118,9 +93,6 @@ object IScala extends App with Parent {
             }
         }
     }
-
-    (new WatchStream(StdOut)).start()
-    (new WatchStream(StdErr)).start()
 
     val heartBeat = new HeartBeat
     heartBeat.start()
