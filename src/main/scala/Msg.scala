@@ -331,29 +331,29 @@ case class history_request(
     // If hist_access_type is 'range', get a range of input cells. session can
     // be a positive session number, or a negative number to count back from
     // the current session.
-    session: Int,
+    session: Option[Int],
 
     // start and stop are line numbers within that session.
-    start: Int,
-    stop: Int,
+    start: Option[Int],
+    stop: Option[Int],
 
     // If hist_access_type is 'tail' or 'search', get the last n cells.
-    n: Int,
+    n: Option[Int],
 
     // If hist_access_type is 'search', get cells matching the specified glob
     // pattern (with * and ? as wildcards).
-    pattern: String,
+    pattern: Option[String],
 
     // If hist_access_type is 'search' and unique is true, do not
     // include duplicated history.  Default is false.
-    unique: Boolean) extends Request
+    unique: Option[Boolean]) extends Request
 
 case class history_reply(
     // A list of 3 tuples, either:
     // (session, line_number, input) or
     // (session, line_number, (input, output)),
     // depending on whether output was False or True, respectively.
-    history: List[(String, Int, Either[String, (String, String)])]) extends Reply
+    history: List[(Int, Int, Either[String, (String, Option[String])])]) extends Reply
 
 case class connect_request() extends Request
 

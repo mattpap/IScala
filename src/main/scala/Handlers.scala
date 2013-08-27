@@ -229,11 +229,53 @@ class ObjectInfoHandler(parent: Parent) extends Handler[object_info_request](par
 }
 
 class HistoryHandler(parent: Parent) extends Handler[history_request](parent) {
-    import parent.ipy
+    import parent.{ipy,interpreter}
 
     def apply(socket: ZMQ.Socket, msg: Msg[history_request]) {
+        import org.refptr.iscala.db.{DB,History,OutputHistory}
+
+        import scala.slick.driver.SQLiteDriver.simple._
+        import Database.threadLocalSession
+
+        val raw = msg.content.raw
+
+        var query = for {
+            (input, output) <- History leftJoin OutputHistory on ((in, out) => in.session === out.session && in.line === out.line)
+        } yield input.session ~ input.line ~ (if (raw) input.source_raw else input.source) ~ output.output.?
+
+        msg.content.hist_access_type match {
+            case HistAccessType.range =>
+                val session = msg.content.session getOrElse 0
+
+                val actualSession =
+                    if (session == 0) interpreter.session.id
+                    else if (session > 0) session
+                    else interpreter.session.id - session
+
+                query = query.filter(_._1 === actualSession)
+
+                for (start <- msg.content.start)
+                    query = query.filter(_._2 >= start)
+
+                for (stop <- msg.content.stop)
+                    query = query.filter(_._2 < stop)
+            case HistAccessType.tail | HistAccessType.search =>
+                // TODO: add support for `pattern` and `unique`
+                query = query.sortBy(r => (r._1.desc, r._2.desc))
+
+                for (n <- msg.content.n)
+                    query = query.take(n)
+        }
+
+        val rawHistory = DB.db.withSession { query.list }
+        val history =
+            if (msg.content.output)
+                rawHistory.map { case (session, line, input, output) => (session, line, Right((input, output))) }
+            else
+                rawHistory.map { case (session, line, input, output) => (session, line, Left(input)) }
+
         ipy.send(socket, msg.reply(MsgType.history_reply,
             history_reply(
-                history=Nil)))
+                history=history)))
     }
 }
