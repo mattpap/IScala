@@ -29,6 +29,7 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
 
     private var _intp: IMain = _
     private var _runner: Runner = _
+    private var _session: Session = _
     private var _n: Int = _
 
     var In: mutable.Map[Int, String] = _
@@ -36,6 +37,7 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
 
     def intp = _intp
     def runner = _runner
+    def session = _session
     def n = _n
 
     reset()
@@ -46,12 +48,19 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
 
     def reset() {
         synchronized {
+            finish()
             _intp = new IMain(settings, printer)
             _runner = new Runner(_intp.classLoader)
+            _session = new Session
             _n = 0
             In = mutable.Map()
             Out = mutable.Map()
         }
+    }
+
+    def finish() {
+        if (_session != null)
+            _session.endSession(_n)
     }
 
     def resetOutput() {
@@ -83,8 +92,8 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
             val definesValue = req.handlers.last.definesValue
             val name = if (definesValue) result else print
 
-            try {
-                val execution = runner.execute {
+            val outcome = try {
+                runner.execute {
                     try {
                         val value = req.lineRep.call(name)
                         Results.Success(if (definesValue && value != null) Some(value) else None)
@@ -93,14 +102,15 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
                             req.lineRep.bindError(exception)
                             Results.Failure(unwrap(exception))
                     }
-                }
-
-                val outcome = execution.result()
-                if (outcome.isInstanceOf[Results.Success]) intp0.recordRequest(req)
-                outcome
+                } result()
             } finally {
                 runner.clear()
             }
+
+            if (outcome.isInstanceOf[Results.Success])
+                intp0.recordRequest(req)
+
+            outcome
         }
 
         if (intp0.global == null) Results.Error

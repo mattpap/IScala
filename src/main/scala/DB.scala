@@ -2,14 +2,17 @@ package org.refptr.iscala.db
 
 import java.sql.Timestamp
 
+import scalax.io.JavaConverters._
+import scalax.file.Path
+
 import scala.slick.driver.SQLiteDriver.simple._
 import Database.threadLocalSession
 
-object Sessions extends Table[(Int, Timestamp, Timestamp, Int, String)]("sessions") {
+object Sessions extends Table[(Int, Timestamp, Option[Timestamp], Option[Int], String)]("sessions") {
     def session = column[Int]("session", O.PrimaryKey, O.AutoInc)
     def start = column[Timestamp]("start")
-    def end = column[Timestamp]("end")
-    def num_cmds = column[Int]("num_cmds")
+    def end = column[Option[Timestamp]]("end")
+    def num_cmds = column[Option[Int]]("num_cmds")
     def remark = column[String]("remark")
 
     def * = session ~ start ~ end ~ num_cmds ~ remark
@@ -34,11 +37,14 @@ object OutputHistory extends Table[(Int, Int, String)]("output_history") {
 }
 
 object DB {
-    lazy val db = Database.forURL("jdbc:sqlite:history.sqlite", driver="org.sqlite.JDBC")
+    private lazy val dbPath = {
+        val home = Path.fromString(System.getProperty("user.home"))
+        val profile = home / ".config" / "ipython" / "profile_scala"
+        if (!profile.exists) profile.createDirectory()
+        profile / "history.sqlite" path
+    }
 
-    import db.withSession
-
-    def createTable[T](table: Table[T]) = withSession {
+    private def createTable[T](table: Table[T]) = {
         try {
             table.ddl.create
         } catch {
@@ -46,24 +52,37 @@ object DB {
         }
     }
 
-    def createTables {
+    private def createTables() {
         createTable(Sessions)
         createTable(History)
         createTable(OutputHistory)
     }
 
-    def now = new Timestamp(System.currentTimeMillis)
+
+    lazy val db = {
+        val db = Database.forURL(s"jdbc:sqlite:$dbPath", driver="org.sqlite.JDBC")
+        db.withSession { createTables() }
+        db
+    }
+
+    import db.withSession
+
+    private def now = new Timestamp(System.currentTimeMillis)
 
     def newSession(): Int = withSession {
-        Sessions.forInsert returning Sessions.session insert (now, now, 0, "")
+        Sessions.forInsert returning Sessions.session insert (now, None, None, "")
     }
 
     def endSession(session: Int)(num_cmds: Int): Unit = withSession {
         val q = for { s <- Sessions if s.session === session } yield s.end ~ s.num_cmds
-        q.update(now, num_cmds)
+        q.update(Some(now), Some(num_cmds))
     }
 
     def addHistory(session: Int)(line: Int, source: String): Unit = withSession {
         History.insert(session, line, source, source)
+    }
+
+    def addOutputHistory(session: Int)(line: Int, output: String): Unit = withSession {
+        OutputHistory.insert(session, line, output)
     }
 }

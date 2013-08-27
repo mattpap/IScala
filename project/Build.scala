@@ -43,6 +43,8 @@ object ProjectBuild extends Build {
 
         val sqlite = "org.xerial" % "sqlite-jdbc" % "3.7.2"
 
+        val slf4j = "org.slf4j" % "slf4j-nop" % "1.6.4"
+
         val specs2 = "org.specs2" %% "specs2" % "2.1.1" % "test"
     }
 
@@ -79,12 +81,14 @@ object ProjectBuild extends Build {
         },
         libraryDependencies ++= {
             import Dependencies._
-            scalaio ++ Seq(ivy, jopt, jeromq, play_json, slick, h2, sqlite, specs2)
+            scalaio ++ Seq(ivy, jopt, jeromq, play_json, slick, h2, sqlite, slf4j, specs2)
         },
         libraryDependencies <+= scalaVersion("org.scala-lang" % "scala-compiler" % _),
         initialCommands := """
             import scala.reflect.runtime.{universe=>u}
             import scala.tools.nsc.interpreter._
+            import scalax.io.JavaConverters._
+            import scalax.file.Path
             import scala.slick.driver.SQLiteDriver.simple._
             import Database.threadLocalSession
             """

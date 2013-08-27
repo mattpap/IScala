@@ -64,8 +64,8 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
         parent.executeMsg = Some(msg)
 
         val content = msg.content
-        val code = content.code
-        val silent = content.silent || code.trim.endsWith(";")
+        val code = content.code.replaceAll("\\s+$", "")
+        val silent = content.silent || code.endsWith(";")
         val store_history = content.store_history getOrElse !silent
 
         if (code.trim.isEmpty) {
@@ -78,6 +78,7 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
 
             if (store_history) {
                 In(n) = code
+                interpreter.session.addHistory(n, code)
             }
 
             ipy.publish(msg.pub(MsgType.pyin,
@@ -109,6 +110,7 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
 
                             if (!silent && store_history) {
                                 value.foreach(Out(n) = _)
+                                result.foreach(interpreter.session.addOutputHistory(n, _))
 
                                 interpreter.intp.beSilentDuring {
                                     value.foreach(interpreter.intp.bind("_" + interpreter.n, "Any", _))

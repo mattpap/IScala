@@ -39,6 +39,7 @@ object IScala extends App with Parent {
     Runtime.getRuntime().addShutdownHook(new Thread() {
         override def run() {
             log("Terminating IScala")
+            interpreter.finish()
         }
     })
 
