@@ -11,9 +11,23 @@ import Util.{getpid,log,debug}
 import json.JsonUtil._
 import msg._
 
-object IScala extends App with Parent {
+object IScala extends App {
     val options = new Options(args)
 
+    val thread = new Thread {
+        override def run() {
+            val iscala = new IScala(options)
+            iscala.heartBeat.join()
+        }
+    }
+
+    thread.setName("IScala")
+    thread.setDaemon(true)
+    thread.start()
+    thread.join()
+}
+
+class IScala(options: Options) extends Parent {
     val profile = options.profile match {
         case Some(path) => Path(path).string.as[Profile]
         case None =>
@@ -95,15 +109,21 @@ object IScala extends App with Parent {
     }
 
     val heartBeat = new HeartBeat
+    heartBeat.setName("HeartBeat")
     heartBeat.start()
 
     ipy.send_status(ExecutionState.starting)
 
     debug("Starting kernel event loops")
 
-    (new EventLoop(zmq.requests)).start()
-    (new EventLoop(zmq.control)).start()
+    val requestsLoop = new EventLoop(zmq.requests)
+    val controlLoop = new EventLoop(zmq.control)
+
+    requestsLoop.setName("RequestsEventLoop")
+    controlLoop.setName("ControlEventLoop")
+
+    requestsLoop.start()
+    controlLoop.start()
 
     welcome()
-    heartBeat.join()
 }
