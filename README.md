@@ -218,10 +218,19 @@ In [3]: %update
 
 In [1]: import scalaj.collection.Imports._
 
-In [2]: List(1, 2, 3).asJava.isInstanceOf[java.util.List[Int]]
-Out[2]: true
+In [2]: List(1, 2, 3)
+Out[2]: List(1, 2, 3)
 
-In [3]: %libraryDependencies
+In [3]: _2.asJava
+Out[3]: [1, 2, 3]
+
+In [4]: _3.isInstanceOf[List[_]]
+Out[4]: false
+
+In [5]: _3.isInstanceOf[java.util.List[_]]
+Out[5]: true
+
+In [6]: %libraryDependencies
 List(org.scalaj:scalaj-collection:1.5)
 ```
 
