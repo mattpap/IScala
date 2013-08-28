@@ -50,7 +50,7 @@ class IScala(options: Options) extends Parent {
 
     Runtime.getRuntime().addShutdownHook(new Thread() {
         override def run() {
-            log("Terminating IScala")
+            debug("Terminating IScala")
             interpreter.finish()
         }
     })
@@ -72,6 +72,29 @@ class IScala(options: Options) extends Parent {
         override def run() {
             ZMQ.proxy(zmq.heartbeat, zmq.heartbeat, null)
         }
+    }
+
+    (options.profile, options.parent) match {
+        case (Some(file), true) =>
+            // This setup means that this kernel was started by IPython. Currently
+            // IPython is unable to terminate IScala without explicitly killing it
+            // or sending shutdown_request. To fix that, IScala watches the profile
+            // file whether it exists or not. When the file is removed, IScala is
+            // terminated.
+
+            class FileWatcher(file: java.io.File, interval: Int) extends Thread {
+                override def run() {
+                    while (true) {
+                        if (file.exists) Thread.sleep(interval)
+                        else sys.exit()
+                    }
+                }
+            }
+
+            val fileWatcher = new FileWatcher(file, 1000)
+            fileWatcher.setName(s"FileWatcher(${file.getPath})")
+            fileWatcher.start()
+        case _ =>
     }
 
     val ExecuteHandler = new ExecuteHandler(this)
