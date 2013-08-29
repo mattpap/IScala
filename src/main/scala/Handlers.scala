@@ -13,7 +13,7 @@ trait Parent {
     val interpreter: Interpreter
 }
 
-abstract class Handler[T <: Request](parent: Parent) extends ((ZMQ.Socket, Msg[T]) => Unit)
+abstract class Handler[T <: FromIPython](parent: Parent) extends ((ZMQ.Socket, Msg[T]) => Unit)
 
 class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
     import parent.{ipy,interpreter}

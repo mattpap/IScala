@@ -15,7 +15,7 @@ class Communication(zmq: Sockets, profile: Profile) {
 
     private val DELIMITER = "<IDS|MSG>"
 
-    def send[T<:Reply:Writes](socket: ZMQ.Socket, msg: Msg[T]) {
+    def send[T<:ToIPython:Writes](socket: ZMQ.Socket, msg: Msg[T]) {
         val idents = msg.idents
         val header = toJSON(msg.header)
         val parent_header = msg.parent_header.map(toJSON(_)).getOrElse("{}")
@@ -34,7 +34,7 @@ class Communication(zmq: Sockets, profile: Profile) {
         }
     }
 
-    def recv(socket: ZMQ.Socket): Msg[Request] = {
+    def recv(socket: ZMQ.Socket): Msg[FromIPython] = {
         val (idents, signature, header, parent_header, metadata, content) = socket.synchronized {
             (Stream.continually { socket.recvStr() }.takeWhile(_ != DELIMITER).toList,
              socket.recvStr(),
@@ -63,7 +63,7 @@ class Communication(zmq: Sockets, profile: Profile) {
         msg
     }
 
-    def publish[T<:Reply:Writes](msg: Msg[T]) = send(zmq.publish, msg)
+    def publish[T<:ToIPython:Writes](msg: Msg[T]) = send(zmq.publish, msg)
 
     def send_status(state: ExecutionState) {
         val msg = Msg(

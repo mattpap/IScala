@@ -112,7 +112,7 @@ class IScala(options: Options) extends Parent {
                     Some(ipy.recv(socket))
                 } catch {
                     case e: play.api.libs.json.JsResultException =>
-                        Util.log(s"JSON deserialization error: ${e.getMessage}")
+                        log(s"JSON deserialization error: ${e.getMessage}")
                         None
                 }
 

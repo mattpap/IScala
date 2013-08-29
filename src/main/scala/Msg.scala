@@ -51,8 +51,8 @@ object MsgType extends Enumeration {
 }
 
 sealed trait Content
-sealed trait Request extends Content
-sealed trait Reply extends Content
+sealed trait FromIPython extends Content
+sealed trait ToIPython extends Content
 
 case class Header(
     msg_id: UUID,
@@ -70,10 +70,10 @@ case class Msg[+T <: Content](
     private def replyHeader(msg_type: MsgType): Header =
         header.copy(msg_id=UUID.uuid4(), msg_type=msg_type)
 
-    private def replyMsg[T <: Reply](idents: List[String], msg_type: MsgType, content: T, metadata: Metadata): Msg[T] =
+    private def replyMsg[T <: ToIPython](idents: List[String], msg_type: MsgType, content: T, metadata: Metadata): Msg[T] =
         Msg(idents, replyHeader(msg_type), Some(header), metadata, content)
 
-    def pub[T <: Reply](msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] = {
+    def pub[T <: ToIPython](msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] = {
         val tpe = content match {
             case content: stream => content.name
             case _               => msg_type.toString
@@ -81,7 +81,7 @@ case class Msg[+T <: Content](
         replyMsg(tpe :: Nil, msg_type, content, metadata)
     }
 
-    def reply[T <: Reply](msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] =
+    def reply[T <: ToIPython](msg_type: MsgType, content: T, metadata: Metadata=Metadata()): Msg[T] =
         replyMsg(idents, msg_type, content, metadata)
 }
 
@@ -117,9 +117,9 @@ case class execute_request(
     // Some frontends (e.g. the Notebook) do not support stdin requests. If
     // raw_input is called from code executed from such a frontend, a
     // StdinNotImplementedError will be raised.
-    allow_stdin: Boolean) extends Request
+    allow_stdin: Boolean) extends FromIPython
 
-sealed trait execute_reply extends Reply {
+sealed trait execute_reply extends ToIPython {
     // One of: 'ok' OR 'error' OR 'abort'
     val status: ExecutionStatus
 
@@ -181,7 +181,7 @@ case class object_info_request(
 
     // The level of detail desired.  The default (0) is equivalent to typing
     // 'x?' at the prompt, 1 is equivalent to 'x??'.
-    detail_level: Int) extends Request
+    detail_level: Int) extends FromIPython
 
 case class ArgSpec(
     // The names of all the arguments
@@ -196,7 +196,7 @@ case class ArgSpec(
     // value at all.
     defaults: List[String])
 
-sealed trait object_info_reply extends Reply {
+sealed trait object_info_reply extends ToIPython {
     // The name the object was requested under
     val name: String
 
@@ -300,7 +300,7 @@ case class complete_request(
     block: Option[String],
 
     // The position of the cursor where the user hit 'TAB' on the line.
-    cursor_pos: Int) extends Request
+    cursor_pos: Int) extends FromIPython
 
 case class complete_reply(
     // The list of all matches to the completion request, such as
@@ -316,7 +316,7 @@ case class complete_reply(
     // status should be 'ok' unless an exception was raised during the request,
     // in which case it should be 'error', along with the usual error message content
     // in other messages.
-    status: ExecutionStatus) extends Reply
+    status: ExecutionStatus) extends ToIPython
 
 case class history_request(
     // If True, also return output history in the resulting dict.
@@ -346,16 +346,16 @@ case class history_request(
 
     // If hist_access_type is 'search' and unique is true, do not
     // include duplicated history.  Default is false.
-    unique: Option[Boolean]) extends Request
+    unique: Option[Boolean]) extends FromIPython
 
 case class history_reply(
     // A list of 3 tuples, either:
     // (session, line_number, input) or
     // (session, line_number, (input, output)),
     // depending on whether output was False or True, respectively.
-    history: List[(Int, Int, Either[String, (String, Option[String])])]) extends Reply
+    history: List[(Int, Int, Either[String, (String, Option[String])])]) extends ToIPython
 
-case class connect_request() extends Request
+case class connect_request() extends FromIPython
 
 case class connect_reply(
     // The port the shell ROUTER socket is listening on.
@@ -365,9 +365,9 @@ case class connect_reply(
     // The port the stdin ROUTER socket is listening on.
     stdin_port: Int,
     // The port the heartbeat socket is listening on.
-    hb_port: Int) extends Reply
+    hb_port: Int) extends ToIPython
 
-case class kernel_info_request() extends Request
+case class kernel_info_request() extends FromIPython
 
 case class kernel_info_reply(
     // Version of messaging protocol (mandatory).
@@ -391,22 +391,22 @@ case class kernel_info_reply(
 
     // Programming language in which kernel is implemented (mandatory).
     // Kernel included in IPython returns 'python'.
-    language: String) extends Reply
+    language: String) extends ToIPython
 
 case class shutdown_request(
     // whether the shutdown is final, or precedes a restart
-    restart: Boolean) extends Request
+    restart: Boolean) extends FromIPython
 
 case class shutdown_reply(
     // whether the shutdown is final, or precedes a restart
-    restart: Boolean) extends Reply
+    restart: Boolean) extends ToIPython
 
 case class stream(
     // The name of the stream is one of 'stdout', 'stderr'
     name: String,
 
     // The data is an arbitrary string to be written to that stream
-    data: String) extends Reply
+    data: String) extends ToIPython
 
 case class display_data(
     // Who create the data
@@ -418,7 +418,7 @@ case class display_data(
     data: Data,
 
     // Any metadata that describes the data
-    metadata: Metadata) extends Reply
+    metadata: Metadata) extends ToIPython
 
 case class pyin(
     // Source code to be executed, one or more lines
@@ -427,7 +427,7 @@ case class pyin(
     // The counter for this execution is also provided so that clients can
     // display it, since IPython automatically creates variables called _iN
     // (for input prompt In[N]).
-    execution_count: Int) extends Reply
+    execution_count: Int) extends ToIPython
 
 case class pyout(
     // The counter for this execution is also provided so that clients can
@@ -439,7 +439,7 @@ case class pyout(
     // the object being displayed is that passed to the display hook,
     // i.e. the *result* of the execution.
     data: Data,
-    metadata: Metadata = Metadata()) extends Reply
+    metadata: Metadata = Metadata()) extends ToIPython
 
 case class pyerr(
     execution_count: Int,
@@ -457,19 +457,19 @@ case class pyerr(
     // how much of it to unpack.  But for now, let's start with a simple list
     // of strings, since that requires only minimal changes to ultratb as
     // written.
-    traceback: List[String]) extends Reply
+    traceback: List[String]) extends ToIPython
 
 case class status(
     // When the kernel starts to execute code, it will enter the 'busy'
     // state and when it finishes, it will enter the 'idle' state.
     // The kernel will publish state 'starting' exactly once at process startup.
-    execution_state: ExecutionState) extends Reply
+    execution_state: ExecutionState) extends ToIPython
 
 case class input_request(
-    prompt: String) extends Request
+    prompt: String) extends ToIPython
 
 case class input_reply(
-    value: String) extends Reply
+    value: String) extends FromIPython
 
 // XXX: This was originally in src/main/scala/Formats.scala, but due to
 // a bug in the compiler related to `knownDirectSubclasses` and possibly
