@@ -108,15 +108,7 @@ class IScala(options: Options) extends Parent {
     class EventLoop(socket: ZMQ.Socket) extends Thread {
         override def run() {
             while (true) {
-                val msg = try {
-                    Some(ipy.recv(socket))
-                } catch {
-                    case e: play.api.libs.json.JsResultException =>
-                        log(s"JSON deserialization error: ${e.getMessage}")
-                        None
-                }
-
-                msg.foreach { msg =>
+                ipy.recv(socket).foreach { msg =>
                     msg.header.msg_type match {
                         case MsgType.execute_request => ExecuteHandler(socket, msg.asInstanceOf[Msg[execute_request]])
                         case MsgType.complete_request => CompleteHandler(socket, msg.asInstanceOf[Msg[complete_request]])

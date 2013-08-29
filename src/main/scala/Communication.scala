@@ -34,7 +34,7 @@ class Communication(zmq: Sockets, profile: Profile) {
         }
     }
 
-    def recv(socket: ZMQ.Socket): Msg[FromIPython] = {
+    def recv(socket: ZMQ.Socket): Option[Msg[FromIPython]] = {
         val (idents, signature, header, parent_header, metadata, content) = socket.synchronized {
             (Stream.continually { socket.recvStr() }.takeWhile(_ != DELIMITER).toList,
              socket.recvStr(),
@@ -43,24 +43,33 @@ class Communication(zmq: Sockets, profile: Profile) {
              socket.recvStr(),
              socket.recvStr())
         }
+
         if (signature != hmac(header, parent_header, metadata, content)) {
             sys.error("Invalid HMAC signature") // What should we do here?
         }
-        val _header = header.as[Header]
-        val _parent_header = parent_header.as[Option[Header]]
-        val _metadata = metadata.as[Metadata]
-        val _content = _header.msg_type match {
-            case MsgType.execute_request => content.as[execute_request]
-            case MsgType.complete_request => content.as[complete_request]
-            case MsgType.kernel_info_request => content.as[kernel_info_request]
-            case MsgType.object_info_request => content.as[object_info_request]
-            case MsgType.connect_request => content.as[connect_request]
-            case MsgType.shutdown_request => content.as[shutdown_request]
-            case MsgType.history_request => content.as[history_request]
+
+        try {
+            val _header = header.as[Header]
+            val _parent_header = parent_header.as[Option[Header]]
+            val _metadata = metadata.as[Metadata]
+            val _content = _header.msg_type match {
+                case MsgType.execute_request => content.as[execute_request]
+                case MsgType.complete_request => content.as[complete_request]
+                case MsgType.kernel_info_request => content.as[kernel_info_request]
+                case MsgType.object_info_request => content.as[object_info_request]
+                case MsgType.connect_request => content.as[connect_request]
+                case MsgType.shutdown_request => content.as[shutdown_request]
+                case MsgType.history_request => content.as[history_request]
+                case MsgType.input_reply => content.as[input_reply]
+            }
+            val msg = Msg(idents, _header, _parent_header, _metadata, _content)
+            debug(s"received: $msg")
+            Some(msg)
+        } catch {
+            case e: play.api.libs.json.JsResultException =>
+                log(s"JSON deserialization error: ${e.getMessage}")
+                None
         }
-        val msg = Msg(idents, _header, _parent_header, _metadata, _content)
-        debug(s"received: $msg")
-        msg
     }
 
     def publish[T<:ToIPython:Writes](msg: Msg[T]) = send(zmq.publish, msg)
