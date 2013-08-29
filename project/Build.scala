@@ -3,6 +3,7 @@ import Keys._
 
 import org.sbtidea.{SbtIdeaPlugin=>SbtIdea}
 import sbtassembly.{Plugin=>SbtAssembly}
+import com.typesafe.sbt.{SbtProguard}
 
 object ProjectBuild extends Build {
     override lazy val settings = super.settings ++ Seq(
@@ -54,7 +55,9 @@ object ProjectBuild extends Build {
 
     val jrebelRunning = SettingKey[Boolean]("jrebel-running")
 
-    lazy val pluginSettings = SbtIdea.settings ++ SbtAssembly.assemblySettings ++ {
+    lazy val ideaSettings = SbtIdea.settings
+
+    lazy val assemblySettings = SbtAssembly.assemblySettings ++ {
         import SbtAssembly.AssemblyKeys._
         Seq(test in assembly := {},
             jarName in assembly := "IScala.jar",
@@ -70,6 +73,16 @@ object ProjectBuild extends Build {
                 outputFile
             })
     }
+
+    lazy val proguardSettings = SbtProguard.proguardSettings ++ {
+        import SbtProguard.{Proguard,ProguardOptions}
+        import SbtProguard.ProguardKeys._
+        Seq(javaOptions in (Proguard, proguard) := Seq("-Xmx2G"),
+            options in Proguard += "@" + (baseDirectory.value / "project" / "IScala.pro"),
+            options in Proguard += ProguardOptions.keepMain(organization.value + ".iscala.IScala"))
+    }
+
+    lazy val pluginSettings = ideaSettings ++ assemblySettings ++ proguardSettings
 
     lazy val projectSettings = Project.defaultSettings ++ pluginSettings ++ Seq(
         fork in run := true,

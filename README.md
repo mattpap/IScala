@@ -263,7 +263,7 @@ and run `%update` again.
 This is an early work in progress. Main features and majority of IPython's message
 specification were implemented, however certain features are not yet available
 (e.g. introspection) or are limited in functionality and subject to major changes.
-Report any problems and enhancement proposals [here](https://github.com/mattpap/IScala/issues).
+Report any problems and submit enhancement proposals [here](https://github.com/mattpap/IScala/issues).
 
 ## Acknowledgment
 
