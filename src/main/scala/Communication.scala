@@ -116,8 +116,13 @@ class Communication(zmq: Sockets, profile: Profile) {
 
     def send_stream(msg: Msg[_], name: String, data: String) {
         send(zmq.publish, msg.pub(MsgType.stream,
-            stream(
-                name=name,
-                data=data)))
+            stream(name=name, data=data)))
     }
+
+    def send_stdin(msg: Msg[_], prompt: String) {
+        send(zmq.stdin, msg.reply(MsgType.input_request,
+            input_request(prompt=prompt)))
+    }
+
+    def recv_stdin(): Option[Msg[FromIPython]] = recv(zmq.stdin)
 }
