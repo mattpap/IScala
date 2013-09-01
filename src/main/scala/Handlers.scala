@@ -201,7 +201,7 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                         case Results.Incomplete =>
                             ipy.send_error(msg, n, "incomplete")
                         case Results.Cancelled =>
-                            ipy.send_error(msg, n, "cancelled")
+                            ipy.send_abort(msg, n)
                     }
             }
         } catch {

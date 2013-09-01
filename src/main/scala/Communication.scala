@@ -114,6 +114,12 @@ class Communication(zmq: Sockets, profile: Profile) {
                 traceback=err.traceback)))
     }
 
+    def send_abort(msg: Msg[_], execution_count: Int) {
+        send(zmq.requests, msg.reply(MsgType.execute_reply,
+            execute_abort_reply(
+                execution_count=execution_count)))
+    }
+
     def send_stream(msg: Msg[_], name: String, data: String) {
         send(zmq.publish, msg.pub(MsgType.stream,
             stream(name=name, data=data)))
