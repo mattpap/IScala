@@ -148,7 +148,7 @@ In [15]: object MacrosImpl {
 
 In [16]: object Macros { def members[A] = macro MacrosImpl.membersImpl[A] }
 
-In [17]: m.members[Int]
+In [17]: Macros.members[Int]
 Out[17]: List(<init>, toByte, toShort, toChar, toInt, toLong, toFloat, toDouble, unary_~,
 unary_+, unary_-, +, <<, >>>, >>, ==, !=, <, <=, >, >=, |, &, ^, -, *, /, %, getClass)
 ```
