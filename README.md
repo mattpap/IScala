@@ -165,13 +165,13 @@ domain specific parser.
 
 To infer the type of an expression use `%type expr`. This doesn't require
 evaluation of `expr`, only compilation up to _typer_ phase. You can also
-get compiler's internal type trees with `%deconstruct expr`.
+get compiler's internal type trees with `%type -v` or `%type --verbose`.
 
 ```
 In [1]: %type 1
 Int
 
-In [2]: %deconstruct 1
+In [2]: %type -v 1
 TypeRef(TypeSymbol(final abstract class Int extends AnyVal))
 
 In [3]: val x = "" + 1

@@ -34,6 +34,7 @@ case object Del extends Op
 case object Show extends Op
 case class LibraryDependencies(op: Op, modules: List[ModuleID]=Nil)
 case class Resolvers(op: Op, resolvers: List[Resolver]=Nil)
+case class TypeSpec(code: String, verbose: Boolean)
 
 object LibraryDependenciesParser extends MagicParsers[LibraryDependencies] {
     def crossVersion: Parser[CrossVersion] = "%%" ^^^ CrossVersion.binary | "%" ^^^ CrossVersion.Disabled
@@ -52,6 +53,12 @@ object LibraryDependenciesParser extends MagicParsers[LibraryDependencies] {
     def show: Parser[LibraryDependencies] = "" ^^^ LibraryDependencies(Show)
 
     def magic: Parser[LibraryDependencies] = modify | show
+}
+
+object TypeParser extends MagicParsers[TypeSpec] {
+    def magic: Parser[TypeSpec] = opt("-v" | "--verbose") ~ ".*".r ^^ {
+        case verbose ~ code => TypeSpec(code, verbose.isDefined)
+    }
 }
 
 object ResolversParser extends MagicParsers[Resolvers] {
@@ -93,7 +100,7 @@ abstract class Magic[T](val name: Symbol, parser: MagicParsers[T]) {
 }
 
 object Magic {
-    val magics = List(LibraryDependenciesMagic, ResolversMagic, UpdateMagic, TypeMagic, DeconstructMagic, ResetMagic)
+    val magics = List(LibraryDependenciesMagic, ResolversMagic, UpdateMagic, TypeMagic, ResetMagic)
     val pattern = "^%([a-zA-Z_][a-zA-Z0-9_]*)(.*)\n*$".r
 
     def unapply(code: String): Option[(String, String, Option[Magic[_]])] = code match {
@@ -149,15 +156,9 @@ object UpdateMagic extends EmptyMagic('update) {
     }
 }
 
-object TypeMagic extends EntireMagic('type) {
-    def handle(interpreter: Interpreter, code: String) {
-        interpreter.typeInfo(code, deconstruct=false).map(println)
-    }
-}
-
-object DeconstructMagic extends EntireMagic('deconstruct) {
-    def handle(interpreter: Interpreter, code: String) {
-        interpreter.typeInfo(code, deconstruct=true).map(println)
+object TypeMagic extends Magic('type, TypeParser) {
+    def handle(interpreter: Interpreter, spec: TypeSpec) {
+        interpreter.typeInfo(spec.code, spec.verbose).map(println)
     }
 }
 
