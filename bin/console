@@ -7,7 +7,7 @@ if [ ! -e "$JAR_PATH" ]; then
     JAR_PATH="$(pwd)/$JAR_NAME"
 
     if [ ! -e "$JAR_PATH" ]; then
-        echo "$JAR doesn't exist. Run './sbt assembly' to generate it." >&2
+        echo "$JAR_NAME doesn't exist. Run './sbt assembly' to generate it." >&2
         exit 1
     fi
 fi
