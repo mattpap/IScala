@@ -9,56 +9,27 @@
 
 ## Usage
 
-First obtain a copy of IScala either by cloning [this](git@github.com:mattpap/IScala.git)
-repository or download it from [here](https://github.com/mattpap/IScala/archive/master.zip).
-We use [SBT](http://www.scala-sbt.org/) for dependency management, compilation and deployment.
-In a terminal issue:
-```
-$ cd IScala
-$ ./sbt
-```
-This will start SBT console (which will be indicated by `>` prefix). On first run
-SBT will download itself and build dependencies (plugins), and compile build file.
-From here you can compile the project by issuing `compile` command:
-```
-> compile
-```
-On first run it will download all project dependencies (including Scala standard
-library and compiler), so it may take a while. Note that dependencies are cached
-in `~/.ivy2` directory, so they will be picked up next time SBT is run.
+First obtain a copy of IScala from [here](https://github.com/mattpap/IScala/releases). The
+package comes with pre-compiled `IScala.jar` and collection of scripts for running IPython's
+console, qtconsole and notebook. `IScala.jar` contains all project dependencies and resources,
+so you can move IScala easily around. To start IPython's console, simply issue `bin/console`
+in a terminal. This will start `ipython console` and setup it to use IScala backend instead
+of the default Python one. Issue `bin/qtconsole` or `bin/notebook` to start IPython's Qt
+console or notebook, respectively.
 
-Ignore any (deprecation) warnings you will get. To start IScala issue:
+To start IPython with IScala backend manually, issue:
 ```
-> run
-[info] Running org.refptr.iscala.IScala
-[info] connect ipython with --existing profile-18271.json
-[info] Welcome to Scala 2.10.2 (OpenJDK 64-Bit Server VM, Java 1.6.0_27)
+ipython console --KernelManager.kernel_cmd='["java", "-jar", "lib/IScala.jar", "--profile", "{connection_file}", "--parent"]'
 ```
-To terminate a kernel press `Ctrl+C`. Finally to generate a JAR file with IScala's
-class files, data files and all dependencies, issue `assembly`. You can run it with:
-```
-$ java -jar IScala.jar
-```
-You can pass command line argument to IScala after `run` command or after JAR file. e.g.:
-```
-$ java -jar IScala.jar --profile my_profile.json
-```
-It is also possible to customize Scala compiler by passing options directly to the
-compiler after `--` delimiter:
-```
-$ java -jar IScala.jar --profile my_profile.json -- -Xprint:typer
-```
-This will print Scala syntax trees after _typer_ compiler phase.
+The same works for `qtconsole` and `notebook`, and is, in principle, what scripts in `bin/`
+do. Note that you may have to provide a full path to `IScala.jar`. Option `--parent` is
+important and tells IScala that it was started by IPython and is not a standalone kernel.
+If not provided, double `^C` (`INT` signal) within 500 ms terminates IScala. Otherwise,
+`TERM` signal or shutdown message is needed to terminate IScala gracefully. As a safety
+measure, IScala also watches connection file that IPython provided. If the file is removed,
+the respective kernel is terminated.
 
-## Running IPython Notebook
-
-To start IPython Notebook, issue:
-```
-ipython notebook --KernelManager.kernel_cmd='["java", "-jar", "IScala.jar", "--profile", "{connection_file}", "--parent"]'
-```
-or just use `bin/notebook` script. Make sure that `IScala.jar` exists. If not, run `./sbt assembly`
-to generate it. Alternatively (and better in the long run) you can also create an IPython profile
-for Scala. To do this issue:
+You can also create a `scala` profile for IPython. To do this, issue:
 ```
 $ ipython profile create scala
 [ProfileCreate] WARNING | Generating default config file: u'~/.config/ipython/profile_scala/ipython_config.py'
@@ -67,16 +38,33 @@ $ ipython profile create scala
 ```
 Then add the following line:
 ```
-c.KernelManager.kernel_cmd = ["java", "-jar", "$ISCALA_PATH/IScala.jar", "--profile", "{connection_file}", "--parent"]"
+c.KernelManager.kernel_cmd = ["java", "-jar", "$ISCALA_PATH/lib/IScala.jar", "--profile", "{connection_file}", "--parent"]"
 ```
-to `~/.config/ipython/profile_scala/ipython_config.py`. Replace `$ISCALA_PATH`
-with the actual location of `IScala.jar`. Then you can run IPython notebook
-with `ipython notebook --profile scala`.
+to `~/.config/ipython/profile_scala/ipython_config.py`. Replace `$ISCALA_PATH` with the actual
+location of `IScala.jar`. Then you can run IPython with `ipython console --profile scala`.
+
+To start a standalone kernel simply issue:
+```
+$ java -jar lib/IScala.jar
+connect ipython with --existing profile-18271.json
+Welcome to Scala 2.10.2 (OpenJDK 64-Bit Server VM, Java 1.6.0_27)
+```
+This creates a connection file `profile-PID.json`, where `PID` is the process ID of IScala
+kernel. You can connect IPython using `--existing profile-PID.json`. You can provide an
+existing connection file with `--profile` option.
+
+IScala supports other options as well. See `java -jar IScala.jar -h` for details. Note
+that you can also pass options directly to Scala compiler after `--` delimiter:
+```
+$ java -jar IScala.jar --profile profile.json -- -Xprint:typer
+```
+This will start standalone IScala with preexisting connection file and make Scala compiler
+print Scala syntax trees after _typer_ compiler phase.
 
 ## Example
 
 ```
-$ ipython console --profile scala
+$ bin/console
 Welcome to Scala 2.10.2 (OpenJDK 64-Bit Server VM, Java 1.6.0_27)
 
 In [1]: 1
@@ -257,6 +245,45 @@ In [2]: %update
 By default IScala uses Sonatype's releases maven repository. To add more
 repositories use `%resolvers += "Repo Name" at "https://path/to/repository"`
 and run `%update` again.
+
+## Development
+
+Obtain a copy of IScala either by cloning [this](git@github.com:mattpap/IScala.git)
+repository or download it from [here](https://github.com/mattpap/IScala/archive/master.zip).
+We use [SBT](http://www.scala-sbt.org/) for dependency management, compilation and deployment.
+In a terminal issue:
+```
+$ cd IScala
+$ ./sbt
+```
+This will start SBT console (which will be indicated by `>` prefix). On first run
+SBT will download itself, its dependencies and plugins, and compile project build
+file. From here you can compile the project by issuing `compile` command:
+```
+> compile
+```
+It implicitly run `update` task, so on first run it will download all project
+dependencies (including Scala standard library and compiler), so it may take a
+while. Note that dependencies are cached in `~/.ivy2` directory, so they will be
+picked up next time SBT is run (also in other projects compiled from the same
+account).
+
+Ignore any (deprecation) warnings you will get. To start IScala issue:
+```
+> run
+[info] Running org.refptr.iscala.IScala
+[info] connect ipython with --existing profile-18271.json
+[info] Welcome to Scala 2.10.2 (OpenJDK 64-Bit Server VM, Java 1.6.0_27)
+```
+This is an equivalent of starting a standalone IScala kernel from a terminal. To
+terminate a kernel press `Ctrl+C` (SBT my signal an error). Finally to generate
+a JAR file with IScala's class files, resources and dependencies, issue `assembly`.
+You can run it with:
+```
+$ java -jar IScala.jar
+```
+Unless you made any changes, this is exactly the JAR you can download from IScala's
+releases page.
 
 ## Status
 
