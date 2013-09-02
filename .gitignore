@@ -7,7 +7,7 @@ target/
 /.idea/
 /.idea_modules/
 
-/IScala.jar
+/lib/IScala.jar
 /profile*.json
 /*.ipynb
 /.ipynb_checkpoints/

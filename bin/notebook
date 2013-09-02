@@ -1,17 +1,12 @@
 #! /bin/bash
 
-JAR_NAME="IScala.jar"
-JAR_PATH="$(dirname $0)/$JAR_NAME"
+JAR_PATH="$(dirname $(readlink -f $0))"
 
-if [ ! -e "$JAR_PATH" ]; then
-    JAR_PATH="$(pwd)/$JAR_NAME"
-
-    if [ ! -e "$JAR_PATH" ]; then
-        echo "$JAR_NAME doesn't exist. Run './sbt assembly' to generate it." >&2
-        exit 1
-    fi
+if [ "$(basename $JAR_PATH)" = "bin" ]; then
+    JAR_PATH="$(dirname $JAR_PATH)"
 fi
 
-KERNEL_CMD="[\"java\", \"-jar\", \"$JAR_PATH\", \"--profile\", \"{connection_file}\", \"--parent\", \"$@\"]"
+JAR_PATH="$JAR_PATH/lib/IScala.jar"
 
+KERNEL_CMD="[\"java\", \"-jar\", \"$JAR_PATH\", \"--profile\", \"{connection_file}\", \"--parent\", \"$@\"]"
 ipython notebook --profile scala --KernelManager.kernel_cmd="$KERNEL_CMD"

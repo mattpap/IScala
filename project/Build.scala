@@ -1,9 +1,10 @@
 import sbt._
 import Keys._
 
-import org.sbtidea.{SbtIdeaPlugin=>SbtIdea}
 import sbtassembly.{Plugin=>SbtAssembly}
-import com.typesafe.sbt.{SbtProguard}
+import org.sbtidea.SbtIdeaPlugin
+import com.typesafe.sbt.SbtProguard
+import com.typesafe.sbt.SbtNativePackager
 
 object ProjectBuild extends Build {
     override lazy val settings = super.settings ++ Seq(
@@ -53,15 +54,17 @@ object ProjectBuild extends Build {
         ConsoleLogger().log(Level.Info, msg)
     }
 
+    val release = TaskKey[File]("release")
+
     val jrebelRunning = SettingKey[Boolean]("jrebel-running")
 
-    lazy val ideaSettings = SbtIdea.settings
+    lazy val ideaSettings = SbtIdeaPlugin.settings
 
     lazy val assemblySettings = SbtAssembly.assemblySettings ++ {
         import SbtAssembly.AssemblyKeys._
         Seq(test in assembly := {},
             jarName in assembly := "IScala.jar",
-            target in assembly := baseDirectory.value,
+            target in assembly := baseDirectory.value / "lib",
             assemblyDirectory in assembly := {
                 val tmpDir = IO.createTemporaryDirectory
                 info(s"Using $tmpDir for sbt-assembly temporary files")
@@ -82,9 +85,24 @@ object ProjectBuild extends Build {
             options in Proguard += ProguardOptions.keepMain(organization.value + ".iscala.IScala"))
     }
 
-    lazy val pluginSettings = ideaSettings ++ assemblySettings ++ proguardSettings
+    lazy val packagerSettings = SbtNativePackager.packagerSettings ++ {
+        import SbtNativePackager.NativePackagerKeys._
+        import SbtNativePackager.Universal
+        Seq(mappings in Universal <++= (SbtAssembly.AssemblyKeys.assembly, baseDirectory) map { (jar, base) =>
+                jar x relativeTo(base)
+            },
+            mappings in Universal ++= {
+                val paths = Seq("README.md", "LICENSE", "bin/console", "bin/qtconsole", "bin/notebook")
+                paths.map(path => (file(path), path))
+            },
+            name in Universal := "IScala",
+            release <<= packageZipTarball in Universal)
+    }
+
+    lazy val pluginSettings = ideaSettings ++ assemblySettings ++ proguardSettings ++ packagerSettings
 
     lazy val projectSettings = Project.defaultSettings ++ pluginSettings ++ Seq(
+        unmanagedBase := baseDirectory.value / "custom_lib",
         fork in run := true,
         javaOptions in run ++= List("-Xdebug", "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5005"),
         jrebelRunning := {
