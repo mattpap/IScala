@@ -5,6 +5,8 @@ import scala.tools.nsc.util.ClassPath
 
 import sbt.{ModuleID,CrossVersion,Resolver,MavenRepository}
 
+import Util.{log,debug}
+
 trait MagicParsers[T] extends JavaTokenParsers {
     def string: Parser[String] = stringLiteral ^^ {
         case string => string.stripPrefix("\"").stripSuffix("\"")
@@ -126,7 +128,22 @@ object LibraryDependenciesMagic extends Magic('libraryDependencies, LibraryDepen
             case LibraryDependencies(Add, dependencies) =>
                 Settings.libraryDependencies ++= dependencies
             case LibraryDependencies(Del, dependencies) =>
-                Settings.libraryDependencies = Settings.libraryDependencies.filterNot(dependencies contains _)
+                // TODO: should be
+                //
+                // Settings.libraryDependencies = Settings.libraryDependencies.filterNot(dependencies contains _)
+                //
+                // but `CrossVersion` doesn't implement `equals` method, so we have to compare manually.
+
+                Settings.libraryDependencies = Settings.libraryDependencies.filterNot { existingDep =>
+                    dependencies.find { removeDep =>
+                        removeDep.organization == existingDep.organization &&
+                        removeDep.name == existingDep.name &&
+                        removeDep.revision == existingDep.revision &&
+                        (removeDep.crossVersion == existingDep.crossVersion ||
+                         (removeDep.crossVersion.isInstanceOf[CrossVersion.Binary] &&
+                          existingDep.crossVersion.isInstanceOf[CrossVersion.Binary]))
+                    } isDefined
+                }
         }
     }
 }
@@ -150,7 +167,7 @@ object UpdateMagic extends EmptyMagic('update) {
             Settings.managedJars = jars.toList
             val paths = jars.map(_.getAbsolutePath)
             interpreter.settings.classpath.value = ClassPath.join(paths: _*)
-            Util.debug(s"New classpath: ${interpreter.settings.classpath.value}")
+            debug(s"New classpath: ${interpreter.settings.classpath.value}")
             interpreter.reset()
         }
     }
