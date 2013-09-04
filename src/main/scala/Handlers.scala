@@ -183,25 +183,22 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                     ipy.send_error(msg, n, s"ERROR: Line magic function `%$name` not found.")
                 case _ =>
                     capture(msg) { interpreter.interpret(code) } match {
-                        case Results.Success(value) =>
-                            val result = if (silent) None else value.map(interpreter.stringify)
+                        case Results.Success(Some(Results.Value(value, tpe))) if !silent =>
+                            val result = interpreter.stringify(value)
 
-                            if (!silent && store_history) {
-                                value.foreach(Out(n) = _)
-                                result.foreach(interpreter.session.addOutputHistory(n, _))
-
-                                interpreter.intp.beSilentDuring {
-                                    value.foreach(interpreter.intp.bind("_" + interpreter.n, "Any", _))
-                                }
+                            if (store_history) {
+                                Out(n) = value
+                                interpreter.session.addOutputHistory(n, result)
+                                interpreter.bind("_" + interpreter.n, tpe, value)
                             }
 
-                            result.foreach { data =>
-                                ipy.publish(msg.pub(MsgType.pyout,
-                                    pyout(
-                                        execution_count=n,
-                                        data=Data("text/plain" -> data))))
-                            }
+                            ipy.publish(msg.pub(MsgType.pyout,
+                                pyout(
+                                    execution_count=n,
+                                    data=Data("text/plain" -> result))))
 
+                            ipy.send_ok(msg, n)
+                        case Results.Success(None) =>
                             ipy.send_ok(msg, n)
                         case Results.Failure(exception) =>
                             ipy.send_error(msg, pyerr_content(exception, n))

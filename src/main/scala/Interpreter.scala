@@ -11,8 +11,10 @@ import scala.tools.nsc.io
 import Util.{log,debug}
 
 object Results {
+    final case class Value(value: AnyRef, tpe: String)
+
     sealed trait Result
-    final case class Success(value: Option[AnyRef]) extends Result
+    final case class Success(value: Option[Value]) extends Result
     final case class Failure(exception: Throwable) extends Result
     final case object Error extends Result
     final case object Incomplete extends Result
@@ -95,7 +97,14 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
                 runner.execute {
                     try {
                         val value = req.lineRep.call(name)
-                        Results.Success(if (definesValue && value != null) Some(value) else None)
+                        intp0.recordRequest(req)
+                        val outcome =
+                            if (definesValue && value != null) {
+                                val tpe = intp0.typeOfTerm(intp0.mostRecentVar)
+                                Some(Results.Value(value, stringify(tpe).replaceAll("iw\\$", "")))
+                            } else
+                                None
+                        Results.Success(outcome)
                     } catch {
                         case exception: Throwable =>
                             req.lineRep.bindError(exception)
@@ -105,9 +114,6 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
             } finally {
                 runner.clear()
             }
-
-            if (outcome.isInstanceOf[Results.Success])
-                intp0.recordRequest(req)
 
             outcome
         }
@@ -121,6 +127,13 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
                 // and fail if false (implying e.g. a type error)
                 if (req == null || !req.compile) Results.Error
                 else loadAndRunReq(req)
+        }
+    }
+
+    def bind(name: String, tpe: String, value: Any, modifiers: List[String]=Nil): IR.Result = {
+        intp.bind(name, tpe, value, modifiers) match {
+            case IR.Success => IR.Success
+            case _ => intp.bind(name, "Any", value, modifiers)
         }
     }
 
