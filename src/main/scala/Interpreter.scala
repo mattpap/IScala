@@ -101,7 +101,7 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
                         val outcome =
                             if (definesValue && value != null) {
                                 val tpe = intp0.typeOfTerm(intp0.mostRecentVar)
-                                Some(Results.Value(value, stringify(tpe).replaceAll("iw\\$", "")))
+                                Some(Results.Value(value, intp0.global.afterTyper { tpe.toString }))
                             } else
                                 None
                         Results.Success(outcome)
