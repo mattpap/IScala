@@ -113,7 +113,7 @@ In [9]: class Foo(a: Int) { def bar(b: String) = b*a }
 In [10]: new Foo(5)
 Out[10]: Foo@70f4d063
 
-In [11]: _10.asInstanceOf[Foo].bar("xyz") // _n is currently of type Any
+In [11]: _10.bar("xyz")
 Out[11]: xyzxyzxyzxyzxyz
 
 In [12]: import scala.language.implicitConversions

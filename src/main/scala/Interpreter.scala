@@ -130,11 +130,28 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
         }
     }
 
-    def bind(name: String, tpe: String, value: Any, modifiers: List[String]=Nil): IR.Result = {
-        intp.bind(name, tpe, value, modifiers) match {
-            case IR.Success => IR.Success
-            case _ => intp.bind(name, "Any", value, modifiers)
+    def bind(name: String, boundType: String, value: Any, modifiers: List[String] = Nil): IR.Result = {
+        val intp0 = intp
+
+        val imports = (intp0.definedTypes ++ intp0.definedTerms) match {
+            case Nil => "/* imports */"
+            case names => names.map(intp0.pathToName).map("import " + _).mkString("\n  ")
         }
+
+        val bindRep = new intp0.ReadEvalPrint()
+        val source = s"""
+            |object ${bindRep.evalName} {
+            |  $imports
+            |  var value: ${boundType} = _
+            |  def set(x: Any) = value = x.asInstanceOf[${boundType}]
+            |}
+            """.stripMargin
+
+        bindRep.compile(source)
+        bindRep.callOpt("set", value).map { _ =>
+            val line = "%sval %s = %s.value".format(modifiers map (_ + " ") mkString, name, bindRep.evalPath)
+            intp0.interpret(line)
+        } getOrElse IR.Error
     }
 
     def cancel() = runner.cancel()
