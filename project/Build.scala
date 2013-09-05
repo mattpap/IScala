@@ -56,7 +56,10 @@ object ProjectBuild extends Build {
 
     val release = TaskKey[File]("release")
 
-    val scripts = TaskKey[Seq[File]]("scripts")
+    val ipyCommands = SettingKey[Seq[(String, String)]]("ipy-commands")
+
+    val develScripts = TaskKey[Seq[File]]("devel-scripts")
+    val userScripts = TaskKey[Seq[File]]("user-scripts")
 
     val jrebelRunning = SettingKey[Boolean]("jrebel-running")
 
@@ -66,7 +69,7 @@ object ProjectBuild extends Build {
         import SbtAssembly.AssemblyKeys._
         Seq(test in assembly := {},
             jarName in assembly := "IScala.jar",
-            target in assembly := baseDirectory.value / "lib",
+            target in assembly := target.value / "lib",
             assemblyDirectory in assembly := {
                 val tmpDir = IO.createTemporaryDirectory
                 info(s"Using $tmpDir for sbt-assembly temporary files")
@@ -90,11 +93,15 @@ object ProjectBuild extends Build {
     lazy val packagerSettings = SbtNativePackager.packagerSettings ++ {
         import SbtNativePackager.NativePackagerKeys._
         import SbtNativePackager.Universal
-        Seq(mappings in Universal <++= (SbtAssembly.AssemblyKeys.assembly, baseDirectory) map { (jar, base) =>
-                jar x relativeTo(base)
+        import SbtAssembly.AssemblyKeys.assembly
+        Seq(mappings in Universal <++= (assembly, target) map { (jar, target) =>
+                jar x relativeTo(target)
+            },
+            mappings in Universal <++= (userScripts, target) map { (scripts, target) =>
+                scripts x relativeTo(target)
             },
             mappings in Universal ++= {
-                val paths = Seq("README.md", "LICENSE", "bin/console", "bin/qtconsole", "bin/notebook")
+                val paths = Seq("README.md", "LICENSE")
                 paths.map(path => (file(path), path))
             },
             name in Universal := "IScala",
@@ -103,50 +110,72 @@ object ProjectBuild extends Build {
 
     lazy val pluginSettings = ideaSettings ++ assemblySettings ++ proguardSettings ++ packagerSettings
 
-    lazy val projectSettings = Project.defaultSettings ++ pluginSettings ++ Seq(
-        unmanagedBase := baseDirectory.value / "custom_lib",
-        fork in run := true,
-        javaOptions in run ++= List("-Xdebug", "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5005"),
-        jrebelRunning := {
-            val jrebel = java.lang.Package.getPackage("com.zeroturnaround.javarebel") != null
-            info(s"JRebel is ${if (jrebel) "enabled" else "disabled"}")
-            jrebel
-        },
-        libraryDependencies ++= {
-            import Dependencies._
-            scalaio ++ Seq(ivy, jopt, jeromq, play_json, slick, h2, sqlite, slf4j, specs2)
-        },
-        libraryDependencies <+= scalaVersion("org.scala-lang" % "scala-compiler" % _),
-        initialCommands := """
-            import scala.reflect.runtime.{universe=>u}
-            import scala.tools.nsc.interpreter._
-            import scalax.io.JavaConverters._
-            import scalax.file.Path
-            import scala.slick.driver.SQLiteDriver.simple._
-            import Database.threadLocalSession
-            """,
-        scripts in Compile <<= (fullClasspath in Compile, mainClass in Compile, target in Compile) map { (fullClasspath, mainClass, target) =>
-            val classpath = fullClasspath.files.mkString(":")
-            val main = mainClass getOrElse sys.error("Unknown main class")
-            val commands = List(
-                "console" -> "--no-banner",
+    lazy val projectSettings = Project.defaultSettings ++ pluginSettings ++ {
+        import SbtAssembly.AssemblyKeys.{assembly,jarName}
+        Seq(fork in run := true,
+            javaOptions in run ++= List("-Xdebug", "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5005"),
+            jrebelRunning := {
+                val jrebel = java.lang.Package.getPackage("com.zeroturnaround.javarebel") != null
+                info(s"JRebel is ${if (jrebel) "enabled" else "disabled"}")
+                jrebel
+            },
+            libraryDependencies ++= {
+                import Dependencies._
+                scalaio ++ Seq(ivy, jopt, jeromq, play_json, slick, h2, sqlite, slf4j, specs2)
+            },
+            libraryDependencies <+= scalaVersion("org.scala-lang" % "scala-compiler" % _),
+            initialCommands := """
+                import scala.reflect.runtime.{universe=>u}
+                import scala.tools.nsc.interpreter._
+                import scalax.io.JavaConverters._
+                import scalax.file.Path
+                import scala.slick.driver.SQLiteDriver.simple._
+                import Database.threadLocalSession
+                """,
+            ipyCommands := List(
+                "console"   -> "--no-banner",
                 "qtconsole" -> "",
-                "notebook" -> "")
+                "notebook"  -> ""),
+            develScripts <<= (fullClasspath in Compile, mainClass in Compile, baseDirectory, ipyCommands, streams) map { (fullClasspath, mainClass, base, commands, streams) =>
+                val classpath = fullClasspath.files.mkString(java.io.File.pathSeparator)
+                val main = mainClass getOrElse sys.error("Unknown main class")
 
-            commands map { case (command, options) =>
-                val output =
-                    s"""
-                    |#!/bin/bash
-                    |KERNEL_CMD="[\\"java\\", \\"-cp\\", \\"$classpath\\", \\"$main\\", \\"--profile\\", \\"{connection_file}\\", \\"--parent\\", \\"$$@\\"]"
-                    |ipython $command --profile scala --KernelManager.kernel_cmd="$$KERNEL_CMD" $options
-                    """.stripMargin.trim + "\n"
-                val file = target / command
-                IO.write(file, output)
-                s"chmod +x ${file.getPath}"!;
-                file
-            }
-        }
-    )
+                val bin = base / "bin"
+                IO.createDirectory(bin)
+
+                commands map { case (command, options) =>
+                    val output =
+                        s"""
+                        |#!/bin/bash
+                        |KERNEL_CMD="[\\"java\\", \\"-cp\\", \\"$classpath\\", \\"$main\\", \\"--profile\\", \\"{connection_file}\\", \\"--parent\\", \\"$$@\\"]"
+                        |ipython $command --profile scala --KernelManager.kernel_cmd="$$KERNEL_CMD" $options
+                        """.stripMargin.trim + "\n"
+                    val file = bin / command
+                    streams.log.info(s"Writing ${file.getPath}")
+                    IO.write(file, output)
+                    file.setExecutable(true)
+                    file
+                }
+            },
+            userScripts <<= (jarName in assembly, target, ipyCommands, streams) map { (jarName, target, commands, streams) =>
+                val bin = target / "bin"
+                IO.createDirectory(bin)
+
+                commands map { case (command, options) =>
+                    val output = s"""
+                        |#!/bin/bash
+                        |JAR_PATH="$$(dirname $$(dirname $$(readlink -f $$0)))/lib/$jarName"
+                        |KERNEL_CMD="[\\"java\\", \\"-jar\\", \\"$$JAR_PATH\\", \\"--profile\\", \\"{connection_file}\\", \\"--parent\\", \\"$$@\\"]"
+                        |ipython $command --profile scala --KernelManager.kernel_cmd="$$KERNEL_CMD" $options
+                        """.stripMargin.trim + "\n"
+                    val file = bin / command
+                    streams.log.info(s"Writing ${file.getPath}")
+                    IO.write(file, output)
+                    file.setExecutable(true)
+                    file
+                }
+            })
+    }
 
     lazy val macrosSettings = Project.defaultSettings ++ Seq(
         libraryDependencies ++= {
