@@ -56,6 +56,8 @@ object ProjectBuild extends Build {
 
     val release = TaskKey[File]("release")
 
+    val scripts = TaskKey[Seq[File]]("scripts")
+
     val jrebelRunning = SettingKey[Boolean]("jrebel-running")
 
     lazy val ideaSettings = SbtIdeaPlugin.settings
@@ -122,7 +124,28 @@ object ProjectBuild extends Build {
             import scalax.file.Path
             import scala.slick.driver.SQLiteDriver.simple._
             import Database.threadLocalSession
-            """
+            """,
+        scripts in Compile <<= (fullClasspath in Compile, mainClass in Compile, target in Compile) map { (fullClasspath, mainClass, target) =>
+            val classpath = fullClasspath.files.mkString(":")
+            val main = mainClass getOrElse sys.error("Unknown main class")
+            val commands = List(
+                "console" -> "--no-banner",
+                "qtconsole" -> "",
+                "notebook" -> "")
+
+            commands map { case (command, options) =>
+                val output =
+                    s"""
+                    |#!/bin/bash
+                    |KERNEL_CMD="[\\"java\\", \\"-cp\\", \\"$classpath\\", \\"$main\\", \\"--profile\\", \\"{connection_file}\\", \\"--parent\\", \\"$$@\\"]"
+                    |ipython $command --profile scala --KernelManager.kernel_cmd="$$KERNEL_CMD" $options
+                    """.stripMargin.trim + "\n"
+                val file = target / command
+                IO.write(file, output)
+                s"chmod +x ${file.getPath}"!;
+                file
+            }
+        }
     )
 
     lazy val macrosSettings = Project.defaultSettings ++ Seq(
