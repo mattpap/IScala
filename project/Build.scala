@@ -58,10 +58,12 @@ object ProjectBuild extends Build {
 
     val ipyCommands = SettingKey[Seq[(String, String)]]("ipy-commands")
 
+    val jrebelJar = SettingKey[Option[File]]("jrebel-jar")
+    val jrebelOptions = SettingKey[Seq[String]]("jrebel-options")
+    val jrebelCommand = TaskKey[Seq[String]]("jrebel-command")
+
     val develScripts = TaskKey[Seq[File]]("devel-scripts")
     val userScripts = TaskKey[Seq[File]]("user-scripts")
-
-    val jrebelRunning = SettingKey[Boolean]("jrebel-running")
 
     lazy val ideaSettings = SbtIdeaPlugin.settings
 
@@ -114,11 +116,6 @@ object ProjectBuild extends Build {
         import SbtAssembly.AssemblyKeys.{assembly,jarName}
         Seq(fork in run := true,
             javaOptions in run ++= List("-Xdebug", "-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5005"),
-            jrebelRunning := {
-                val jrebel = java.lang.Package.getPackage("com.zeroturnaround.javarebel") != null
-                info(s"JRebel is ${if (jrebel) "enabled" else "disabled"}")
-                jrebel
-            },
             libraryDependencies ++= {
                 import Dependencies._
                 scalaio ++ Seq(ivy, jopt, jeromq, play_json, slick, h2, sqlite, slf4j, specs2)
@@ -136,9 +133,20 @@ object ProjectBuild extends Build {
                 "console"   -> "--no-banner",
                 "qtconsole" -> "",
                 "notebook"  -> ""),
-            develScripts <<= (fullClasspath in Compile, mainClass in Compile, baseDirectory, ipyCommands, streams) map { (fullClasspath, mainClass, base, commands, streams) =>
+            jrebelJar := {
+                val jar = file(System.getProperty("user.home")) / ".jrebel" / "jrebel" / "jrebel.jar"
+                if (jar.exists) Some(jar) else None
+            },
+            jrebelOptions := Seq("-Drebel.load_embedded_plugins=false", "-Drebel.stats=false", "-Drebel.usage_reporting=false"),
+            jrebelCommand <<= (jrebelJar, jrebelOptions) map { (jar, options) =>
+                jar.map(jar => Seq("-XX:+CMSClassUnloadingEnabled", "-noverify", s"-javaagent:$jar") ++ options) getOrElse Nil
+            },
+            develScripts <<= (fullClasspath in Compile, mainClass in Compile, baseDirectory, ipyCommands, jrebelCommand, streams) map { (fullClasspath, mainClass, base, commands, jrebel, streams) =>
                 val classpath = fullClasspath.files.mkString(java.io.File.pathSeparator)
-                val main = mainClass getOrElse sys.error("Unknown main class")
+                val main = mainClass getOrElse sys.error("unknown main class")
+
+                val cmd = Seq("java") ++ jrebel ++ Seq("-cp", classpath, main, "--profile", "{connection_file}", "--parent", "$@")
+                val kernel_cmd = cmd.map(arg => s"""\\"$arg\\"""").mkString(", ")
 
                 val bin = base / "bin"
                 IO.createDirectory(bin)
@@ -147,8 +155,7 @@ object ProjectBuild extends Build {
                     val output =
                         s"""
                         |#!/bin/bash
-                        |KERNEL_CMD="[\\"java\\", \\"-cp\\", \\"$classpath\\", \\"$main\\", \\"--profile\\", \\"{connection_file}\\", \\"--parent\\", \\"$$@\\"]"
-                        |ipython $command --profile scala --KernelManager.kernel_cmd="$$KERNEL_CMD" $options
+                        |ipython $command --profile scala --KernelManager.kernel_cmd="[$kernel_cmd]" $options
                         """.stripMargin.trim + "\n"
                     val file = bin / command
                     streams.log.info(s"Writing ${file.getPath}")
