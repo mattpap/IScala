@@ -106,7 +106,7 @@ object ProjectBuild extends Build {
                 val paths = Seq("README.md", "LICENSE")
                 paths.map(path => (file(path), path))
             },
-            name in Universal := "IScala",
+            name in Universal := s"IScala-${version.value}",
             release <<= packageZipTarball in Universal)
     }
 
