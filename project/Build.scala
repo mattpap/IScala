@@ -9,7 +9,7 @@ import com.typesafe.sbt.SbtNativePackager
 object ProjectBuild extends Build {
     override lazy val settings = super.settings ++ Seq(
         organization := "org.refptr",
-        version := "0.1",
+        version := "0.2",
         description := "Scala-language backend for IPython",
         scalaVersion := "2.10.2",
         scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:_"),
