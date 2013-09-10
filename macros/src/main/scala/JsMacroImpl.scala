@@ -1,6 +1,6 @@
 package org.refptr.iscala.json
 
-import play.api.libs.json.{Reads,Writes,Format}
+import play.api.libs.json.{Reads,Writes,Format,Json,JsObject}
 
 import scala.language.reflectiveCalls
 import scala.reflect.macros.Context
@@ -60,13 +60,12 @@ object JsMacroImpl {
             } else if (!children.forall(_.isClass) || !children.map(_.asClass).forall(_.isCaseClass)) {
                 c.abort(c.enclosingPosition, "all children must be case classes")
             } else {
-                val playJson = Select(Select(Select(Ident(newTermName("play")), newTermName("api")), newTermName("libs")), newTermName("json"))
-                val collImmu = Select(Select(Ident(newTermName("scala")), newTermName("collection")), newTermName("immutable"))
+                val playJson = reify(Json).tree
 
                 val writesDefs = children.map { child =>
                     ValDef(
                         Modifiers(), newTermName("$writes$" + child.name.toString), TypeTree(),
-                        TypeApply(Select(Select(playJson, newTermName("Json")), newTermName("writes")),
+                        TypeApply(Select(playJson, newTermName("writes")),
                                   List(Ident(child))))
                 }
 
@@ -100,11 +99,11 @@ object JsMacroImpl {
 
                 val fieldDefs = fieldNames.map { fieldName =>
                     Apply(
-                        Select(Select(Ident(newTermName("scala")), newTermName("Tuple2")), newTermName("apply")),
+                        Select(reify(Tuple2).tree, newTermName("apply")),
                         List(
                             Literal(Constant(fieldName)),
                             Apply(
-                                Select(Select(playJson, newTermName("Json")), newTermName("toJson")),
+                                Select(playJson, newTermName("toJson")),
                                 List(Select(Ident(newTermName("obj")), newTermName(fieldName))))))
                 }
 
@@ -132,10 +131,10 @@ object JsMacroImpl {
                                                     newTermName("$plus$plus")),
                                                 List(
                                                     Apply(
-                                                        Select(Select(playJson, newTermName("JsObject")), newTermName("apply")),
+                                                        Select(reify(JsObject).tree, newTermName("apply")),
                                                         List(
                                                             Apply(
-                                                                Select(Select(collImmu, newTermName("List")), newTermName("apply")),
+                                                                Select(reify(List).tree, newTermName("apply")),
                                                                 fieldDefs))))))
                                     )))),
                         Apply(Select(New(Ident(newTypeName("$anon"))), nme.CONSTRUCTOR), List())))

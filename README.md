@@ -116,28 +116,25 @@ Out[10]: Foo@70f4d063
 In [11]: _10.bar("xyz")
 Out[11]: xyzxyzxyzxyzxyz
 
-In [12]: import scala.language.implicitConversions
+In [12]: import scala.language.experimental.macros
 
-In [13]: import scala.language.experimental.macros
+In [13]: import scala.reflect.macros.Context
 
-In [14]: import scala.reflect.macros.Context
-
-In [15]: object MacrosImpl {
+In [14]: object Macros {
     ...:     def membersImpl[A: c.WeakTypeTag](c: Context): c.Expr[List[String]] = {
     ...:         import c.universe._
     ...:         val tpe = weakTypeOf[A]
     ...:         val members = tpe.declarations.map(_.name.decoded).toList.distinct
     ...:         val literals = members.map(member => Literal(Constant(member)))
-    ...:         implicit def term(s: String): TermName = newTermName(s)
-    ...:         val List = Select(Select(Select(Ident("scala"), "collection"), "immutable"), "List")
-    ...:         c.Expr[List[String]](Apply(List, literals))
+    ...:         c.Expr[List[String]](Apply(reify(List).tree, literals))
     ...:     }
+    ...:
+    ...:     def members[A] = macro membersImpl[A]
     ...: }
+    ...:
 
-In [16]: object Macros { def members[A] = macro MacrosImpl.membersImpl[A] }
-
-In [17]: Macros.members[Int]
-Out[17]: List(<init>, toByte, toShort, toChar, toInt, toLong, toFloat, toDouble, unary_~,
+In [15]: Macros.members[Int]
+Out[15]: List(<init>, toByte, toShort, toChar, toInt, toLong, toFloat, toDouble, unary_~,
 unary_+, unary_-, +, <<, >>>, >>, ==, !=, <, <=, >, >=, |, &, ^, -, *, /, %, getClass)
 ```
 
