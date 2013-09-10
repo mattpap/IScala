@@ -55,19 +55,19 @@ object ProjectBuild extends Build {
         ConsoleLogger().log(Level.Info, msg)
     }
 
-    val release = TaskKey[File]("release")
+    val release = taskKey[File]("Create a set of archives and installers for new release")
 
-    val ipyCommands = SettingKey[Seq[(String, String)]]("ipy-commands")
+    val ipyCommands = settingKey[Seq[(String, String)]]("IPython commands (e.g. console) and their command line options")
 
-    val jrebelJar = SettingKey[Option[File]]("jrebel-jar")
-    val jrebelOptions = SettingKey[Seq[String]]("jrebel-options")
-    val jrebelCommand = TaskKey[Seq[String]]("jrebel-command")
+    val jrebelJar = settingKey[Option[File]]("Location of jrebel.jar")
+    val jrebelOptions = settingKey[Seq[String]]("http://manuals.zeroturnaround.com/jrebel/misc/index.html#agent-settings")
+    val jrebelCommand = taskKey[Seq[String]]("JVM command line options enabling JRebel")
 
-    val debugPort = SettingKey[Int]("debug-port")
-    val debugCommand = TaskKey[Seq[String]]("debug-command")
+    val debugPort = settingKey[Int]("Port for remote debugging")
+    val debugCommand = taskKey[Seq[String]]("JVM command line options enabling remote debugging")
 
-    val develScripts = TaskKey[Seq[File]]("devel-scripts")
-    val userScripts = TaskKey[Seq[File]]("user-scripts")
+    val develScripts = taskKey[Seq[File]]("Development scripts generated in bin/")
+    val userScripts = taskKey[Seq[File]]("User scripts generated in target/bin/")
 
     lazy val ideaSettings = SbtIdeaPlugin.settings
 
