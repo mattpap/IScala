@@ -344,7 +344,7 @@ object JsMacroImpl {
 
                     if (!hasRec) {
                       val block = Block(
-                        Import(functionalSyntaxPkg, List(ImportSelector(nme.WILDCARD, -1, null, -1))),
+                        List(Import(functionalSyntaxPkg, List(ImportSelector(nme.WILDCARD, -1, null, -1)))),
                         finalTree
                       )
 
@@ -368,7 +368,7 @@ object JsMacroImpl {
                       )
 
                       val block = Select(
-                        Block(
+                        Block(List(
                           Import(functionalSyntaxPkg, List(ImportSelector(nme.WILDCARD, -1, null, -1))),
                           ClassDef(
                             Modifiers(Flag.FINAL),
@@ -393,6 +393,7 @@ object JsMacroImpl {
                                   List(List()),
                                   TypeTree(),
                                   Block(
+                                    List(),
                                     Apply(
                                       Select(Super(This(tpnme.EMPTY), tpnme.EMPTY), nme.CONSTRUCTOR),
                                       List()
@@ -407,7 +408,7 @@ object JsMacroImpl {
                                 )
                               )
                             )
-                          ),
+                          )),
                           Apply(Select(New(Ident(newTypeName("$anon"))), nme.CONSTRUCTOR), List())
                         ),
                         newTermName("lazyStuff")
@@ -627,7 +628,7 @@ object JsMacroImpl {
 
                     if (!hasRec) {
                       val block = Block(
-                        Import(functionalSyntaxPkg, List(ImportSelector(nme.WILDCARD, -1, null, -1))),
+                        List(Import(functionalSyntaxPkg, List(ImportSelector(nme.WILDCARD, -1, null, -1)))),
                         finalTree
                       )
                       //println("block:"+block)
@@ -642,7 +643,7 @@ object JsMacroImpl {
                       )
 
                       val block = Select(
-                        Block(
+                        Block(List(
                           Import(functionalSyntaxPkg, List(ImportSelector(nme.WILDCARD, -1, null, -1))),
                           ClassDef(
                             Modifiers(Flag.FINAL),
@@ -667,6 +668,7 @@ object JsMacroImpl {
                                   List(List()),
                                   TypeTree(),
                                   Block(
+                                    List(),
                                     Apply(
                                       Select(Super(This(tpnme.EMPTY), tpnme.EMPTY), nme.CONSTRUCTOR),
                                       List()
@@ -681,7 +683,7 @@ object JsMacroImpl {
                                 )
                               )
                             )
-                          ),
+                          )),
                           Apply(Select(New(Ident(newTypeName("$anon"))), nme.CONSTRUCTOR), List())
                         ),
                         newTermName("lazyStuff")
@@ -795,7 +797,7 @@ object JsMacroImpl {
                       case (name, (t, impl, rec, tpe)) =>
                         // inception of (__ \ name).read(impl)
                         val jspathTree = Apply(
-                          Select(jsPathSelect, scala.reflect.NameTransformer.encode("\\")),
+                          Select(jsPathSelect, newTermName(scala.reflect.NameTransformer.encode("\\"))),
                           List(Literal(Constant(name.decoded)))
                         )
 
@@ -924,7 +926,7 @@ object JsMacroImpl {
 
                     if (!hasRec) {
                       val block = Block(
-                        Import(functionalSyntaxPkg, List(ImportSelector(nme.WILDCARD, -1, null, -1))),
+                        List(Import(functionalSyntaxPkg, List(ImportSelector(nme.WILDCARD, -1, null, -1)))),
                         finalTree
                       )
                       //println("block:"+block)
@@ -939,7 +941,7 @@ object JsMacroImpl {
                       )
 
                       val block = Select(
-                        Block(
+                        Block(List(
                           Import(functionalSyntaxPkg, List(ImportSelector(nme.WILDCARD, -1, null, -1))),
                           ClassDef(
                             Modifiers(Flag.FINAL),
@@ -964,6 +966,7 @@ object JsMacroImpl {
                                   List(List()),
                                   TypeTree(),
                                   Block(
+                                    List(),
                                     Apply(
                                       Select(Super(This(tpnme.EMPTY), tpnme.EMPTY), nme.CONSTRUCTOR),
                                       List()
@@ -978,7 +981,7 @@ object JsMacroImpl {
                                 )
                               )
                             )
-                          ),
+                          )),
                           Apply(Select(New(Ident(newTypeName("$anon"))), nme.CONSTRUCTOR), List())
                         ),
                         newTermName("lazyStuff")
