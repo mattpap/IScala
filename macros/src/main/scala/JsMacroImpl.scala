@@ -60,19 +60,20 @@ object JsMacroImpl {
             } else if (!children.forall(_.isClass) || !children.map(_.asClass).forall(_.isCaseClass)) {
                 c.abort(c.enclosingPosition, "all children must be case classes")
             } else {
-                val valDefs = children.map { child =>
-                    val name = newTermName("$writes$" + child.name.toString)
+                val named = children.map { child =>
+                    (child, newTermName("$writes$" + child.name.toString))
+                }
+
+                val valDefs = named.map { case (child, name) =>
                     q"val $name = play.api.libs.json.Json.writes[$child]"
                 }
 
-                val caseDefs = children.map { child =>
-                    val name = newTermName("$writes$" + child.name.toString)
+                val caseDefs = named.map { case (child, name) =>
                     CaseDef(
                         Bind(newTermName("o"), Typed(Ident(nme.WILDCARD),
                              Ident(child))),
                         EmptyTree,
-                        q"$name.writes(o)"
-                    )
+                        q"$name.writes(o)")
                 }
 
                 val names = children.flatMap(
