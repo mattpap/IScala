@@ -1,6 +1,6 @@
 package org.refptr.iscala.json
 
-import play.api.libs.json.{Reads,Writes,Format,Json,JsObject}
+import play.api.libs.json.{Reads,Writes,Format}
 
 import scala.language.reflectiveCalls
 import scala.reflect.macros.Context
@@ -22,7 +22,7 @@ object JsMacroImpl {
      *     ...
      *     val $writes$T_n = Json.writes[T_n]
      *
-     *     def writes(obj: cls) = (obj match {
+     *     def writes(obj: T) = (obj match {
      *         case o: T_1 => $writes$T_1.writes(o)
      *         ...
      *         case o: T_n => $writes$T_n.writes(o)
@@ -36,10 +36,10 @@ object JsMacroImpl {
      * `T` is a sealed trait with case subclasses `T_1`, ... `T_n`. Fields `field_1`,
      * ..., `field_n` are `T`'s vals that don't appear in `T_i` constructors.
      */
-    def sealedWritesImpl[A: c.WeakTypeTag](c: Context): c.Expr[Writes[A]] = {
+    def sealedWritesImpl[T: c.WeakTypeTag](c: Context): c.Expr[Writes[T]] = {
         import c.universe._
 
-        val tpe = weakTypeOf[A]
+        val tpe = weakTypeOf[T]
         val symbol = tpe.typeSymbol
 
         if (!symbol.isClass) {
@@ -60,23 +60,19 @@ object JsMacroImpl {
             } else if (!children.forall(_.isClass) || !children.map(_.asClass).forall(_.isCaseClass)) {
                 c.abort(c.enclosingPosition, "all children must be case classes")
             } else {
-                val playJson = reify(Json).tree
-
-                val writesDefs = children.map { child =>
-                    ValDef(
-                        Modifiers(), newTermName("$writes$" + child.name.toString), TypeTree(),
-                        TypeApply(Select(playJson, newTermName("writes")),
-                                  List(Ident(child))))
+                val valDefs = children.map { child =>
+                    val name = newTermName("$writes$" + child.name.toString)
+                    q"val $name = play.api.libs.json.Json.writes[$child]"
                 }
 
                 val caseDefs = children.map { child =>
+                    val name = newTermName("$writes$" + child.name.toString)
                     CaseDef(
                         Bind(newTermName("o"), Typed(Ident(nme.WILDCARD),
                              Ident(child))),
                         EmptyTree,
-                        Apply(
-                            Select(Select(This(newTypeName("$anon")), newTermName("$writes$" + child.name.toString)), newTermName("writes")),
-                            List(Ident(newTermName("o")))))
+                        q"$name.writes(o)"
+                    )
                 }
 
                 val names = children.flatMap(
@@ -98,46 +94,21 @@ object JsMacroImpl {
                    .filterNot(names contains _)
 
                 val fieldDefs = fieldNames.map { fieldName =>
-                    Apply(
-                        Select(reify(Tuple2).tree, newTermName("apply")),
-                        List(
-                            Literal(Constant(fieldName)),
-                            Apply(
-                                Select(playJson, newTermName("toJson")),
-                                List(Select(Ident(newTermName("obj")), newTermName(fieldName))))))
+                    val name = newTermName(fieldName)
+                    q"($fieldName, play.api.libs.json.Json.toJson(obj.$name))"
                 }
 
-                val expr = c.Expr[Writes[A]](
-                    Block(
-                        List(
-                            ClassDef(Modifiers(Flag.FINAL), newTypeName("$anon"), List(),
-                                Template(
-                                    List(AppliedTypeTree(Ident(weakTypeOf[Writes[A]].typeSymbol),
-                                                         List(Ident(symbol)))),
-                                    emptyValDef,
-                                    writesDefs ++ List(
-                                        DefDef(Modifiers(), nme.CONSTRUCTOR, List(),
-                                            List(List()), TypeTree(),
-                                            Block(
-                                                List(Apply(Select(Super(This(tpnme.EMPTY), tpnme.EMPTY), nme.CONSTRUCTOR), List())),
-                                                Literal(Constant(())))),
-                                        DefDef(Modifiers(), newTermName("writes"), List(),
-                                            List(List(ValDef(Modifiers(Flag.PARAM), newTermName("obj"), Ident(symbol), EmptyTree))), TypeTree(),
-                                            Apply(
-                                                Select(
-                                                    Match(
-                                                        Ident(newTermName("obj")),
-                                                        caseDefs),
-                                                    newTermName("$plus$plus")),
-                                                List(
-                                                    Apply(
-                                                        Select(reify(JsObject).tree, newTermName("apply")),
-                                                        List(
-                                                            Apply(
-                                                                Select(reify(List).tree, newTermName("apply")),
-                                                                fieldDefs))))))
-                                    )))),
-                        Apply(Select(New(Ident(newTypeName("$anon"))), nme.CONSTRUCTOR), List())))
+                val matchDef = Match(q"obj", caseDefs)
+
+                val expr = c.Expr[Writes[T]](
+                    q"""
+                    new Writes[$symbol] {
+                        ..$valDefs
+
+                        def writes(obj: $symbol) =
+                            $matchDef ++ play.api.libs.json.JsObject(List(..$fieldDefs))
+                    }
+                    """)
 
                 debug(show(expr))
                 expr

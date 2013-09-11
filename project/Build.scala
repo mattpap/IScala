@@ -13,6 +13,7 @@ object ProjectBuild extends Build {
         description := "Scala-language backend for IPython",
         scalaVersion := "2.10.2",
         scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:_"),
+        addCompilerPlugin("org.scala-lang.plugins" % "macro-paradise" % "2.0.0-SNAPSHOT" cross CrossVersion.full),
         shellPrompt := { state =>
             "refptr (%s)> ".format(Project.extract(state).currentProject.id)
         },
@@ -49,6 +50,10 @@ object ProjectBuild extends Build {
         val slf4j = "org.slf4j" % "slf4j-nop" % "1.6.4"
 
         val specs2 = "org.specs2" %% "specs2" % "2.1.1" % "test"
+
+        val reflect = Def.setting { "org.scala-lang" % "scala-reflect" % scalaVersion.value }
+
+        val compiler = Def.setting { "org.scala-lang" % "scala-compiler" % scalaVersion.value }
     }
 
     def info(msg: => String) {
@@ -121,9 +126,8 @@ object ProjectBuild extends Build {
         Seq(fork in run := true,
             libraryDependencies ++= {
                 import Dependencies._
-                scalaio ++ Seq(ivy, jopt, jeromq, play_json, slick, h2, sqlite, slf4j, specs2)
+                scalaio ++ Seq(ivy, jopt, jeromq, play_json, slick, h2, sqlite, slf4j, specs2, compiler.value)
             },
-            libraryDependencies <+= scalaVersion("org.scala-lang" % "scala-compiler" % _),
             initialCommands := """
                 import scala.reflect.runtime.{universe=>u}
                 import scala.tools.nsc.interpreter._
@@ -195,9 +199,8 @@ object ProjectBuild extends Build {
     lazy val macrosSettings = Project.defaultSettings ++ Seq(
         libraryDependencies ++= {
             import Dependencies._
-            Seq(play_json, specs2)
-        },
-        libraryDependencies <+= scalaVersion("org.scala-lang" % "scala-reflect" % _)
+            Seq(play_json, specs2, reflect.value)
+        }
     )
 
     lazy val IScala = Project(id="IScala", base=file("."), settings=projectSettings) dependsOn(Macros)
