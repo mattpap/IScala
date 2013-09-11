@@ -13,7 +13,6 @@ object ProjectBuild extends Build {
         description := "Scala-language backend for IPython",
         scalaVersion := "2.10.2",
         scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:_"),
-        addCompilerPlugin("org.scala-lang.plugins" % "macro-paradise" % "2.0.0-SNAPSHOT" cross CrossVersion.full),
         shellPrompt := { state =>
             "refptr (%s)> ".format(Project.extract(state).currentProject.id)
         },
@@ -197,6 +196,7 @@ object ProjectBuild extends Build {
     }
 
     lazy val macrosSettings = Project.defaultSettings ++ Seq(
+        addCompilerPlugin("org.scala-lang.plugins" % "macro-paradise" % "2.0.0-SNAPSHOT" cross CrossVersion.full),
         libraryDependencies ++= {
             import Dependencies._
             Seq(play_json, specs2, reflect.value)
