@@ -2,9 +2,7 @@ package org.refptr.iscala.macros.json
 
 import play.api.libs.json.{Reads,Writes,Format}
 
-import scala.language.reflectiveCalls
 import scala.reflect.macros.Context
-import language.experimental.macros
 
 trait JsonImpl {
     def reads[A]:  Reads[A]  = macro JsMacroImpl.readsImpl[A]
