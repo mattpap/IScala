@@ -1,10 +1,16 @@
-package org.refptr.iscala.json
+package org.refptr.iscala.macros.json
 
 import play.api.libs.json.{Reads,Writes,Format}
 
 import scala.language.reflectiveCalls
 import scala.reflect.macros.Context
 import language.experimental.macros
+
+trait JsonImpl {
+    def reads[A]:  Reads[A]  = macro JsMacroImpl.readsImpl[A]
+    def writes[A]: Writes[A] = macro JsMacroImpl.sealedWritesImpl[A]
+    def format[A]: Format[A] = macro JsMacroImpl.formatImpl[A]
+}
 
 object JsMacroImpl {
     private def debug(msg: => Any) = {

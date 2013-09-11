@@ -6,6 +6,7 @@ import play.api.libs.json.{Json=>PlayJson,Reads,Writes,OWrites,Format,JsPath}
 import play.api.libs.json.{JsResult,JsSuccess,JsError}
 import play.api.libs.json.{JsValue,JsString,JsArray,JsObject}
 
+import org.refptr.iscala.macros.json.JsonImpl
 import org.refptr.iscala.UUID
 
 object JsonUtil {
@@ -20,13 +21,8 @@ object JsonUtil {
     }
 }
 
-object Json {
+object Json extends JsonImpl {
     def toJson[T:Writes](obj: T): JsValue = PlayJson.toJson(obj)
-
-    def reads[A]:  Reads[A]  = macro JsMacroImpl.readsImpl[A]
-    def writes[A]: Writes[A] = macro JsMacroImpl.sealedWritesImpl[A]
-    def format[A]: Format[A] = macro JsMacroImpl.formatImpl[A]
-
     def noFields[A:ClassTag]: Format[A] = NoFields.format
 }
 
