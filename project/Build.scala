@@ -127,7 +127,7 @@ object ProjectBuild extends Build {
                 import Dependencies._
                 scalaio ++ Seq(ivy, jopt, jeromq, play_json, slick, h2, sqlite, slf4j, specs2, compiler.value)
             },
-            initialCommands := """
+            initialCommands in Compile := """
                 import scala.reflect.runtime.{universe=>u}
                 import scala.tools.nsc.interpreter._
                 import scalax.io.JavaConverters._
