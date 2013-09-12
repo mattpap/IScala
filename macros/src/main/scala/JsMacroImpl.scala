@@ -129,15 +129,10 @@ object JsMacroImpl {
     val companionSymbol = companioned.companionSymbol
     val companionType = companionSymbol.typeSignature
 
-    val libsPkg = Select(Select(Ident(newTermName("play")), newTermName("api")), newTermName("libs"))
-    val jsonPkg = Select(libsPkg, newTermName("json"))
-    val functionalSyntaxPkg = Select(Select(libsPkg, newTermName("functional")), newTermName("syntax"))
-    val utilPkg = Select(jsonPkg, newTermName("util"))
-
-    val jsPathSelect = Select(jsonPkg, newTermName("JsPath"))
-    val readsSelect = Select(jsonPkg, newTermName("Reads"))
-    val unliftIdent = Select(functionalSyntaxPkg, newTermName("unlift"))
-    val lazyHelperSelect = Select(utilPkg, newTypeName("LazyHelper"))
+    val jsPathSelect = q"play.api.libs.json.JsPath"
+    val readsSelect = q"play.api.libs.json.Reads"
+    val unliftIdent = q"play.api.libs.functional.syntax.unlift"
+    val lazyHelperSelect = q"play.api.libs.json.util.LazyHelper"
 
     companionType.declaration(stringToTermName("unapply")) match {
       case NoSymbol => c.abort(c.enclosingPosition, "No unapply function found")
@@ -207,81 +202,33 @@ object JsMacroImpl {
                     val canBuild = namedImplicits.map {
                       case (name, (t, impl, rec, tpe)) =>
                         // inception of (__ \ name).read(impl)
-                        val jspathTree = Apply(
-                          Select(jsPathSelect, newTermName(scala.reflect.NameTransformer.encode("\\"))),
-                          List(Literal(Constant(name.decoded)))
-                        )
+                        val jspathTree = q"$jsPathSelect \ ${name.decoded}"
 
                         if (!rec) {
-                          val readTree =
-                            if (t.typeConstructor <:< typeOf[Option[_]].typeConstructor)
-                              Apply(
-                                Select(jspathTree, newTermName("readNullable")),
-                                List(impl)
-                              )
-                            else Apply(
-                              Select(jspathTree, newTermName("read")),
-                              List(impl)
-                            )
-
-                          readTree
+                          if (t.typeConstructor <:< typeOf[Option[_]].typeConstructor)
+                            q"$jspathTree.readNullable($impl)"
+                          else
+                            q"$jspathTree.read($impl)"
                         } else {
                           hasRec = true
-                          val readTree =
-                            if (t.typeConstructor <:< typeOf[Option[_]].typeConstructor)
-                              Apply(
-                                Select(jspathTree, newTermName("readNullable")),
-                                List(
-                                  Apply(
-                                    Select(Apply(jsPathSelect, List()), newTermName("lazyRead")),
-                                    List(helperMember)
-                                  )
-                                )
-                              )
-
-                            else {
-                              Apply(
-                                Select(jspathTree, newTermName("lazyRead")),
-                                if (tpe.typeConstructor <:< typeOf[List[_]].typeConstructor)
-                                  List(
-                                  Apply(
-                                    Select(readsSelect, newTermName("list")),
-                                    List(helperMember)
-                                  )
-                                )
-                                else if (tpe.typeConstructor <:< typeOf[Set[_]].typeConstructor)
-                                  List(
-                                  Apply(
-                                    Select(readsSelect, newTermName("set")),
-                                    List(helperMember)
-                                  )
-                                )
-                                else if (tpe.typeConstructor <:< typeOf[Seq[_]].typeConstructor)
-                                  List(
-                                  Apply(
-                                    Select(readsSelect, newTermName("seq")),
-                                    List(helperMember)
-                                  )
-                                )
-                                else if (tpe.typeConstructor <:< typeOf[Map[_, _]].typeConstructor)
-                                  List(
-                                  Apply(
-                                    Select(readsSelect, newTermName("map")),
-                                    List(helperMember)
-                                  )
-                                )
-                                else List(helperMember)
-                              )
-                            }
-
-                          readTree
+                          if (t.typeConstructor <:< typeOf[Option[_]].typeConstructor)
+                            q"$jspathTree.readNullable($jsPathSelect.lazyRead($helperMember))"
+                          else {
+                            val arg =
+                              if (tpe.typeConstructor <:< typeOf[List[_]].typeConstructor)
+                                q"$readsSelect.list($helperMember)"
+                              else if (tpe.typeConstructor <:< typeOf[Set[_]].typeConstructor)
+                                q"$readsSelect.set($helperMember)"
+                              else if (tpe.typeConstructor <:< typeOf[Seq[_]].typeConstructor)
+                                q"$readsSelect.seq($helperMember)"
+                              else if (tpe.typeConstructor <:< typeOf[Map[_, _]].typeConstructor)
+                                q"$readsSelect.map($helperMember)"
+                              else
+                                helperMember
+                            q"$jspathTree.lazyRead($arg)"
+                          }
                         }
-                    }.reduceLeft { (acc, r) =>
-                      Apply(
-                        Select(acc, newTermName("and")),
-                        List(r)
-                      )
-                    }
+                    }.reduceLeft((acc, r) => q"$acc and $r")
 
                     // builds the final Reads using apply method
                     val applyMethod =
@@ -319,21 +266,7 @@ object JsMacroImpl {
                     //println("finalTree: "+finalTree)
 
                     if (!hasRec) {
-                      val block = Block(
-                        List(Import(functionalSyntaxPkg, List(ImportSelector(nme.WILDCARD, -1, null, -1)))),
-                        finalTree
-                      )
-
-                      //println("block:"+block)
-
-                      /*val reif = reify(
-                        /*new play.api.libs.json.util.LazyHelper[Format, A] {
-                          override lazy val lazyStuff: Format[A] = null
-                        }*/
-                      )
-                      println("RAW:"+showRaw(reif.tree, printKinds = true))*/
-
-                      c.Expr[Reads[A]](block)
+                      c.Expr[Reads[A]](q"{ import play.api.libs.functional.syntax._; $finalTree }")
                     } else {
                       val helper = newTermName("helper")
                       val helperVal = ValDef(
@@ -345,7 +278,7 @@ object JsMacroImpl {
 
                       val block = Select(
                         Block(List(
-                          Import(functionalSyntaxPkg, List(ImportSelector(nme.WILDCARD, -1, null, -1))),
+                          q"import play.api.libs.functional.syntax._",
                           ClassDef(
                             Modifiers(Flag.FINAL),
                             newTypeName("$anon"),
@@ -412,15 +345,10 @@ object JsMacroImpl {
     val companionSymbol = companioned.companionSymbol
     val companionType = companionSymbol.typeSignature
 
-    val libsPkg = Select(Select(Ident(newTermName("play")), newTermName("api")), newTermName("libs"))
-    val jsonPkg = Select(libsPkg, newTermName("json"))
-    val functionalSyntaxPkg = Select(Select(libsPkg, newTermName("functional")), newTermName("syntax"))
-    val utilPkg = Select(jsonPkg, newTermName("util"))
-
-    val jsPathSelect = Select(jsonPkg, newTermName("JsPath"))
-    val writesSelect = Select(jsonPkg, newTermName("Writes"))
-    val unliftIdent = Select(functionalSyntaxPkg, newTermName("unlift"))
-    val lazyHelperSelect = Select(utilPkg, newTypeName("LazyHelper"))
+    val jsPathSelect = q"play.api.libs.json.JsPath"
+    val writesSelect = q"play.api.libs.json.Writes"
+    val unliftIdent = q"play.api.libs.functional.syntax.unlift"
+    val lazyHelperSelect = q"play.api.libs.json.util.LazyHelper"
 
     companionType.declaration(stringToTermName("unapply")) match {
       case NoSymbol => c.abort(c.enclosingPosition, "No unapply function found")
@@ -486,87 +414,39 @@ object JsMacroImpl {
 
                     var hasRec = false
 
-                    // combines all reads into CanBuildX
+                    // combines all writes into CanBuildX
                     val canBuild = namedImplicits.map {
                       case (name, (t, impl, rec, tpe)) =>
-                        // inception of (__ \ name).read(impl)
-                        val jspathTree = Apply(
-                          Select(jsPathSelect, newTermName(scala.reflect.NameTransformer.encode("\\"))),
-                          List(Literal(Constant(name.decoded)))
-                        )
+                        // inception of (__ \ name).write(impl)
+                        val jspathTree = q"$jsPathSelect \ ${name.decoded}"
 
                         if (!rec) {
-                          val writesTree =
-                            if (t.typeConstructor <:< typeOf[Option[_]].typeConstructor)
-                              Apply(
-                                Select(jspathTree, newTermName("writeNullable")),
-                                List(impl)
-                              )
-                            else Apply(
-                              Select(jspathTree, newTermName("write")),
-                              List(impl)
-                            )
-
-                          writesTree
+                          if (t.typeConstructor <:< typeOf[Option[_]].typeConstructor)
+                            q"$jspathTree.writeNullable($impl)"
+                          else
+                            q"$jspathTree.write($impl)"
                         } else {
                           hasRec = true
-                          val writesTree =
-                            if (t.typeConstructor <:< typeOf[Option[_]].typeConstructor)
-                              Apply(
-                                Select(jspathTree, newTermName("writeNullable")),
-                                List(
-                                  Apply(
-                                    Select(Apply(jsPathSelect, List()), newTermName("lazyWrite")),
-                                    List(helperMember)
-                                  )
-                                )
-                              )
-
-                            else {
-                              Apply(
-                                Select(jspathTree, newTermName("lazyWrite")),
-                                if (tpe.typeConstructor <:< typeOf[List[_]].typeConstructor)
-                                  List(
-                                  Apply(
-                                    Select(writesSelect, newTermName("list")),
-                                    List(helperMember)
-                                  )
-                                )
-                                else if (tpe.typeConstructor <:< typeOf[Set[_]].typeConstructor)
-                                  List(
-                                  Apply(
-                                    Select(writesSelect, newTermName("set")),
-                                    List(helperMember)
-                                  )
-                                )
-                                else if (tpe.typeConstructor <:< typeOf[Seq[_]].typeConstructor)
-                                  List(
-                                  Apply(
-                                    Select(writesSelect, newTermName("seq")),
-                                    List(helperMember)
-                                  )
-                                )
-                                else if (tpe.typeConstructor <:< typeOf[Map[_, _]].typeConstructor)
-                                  List(
-                                  Apply(
-                                    Select(writesSelect, newTermName("map")),
-                                    List(helperMember)
-                                  )
-                                )
-                                else List(helperMember)
-                              )
-                            }
-
-                          writesTree
+                          if (t.typeConstructor <:< typeOf[Option[_]].typeConstructor)
+                            q"$jspathTree.writeNullable($jsPathSelect.lazyWrite($helperMember))"
+                          else {
+                            val arg =
+                              if (tpe.typeConstructor <:< typeOf[List[_]].typeConstructor)
+                                q"$writesSelect.list($helperMember)"
+                              else if (tpe.typeConstructor <:< typeOf[Set[_]].typeConstructor)
+                                q"$writesSelect.set($helperMember)"
+                              else if (tpe.typeConstructor <:< typeOf[Seq[_]].typeConstructor)
+                                q"$writesSelect.seq($helperMember)"
+                              else if (tpe.typeConstructor <:< typeOf[Map[_, _]].typeConstructor)
+                                q"$writesSelect.map($helperMember)"
+                              else
+                                helperMember
+                            q"$jspathTree.lazyWrite($arg)"
+                          }
                         }
-                    }.reduceLeft { (acc, r) =>
-                      Apply(
-                        Select(acc, newTermName("and")),
-                        List(r)
-                      )
-                    }
+                    }.reduceLeft((acc, r) => q"$acc and $r")
 
-                    // builds the final Reads using apply method
+                    // builds the final Writes using apply method
                     //val applyMethod = Ident( companionSymbol.name )
                     val applyMethod =
                       Function(
@@ -603,12 +483,7 @@ object JsMacroImpl {
                     //println("finalTree: "+finalTree)
 
                     if (!hasRec) {
-                      val block = Block(
-                        List(Import(functionalSyntaxPkg, List(ImportSelector(nme.WILDCARD, -1, null, -1)))),
-                        finalTree
-                      )
-                      //println("block:"+block)
-                      c.Expr[Writes[A]](block)
+                      c.Expr[Writes[A]](q"{ import play.api.libs.functional.syntax._; $finalTree }")
                     } else {
                       val helper = newTermName("helper")
                       val helperVal = ValDef(
@@ -620,7 +495,7 @@ object JsMacroImpl {
 
                       val block = Select(
                         Block(List(
-                          Import(functionalSyntaxPkg, List(ImportSelector(nme.WILDCARD, -1, null, -1))),
+                          q"import play.api.libs.functional.syntax._",
                           ClassDef(
                             Modifiers(Flag.FINAL),
                             newTypeName("$anon"),
