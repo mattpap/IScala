@@ -22,7 +22,14 @@ object JsonUtil {
 }
 
 object Json extends JsonImpl {
+    import PlayJson.{JsValueWrapper,toJsFieldJsValueWrapper}
+
+    def fromJson[T:Reads](json: JsValue): JsResult[T] = PlayJson.fromJson(json)
     def toJson[T:Writes](obj: T): JsValue = PlayJson.toJson(obj)
+
+    def obj(fields: (String, JsValueWrapper)*): JsObject = PlayJson.obj(fields: _*)
+    def arr(fields: JsValueWrapper*): JsArray = PlayJson.arr(fields: _*)
+
     def noFields[A:ClassTag]: Format[A] = NoFields.format
 }
 
