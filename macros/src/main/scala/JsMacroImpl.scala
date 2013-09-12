@@ -134,7 +134,7 @@ object JsMacroImpl {
     val unliftIdent = q"play.api.libs.functional.syntax.unlift"
     val lazyHelperSelect = q"play.api.libs.json.util.LazyHelper"
 
-    companionType.declaration(stringToTermName("unapply")) match {
+    companionType.declaration(newTermName("unapply")) match {
       case NoSymbol => c.abort(c.enclosingPosition, "No unapply function found")
       case s =>
         val unapply = s.asMethod
@@ -155,7 +155,7 @@ object JsMacroImpl {
 
         //println("Unapply return type:" + unapply.returnType)
 
-        companionType.declaration(stringToTermName("apply")) match {
+        companionType.declaration(newTermName("apply")) match {
           case NoSymbol => c.abort(c.enclosingPosition, "No apply function found")
           case s =>
             // searches apply method corresponding to unapply
@@ -350,7 +350,7 @@ object JsMacroImpl {
     val unliftIdent = q"play.api.libs.functional.syntax.unlift"
     val lazyHelperSelect = q"play.api.libs.json.util.LazyHelper"
 
-    companionType.declaration(stringToTermName("unapply")) match {
+    companionType.declaration(newTermName("unapply")) match {
       case NoSymbol => c.abort(c.enclosingPosition, "No unapply function found")
       case s =>
         val unapply = s.asMethod
@@ -371,7 +371,7 @@ object JsMacroImpl {
 
         //println("Unapply return type:" + unapplyReturnTypes)
 
-        companionType.declaration(stringToTermName("apply")) match {
+        companionType.declaration(newTermName("apply")) match {
           case NoSymbol => c.abort(c.enclosingPosition, "No apply function found")
           case s =>
             // searches apply method corresponding to unapply
