@@ -18,8 +18,9 @@ object ProjectBuild extends Build {
         },
         cancelable := true,
         resolvers ++= Seq(
-            "Sonatype Releases" at "http://oss.sonatype.org/content/repositories/releases",
-            "Sonatype Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots",
+            Resolver.sonatypeRepo("releases"),
+            Resolver.sonatypeRepo("snapshots"),
+            Resolver.typesafeIvyRepo("releases"),
             "Mandubian Releases" at "https://github.com/mandubian/mandubian-mvn/raw/master/releases/",
             "Mandubian Snapshots" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/")
     )
