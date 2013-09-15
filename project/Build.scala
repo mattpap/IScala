@@ -141,7 +141,7 @@ object ProjectBuild extends Build {
                 "qtconsole" -> "",
                 "notebook"  -> ""),
             jrebelJar := {
-                val jar = file(System.getProperty("user.home")) / ".jrebel" / "jrebel" / "jrebel.jar"
+                val jar = Path.userHome / ".jrebel" / "jrebel" / "jrebel.jar"
                 if (jar.exists) Some(jar) else None
             },
             jrebelOptions := Seq("-Drebel.load_embedded_plugins=false", "-Drebel.stats=false", "-Drebel.usage_reporting=false"),
