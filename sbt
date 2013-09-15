@@ -4,7 +4,7 @@ function usage {
     echo "Usage: `basename $0` [OPTION|COMMAND]... -- [JVM OPTION]..."
 }
 
-while getopts hdR OPT;
+while getopts h OPT;
 do
     case "$OPT" in
         h)

@@ -9,7 +9,7 @@ import com.typesafe.sbt.SbtNativePackager
 object ProjectBuild extends Build {
     override lazy val settings = super.settings ++ Seq(
         organization := "org.refptr",
-        version := "0.2",
+        version := "0.2-SNAPSHOT",
         description := "Scala-language backend for IPython",
         scalaVersion := "2.10.2",
         scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:_"),
@@ -21,8 +21,8 @@ object ProjectBuild extends Build {
             Resolver.sonatypeRepo("releases"),
             Resolver.sonatypeRepo("snapshots"),
             Resolver.typesafeIvyRepo("releases"),
-            "Mandubian Releases" at "https://github.com/mandubian/mandubian-mvn/raw/master/releases/",
-            "Mandubian Snapshots" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/")
+            "mandubian-releases" at "https://github.com/mandubian/mandubian-mvn/raw/master/releases/",
+            "mandubian-snapshots" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/")
     )
 
     object Dependencies {
@@ -123,11 +123,16 @@ object ProjectBuild extends Build {
 
     lazy val projectSettings = Project.defaultSettings ++ pluginSettings ++ {
         import SbtAssembly.AssemblyKeys.{assembly,jarName}
-        Seq(fork in run := true,
+        Seq(publishMavenStyle := true,
+            publishTo := {
+                def repo(name: String) = Resolver.file(s"refptr-$name", file("/srv/repo/share") / name)
+                Some(if (version.value.endsWith("SNAPSHOT")) repo("snapshots") else repo("releases"))
+            },
             libraryDependencies ++= {
                 import Dependencies._
                 scalaio ++ Seq(ivy, jopt, jeromq, play_json, slick, h2, sqlite, slf4j, specs2, compiler.value)
             },
+            fork in run := true,
             initialCommands in Compile := """
                 import scala.reflect.runtime.{universe=>u}
                 import scala.tools.nsc.interpreter._
@@ -206,7 +211,7 @@ object ProjectBuild extends Build {
 
     lazy val IScala = Project(id="IScala", base=file("."), settings=projectSettings) dependsOn(Macros)
 
-    lazy val Macros = Project(id="Macros", base=file("macros"), settings=macrosSettings)
+    lazy val Macros = Project(id="IScala-Macros", base=file("macros"), settings=macrosSettings)
 
     override def projects = Seq(IScala, Macros)
 }
