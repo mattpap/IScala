@@ -56,10 +56,6 @@ object ProjectBuild extends Build {
         val compiler = Def.setting { "org.scala-lang" % "scala-compiler" % scalaVersion.value }
     }
 
-    def info(msg: => String) {
-        ConsoleLogger().log(Level.Info, msg)
-    }
-
     val release = taskKey[File]("Create a set of archives and installers for new release")
 
     val ipyCommands = settingKey[Seq[(String, String)]]("IPython commands (e.g. console) and their command line options")
@@ -81,13 +77,9 @@ object ProjectBuild extends Build {
         Seq(test in assembly := {},
             jarName in assembly := "IScala.jar",
             target in assembly := target.value / "lib",
-            assemblyDirectory in assembly := {
-                val tmpDir = IO.createTemporaryDirectory
-                info(s"Using $tmpDir for sbt-assembly temporary files")
-                tmpDir
-            },
-            assembly <<= (assembly, assemblyDirectory in assembly) map { (outputFile, tmpDir) =>
-                info(s"Cleaning up $tmpDir")
+            assemblyDirectory in assembly := IO.createTemporaryDirectory,
+            assembly <<= (assembly, assemblyDirectory in assembly, streams) map { (outputFile, tmpDir, streams) =>
+                streams.log.info(s"Cleaning up $tmpDir")
                 IO.delete(tmpDir)
                 outputFile
             })
