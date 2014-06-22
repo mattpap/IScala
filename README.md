@@ -138,6 +138,26 @@ Out[15]: List(<init>, toByte, toShort, toChar, toInt, toLong, toFloat, toDouble,
 unary_+, unary_-, +, <<, >>>, >>, ==, !=, <, <=, >, >=, |, &, ^, -, *, /, %, getClass)
 ```
 
+## HTML and raw output
+
+IPython notebook runs in web browser. It makes possible to use HTML output to render images or whatever you can imagine.
+
+```
+In [1]: raw_output("text/plain", "<i>italic</i>")
+```
+Out[1]: `<i>italic</i>`
+
+```
+In [2]: raw_output("text/html", "<i>italic</i>")
+```
+Out[2]: _italic_
+
+
+```
+In [2]: raw_output("image/png", "BASE64_PNG_DATA")
+```
+Out[2]: <img src='http://blog.concretesolutions.com.br/wp-content/uploads/2012/05/scala_logo.png' />
+
 ## Magics
 
 IScala supports magic commands similarly to IPython, but the set of magics is
