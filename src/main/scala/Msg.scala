@@ -50,6 +50,8 @@ object MsgType extends Enumeration {
         input_reply = Value
 }
 
+class RawMsg(val mime: MIME, val data: String)
+
 sealed trait Content
 sealed trait FromIPython extends Content
 sealed trait ToIPython extends Content

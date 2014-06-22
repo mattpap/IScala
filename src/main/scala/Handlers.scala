@@ -118,10 +118,16 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                     }
                 } getOrElse ""
             }
+
+            def raw_output(mime: String, data: String): org.refptr.iscala.msg.RawMsg = {
+                new org.refptr.iscala.msg.RawMsg(mime, data)
+            }
         }
 
         val bindings = List(
-            ("raw_input", "() => String", Builtins.raw_input _))
+            ("raw_input", "() => String", Builtins.raw_input _),
+            ("raw_output", "(String, String) => org.refptr.iscala.msg.RawMsg", Builtins.raw_output _)
+            )
 
         interpreter.intp.beSilentDuring {
             bindings.foreach { case (name, tpe, value) =>
@@ -183,6 +189,14 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                     ipy.send_error(msg, n, s"ERROR: Line magic function `%$name` not found.")
                 case _ =>
                     capture(msg) { interpreter.interpret(code) } match {
+                        case Results.Success(Some(Results.Value(value: org.refptr.iscala.msg.RawMsg, _))) if !silent =>
+                            ipy.publish(msg.pub(MsgType.pyout,
+                                pyout(
+                                    execution_count=n,
+                                    data=Data(value.mime -> value.data))))
+
+                            ipy.send_ok(msg, n)
+
                         case Results.Success(Some(Results.Value(value, tpe))) if !silent =>
                             val result = interpreter.stringify(value)
 
