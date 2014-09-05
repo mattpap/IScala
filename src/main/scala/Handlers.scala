@@ -303,13 +303,13 @@ class HistoryHandler(parent: Parent) extends Handler[history_request](parent) {
         import org.refptr.iscala.db.{DB,History,OutputHistory}
 
         import scala.slick.driver.SQLiteDriver.simple._
-        import Database.threadLocalSession
+        import Database.dynamicSession
 
         val raw = msg.content.raw
 
         var query = for {
-            (input, output) <- History leftJoin OutputHistory on ((in, out) => in.session === out.session && in.line === out.line)
-        } yield input.session ~ input.line ~ (if (raw) input.source_raw else input.source) ~ output.output.?
+            (input, output) <- DB.History leftJoin DB.OutputHistory on ((in, out) => in.session === out.session && in.line === out.line)
+        } yield (input.session, input.line, (if (raw) input.source_raw else input.source), output.output.?)
 
         msg.content.hist_access_type match {
             case HistAccessType.range =>
@@ -335,7 +335,7 @@ class HistoryHandler(parent: Parent) extends Handler[history_request](parent) {
                     query = query.take(n)
         }
 
-        val rawHistory = DB.db.withSession { query.list }
+        val rawHistory = DB.db.withDynSession { query.list }
         val history =
             if (msg.content.output)
                 rawHistory.map { case (session, line, input, output) => (session, line, Right((input, output))) }
