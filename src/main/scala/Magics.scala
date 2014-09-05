@@ -23,7 +23,7 @@ trait MagicParsers[T] extends JavaTokenParsers {
 }
 
 object EmptyParsers extends MagicParsers[Unit] {
-    def magic: Parser[Unit] = "" ^^^ ()
+    def magic: Parser[Unit] = "".^^^(())
 }
 
 object EntireParsers extends MagicParsers[String] {

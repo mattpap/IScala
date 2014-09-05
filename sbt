@@ -31,10 +31,22 @@ else
     JVM_OPTS=""
 fi
 
-JVM_DEFAULTS="-Dfile.encoding=UTF-8 -Xss8M -Xmx2G -XX:MaxPermSize=1024M -XX:ReservedCodeCacheSize=64M -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled"
+function get_property {
+    echo "$(cat project/build.properties | grep $1 | cut -d'=' -f2)"
+}
+
+JVM_DEFAULTS="                     \
+    -Dfile.encoding=UTF-8          \
+    -Xss8M                         \
+    -Xmx2G                         \
+    -XX:MaxPermSize=1024M          \
+    -XX:ReservedCodeCacheSize=64M  \
+    -XX:+UseConcMarkSweepGC        \
+    -XX:+CMSClassUnloadingEnabled"
+
 JVM_OPTS="$JVM_DEFAULTS $JVM_OPTS"
 
-SBT_VERSION="0.13.0"
+SBT_VERSION="$(get_property sbt.version)"
 SBT_LAUNCHER="$(dirname $0)/project/sbt-launch-$SBT_VERSION.jar"
 
 if [ ! -e "$SBT_LAUNCHER" ];
@@ -43,5 +55,13 @@ then
     wget -O $SBT_LAUNCHER $URL
 fi
 
+EXPECTED_MD5="$(get_property sbt.launcher.md5)"
+COMPUTED_MD5="$(openssl md5 -r < $SBT_LAUNCHER | cut -d' ' -f1)"
+
+if [ "$EXPECTED_MD5" != "$COMPUTED_MD5" ];
+then
+    echo "$SBT_LAUNCHER has invalid MD5 signature: expected $EXPECTED_MD5, got $COMPUTED_MD5"
+    exit 1
+fi
+
 java $JVM_OPTS -jar $SBT_LAUNCHER $SBT_OPTS
-echo

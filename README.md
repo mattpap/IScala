@@ -296,6 +296,6 @@ a [Julia-language](http://julialang.org/) backend for IPython.
 
 ## License
 
-Copyright &copy; 2013 by Mateusz Paprocki and contributors.
+Copyright &copy; 2013-2014 by Mateusz Paprocki and contributors.
 
 Published under The MIT License, see LICENSE.
