@@ -53,6 +53,7 @@ object Dependencies {
 object IScalaBuild extends Build {
     override lazy val settings = super.settings ++ Seq(
         organization := "org.refptr.iscala",
+        name := "IScala",
         version := "0.3-SNAPSHOT",
         description := "Scala-language backend for IPython",
         homepage := Some(url("http://iscala.github.io")),
@@ -81,7 +82,7 @@ object IScalaBuild extends Build {
     lazy val assemblySettings = SbtAssembly.assemblySettings ++ {
         import SbtAssembly.AssemblyKeys._
         Seq(test in assembly := {},
-            jarName in assembly := "IScala.jar",
+            jarName in assembly := s"${name.value}.jar",
             target in assembly := crossTarget.value / "lib",
             assembly <<= assembly dependsOn userScripts)
     }
@@ -91,7 +92,7 @@ object IScalaBuild extends Build {
         import SbtNativePackager.Universal
         import SbtAssembly.AssemblyKeys.assembly
         Seq(packageName in Universal := {
-                s"IScala-${scalaBinaryVersion.value}-${version.value}"
+                s"${name.value}-${scalaBinaryVersion.value}-${version.value}"
             },
             mappings in Universal ++= {
                 assembly.value pair relativeTo(crossTarget.value)
