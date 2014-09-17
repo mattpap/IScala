@@ -13,7 +13,7 @@ do
             ;;
         \?)
             usage
-            exit 1;
+            exit 1
             ;;
     esac
 done
@@ -25,7 +25,8 @@ OPTS=$@
 
 SBT_OPTS="${OPTS%$SEP*}"
 
-if [ "$SBT_OPTS" != "$OPTS" ]; then
+if [ "$SBT_OPTS" != "$OPTS" ];
+then
     JVM_OPTS="${OPTS#*$SEP}"
 else
     JVM_OPTS=""
