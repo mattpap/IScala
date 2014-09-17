@@ -3,7 +3,6 @@ import Keys._
 
 import sbtassembly.{Plugin=>SbtAssembly}
 import org.sbtidea.SbtIdeaPlugin
-import com.typesafe.sbt.SbtProguard
 import com.typesafe.sbt.SbtNativePackager
 
 object Dependencies {
@@ -87,14 +86,6 @@ object IScalaBuild extends Build {
             assembly <<= assembly dependsOn userScripts)
     }
 
-    lazy val proguardSettings = SbtProguard.proguardSettings ++ {
-        import SbtProguard.{Proguard,ProguardOptions}
-        import SbtProguard.ProguardKeys._
-        Seq(javaOptions in (Proguard, proguard) := Seq("-Xmx2G"),
-            options in Proguard += "@" + (baseDirectory.value / "project" / "IScala.pro"),
-            options in Proguard += ProguardOptions.keepMain(organization.value + ".iscala.IScala"))
-    }
-
     lazy val packagerSettings = SbtNativePackager.packagerSettings ++ {
         import SbtNativePackager.NativePackagerKeys._
         import SbtNativePackager.Universal
@@ -113,7 +104,7 @@ object IScalaBuild extends Build {
             release <<= packageZipTarball in Universal)
     }
 
-    lazy val pluginSettings = ideaSettings ++ assemblySettings ++ proguardSettings ++ packagerSettings
+    lazy val pluginSettings = ideaSettings ++ assemblySettings ++ packagerSettings
 
     lazy val iscalaSettings = Defaults.coreDefaultSettings ++ pluginSettings ++ {
         import SbtAssembly.AssemblyKeys.{assembly,jarName}
