@@ -58,7 +58,7 @@ object IScalaBuild extends Build {
         description := "Scala-language backend for IPython",
         homepage := Some(url("http://iscala.github.io")),
         licenses := Seq("MIT-style" -> url("http://www.opensource.org/licenses/mit-license.php")),
-        scalaVersion := "2.10.4",
+        scalaVersion := "2.11.2",
         crossScalaVersions := Seq("2.10.4", "2.11.2"),
         scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-language:_"),
         addCompilerPlugin(Dependencies.paradise),

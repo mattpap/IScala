@@ -100,7 +100,7 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
                         val outcome =
                             if (definesValue && value != null) {
                                 val tpe = intp0.typeOfTerm(intp0.mostRecentVar)
-                                Some(Results.Value(value, intp0.global.afterTyper { tpe.toString }))
+                                Some(Results.Value(value, intp0.global.exitingTyper { tpe.toString }))
                             } else
                                 None
                         Results.Success(outcome)
@@ -166,7 +166,7 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
 
         val symbol = intp0.symbolOfLine(code)
         if (symbol.exists) {
-            Some(afterTyper {
+            Some(exitingTyper {
                 val info = symbol.info match {
                     case NullaryMethodType(restpe) if symbol.isAccessor => restpe
                     case info                                           => info
