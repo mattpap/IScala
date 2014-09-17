@@ -75,7 +75,7 @@ object IScalaBuild extends Build {
     val debugCommand = taskKey[Seq[String]]("JVM command line options enabling remote debugging")
 
     val develScripts = taskKey[Seq[File]]("Development scripts generated in bin/")
-    val userScripts = taskKey[Seq[File]]("User scripts generated in target/bin/")
+    val userScripts = taskKey[Seq[File]]("User scripts generated in target/scala-2.xx/bin/")
 
     lazy val ideaSettings = SbtIdeaPlugin.settings
 
@@ -83,13 +83,8 @@ object IScalaBuild extends Build {
         import SbtAssembly.AssemblyKeys._
         Seq(test in assembly := {},
             jarName in assembly := "IScala.jar",
-            target in assembly := target.value / "lib",
-            assemblyDirectory in assembly := IO.createTemporaryDirectory,
-            assembly <<= (assembly, assemblyDirectory in assembly, streams) map { (outputFile, tmpDir, streams) =>
-                streams.log.info(s"Cleaning up $tmpDir")
-                IO.delete(tmpDir)
-                outputFile
-            })
+            target in assembly := crossTarget.value / "lib",
+            assembly <<= assembly dependsOn userScripts)
     }
 
     lazy val proguardSettings = SbtProguard.proguardSettings ++ {
@@ -104,10 +99,10 @@ object IScalaBuild extends Build {
         import SbtNativePackager.NativePackagerKeys._
         import SbtNativePackager.Universal
         import SbtAssembly.AssemblyKeys.assembly
-        Seq(mappings in Universal <++= (assembly, target) map { (jar, target) =>
+        Seq(mappings in Universal <++= (assembly, crossTarget) map { (jar, target) =>
                 jar pair relativeTo(target)
             },
-            mappings in Universal <++= (userScripts, target) map { (scripts, target) =>
+            mappings in Universal <++= (userScripts, crossTarget) map { (scripts, target) =>
                 scripts pair relativeTo(target)
             },
             mappings in Universal ++= {
@@ -167,7 +162,7 @@ object IScalaBuild extends Build {
                     file
                 }
             },
-            userScripts <<= (jarName in assembly, target, ipyCommands, streams) map { (jarName, target, commands, streams) =>
+            userScripts <<= (jarName in assembly, crossTarget, ipyCommands, streams) map { (jarName, target, commands, streams) =>
                 val bin = target / "bin"
                 IO.createDirectory(bin)
 
