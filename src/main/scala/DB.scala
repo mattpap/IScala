@@ -42,7 +42,7 @@ object DB {
 
     lazy val dbPath = {
         val home = Path.fromString(System.getProperty("user.home"))
-        val profile = home / ".config" / "ipython" / "profile_scala"
+        val profile = home / ".ipython" / "profile_scala"
         if (!profile.exists) profile.createDirectory()
         profile / "history.sqlite" path
     }
