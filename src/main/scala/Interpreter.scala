@@ -6,9 +6,8 @@ import scala.collection.mutable
 
 import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
 import scala.tools.nsc.util.Exceptional.unwrap
-import scala.tools.nsc.io
 
-import Util.{log,debug}
+import Util.{log,debug,newThread,timer}
 
 object Results {
     final case class Value(value: AnyRef, tpe: String)
@@ -135,7 +134,7 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
 
         val imports = (intp0.definedTypes ++ intp0.definedTerms) match {
             case Nil => "/* imports */"
-            case names => names.map(intp0.pathToName).map("import " + _).mkString("\n  ")
+            case names => names.map(_.decode).map("import " + _).mkString("\n  ")
         }
 
         val bindRep = new intp0.ReadEvalPrint()
@@ -148,10 +147,13 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
             """.stripMargin
 
         bindRep.compile(source)
-        bindRep.callOpt("set", value).map { _ =>
-            val line = "%sval %s = %s.value".format(modifiers map (_ + " ") mkString, name, bindRep.evalPath)
-            intp0.interpret(line)
-        } getOrElse IR.Error
+        bindRep.callEither("set", value) match {
+            case Right(_) =>
+                val line = "%sval %s = %s.value".format(modifiers map (_ + " ") mkString, name, bindRep.evalPath)
+                intp0.interpret(line)
+            case Left(_) =>
+                IR.Error
+        }
     }
 
     def cancel() = runner.cancel()
@@ -193,7 +195,7 @@ class Runner(classLoader: ClassLoader) {
             finished.signal()
         }
 
-        private val _thread = io.newThread {
+        private val _thread = newThread {
             _.setContextClassLoader(classLoader)
         } {
             setResult(body)
@@ -231,7 +233,7 @@ class Runner(classLoader: ClassLoader) {
         current.foreach { execution =>
             execution.interrupt()
             execution.cancel()
-            io.timer(5) {
+            timer(5) {
                 if (execution.alive) {
                     debug(s"Forcefully stopping ${execution}")
                     execution.stop()

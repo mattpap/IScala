@@ -1,5 +1,6 @@
 package org.refptr.iscala
 
+import java.util.{Timer,TimerTask}
 import java.lang.management.ManagementFactory
 
 trait ScalaUtil {
@@ -14,6 +15,24 @@ trait OSUtil {
     def getpid(): Int = {
         val name = ManagementFactory.getRuntimeMXBean().getName()
         name.takeWhile(_ != '@').toInt
+    }
+}
+
+trait IOUtil {
+    def newThread(fn: Thread => Unit)(body: => Unit): Thread = {
+        val thread = new Thread(new Runnable {
+            override def run() = body
+        })
+        fn(thread)
+        thread.start
+        thread
+    }
+
+    def timer(seconds: Int)(body: => Unit): Timer = {
+        val alarm = new Timer(true)
+        val task  = new TimerTask { def run() = body }
+        alarm.schedule(task, seconds*1000)
+        alarm
     }
 }
 
@@ -64,5 +83,5 @@ trait StringUtil {
     }
 }
 
-trait Util extends ScalaUtil with ByteUtil with OSUtil with ConsoleUtil with StringUtil
+trait Util extends ScalaUtil with ByteUtil with OSUtil with IOUtil with ConsoleUtil with StringUtil
 object Util extends Util

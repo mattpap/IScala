@@ -98,7 +98,7 @@ class IScalaCompletion(val intp: IMain) extends Completion with CompletionOutput
 
         def members  = afterTyper((effectiveTp.nonPrivateMembers.toList ++ anyMembers) filter (_.isPublic))
         def methods  = members.toList filter (_.isMethod)
-        def packages = members.toList filter (_.isPackage)
+        def packages = members.toList filter (_.hasPackageFlag)
         def aliases  = members.toList filter (_.isAliasType)
 
         def memberNames  = members map tos
