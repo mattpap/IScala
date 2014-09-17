@@ -90,17 +90,19 @@ object IScalaBuild extends Build {
         import SbtNativePackager.NativePackagerKeys._
         import SbtNativePackager.Universal
         import SbtAssembly.AssemblyKeys.assembly
-        Seq(mappings in Universal <++= (assembly, crossTarget) map { (jar, target) =>
-                jar pair relativeTo(target)
+        Seq(packageName in Universal := {
+                s"IScala-${scalaBinaryVersion.value}-${version.value}"
             },
-            mappings in Universal <++= (userScripts, crossTarget) map { (scripts, target) =>
-                scripts pair relativeTo(target)
+            mappings in Universal ++= {
+                assembly.value pair relativeTo(crossTarget.value)
+            },
+            mappings in Universal ++= {
+                userScripts.value pair relativeTo(crossTarget.value)
             },
             mappings in Universal ++= {
                 val paths = Seq("README.md", "LICENSE")
                 paths.map(path => (file(path), path))
             },
-            packageName in Universal := s"IScala-${scalaBinaryVersion.value}-${version.value}",
             release <<= packageZipTarball in Universal)
     }
 
