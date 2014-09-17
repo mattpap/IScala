@@ -100,7 +100,7 @@ object IScalaBuild extends Build {
                 val paths = Seq("README.md", "LICENSE")
                 paths.map(path => (file(path), path))
             },
-            packageName in Universal := s"IScala-${version.value}",
+            packageName in Universal := s"IScala-${scalaBinaryVersion.value}-${version.value}",
             release <<= packageZipTarball in Universal)
     }
 
