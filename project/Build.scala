@@ -33,8 +33,6 @@ object Dependencies {
 
     val slick = "com.typesafe.slick" %% "slick" % "2.1.0"
 
-    val h2 = "com.h2database" % "h2" % "1.4.181"
-
     val sqlite = "org.xerial" % "sqlite-jdbc" % "3.7.2"
 
     val slf4j = "org.slf4j" % "slf4j-nop" % "1.6.4"
@@ -113,7 +111,7 @@ object IScalaBuild extends Build {
         import SbtAssembly.AssemblyKeys.{assembly,jarName}
         Seq(libraryDependencies ++= {
                 import Dependencies._
-                scalaio ++ Seq(ivy, jopt, jeromq, play_json, slick, h2, sqlite, slf4j, specs2, compiler.value)
+                scalaio ++ Seq(ivy, jopt, jeromq, play_json, slick, sqlite, slf4j, specs2, compiler.value)
             },
             unmanagedSourceDirectories in Compile += {
                 (sourceDirectory in Compile).value / s"scala_${scalaBinaryVersion.value}"
