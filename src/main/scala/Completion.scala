@@ -2,8 +2,9 @@ package org.refptr.iscala
 
 import scala.tools.nsc.interpreter.{IMain,Parsed,Completion,CompletionOutput,NamedParam}
 import scala.collection.mutable.ListBuffer
-
 import scala.reflect.NameTransformer
+
+import Compatibility._
 
 /** An interface for objects which are aware of tab completion and
  *  will supply their own candidates and resolve their own paths.
@@ -93,10 +94,10 @@ class IScalaCompletion(val intp: IMain) extends Completion with CompletionOutput
         def anyRefMethodsToShow = Set("isInstanceOf", "asInstanceOf", "toString")
 
         def tos(sym: Symbol): String = sym.decodedName
-        def memberNamed(s: String) = exitingTyper(effectiveTp member newTermName(s))
+        def memberNamed(s: String) = intp.global.exitingTyper(effectiveTp member newTermName(s))
         def hasMethod(s: String) = memberNamed(s).isMethod
 
-        def members  = exitingTyper((effectiveTp.nonPrivateMembers.toList ++ anyMembers) filter (_.isPublic))
+        def members  = intp.global.exitingTyper((effectiveTp.nonPrivateMembers.toList ++ anyMembers) filter (_.isPublic))
         def methods  = members.toList filter (_.isMethod)
         def packages = members.toList filter (_.hasPackageFlag)
         def aliases  = members.toList filter (_.isAliasType)
@@ -146,7 +147,7 @@ class IScalaCompletion(val intp: IMain) extends Completion with CompletionOutput
         def excludeNames: List[String] = (anyref.methodNames filterNot anyRefMethodsToShow) :+ "_root_"
 
         def methodSignatureString(sym: Symbol) = {
-            IMain stripString exitingTyper(new MethodSymbolOutput(sym).methodString())
+            IMain stripString intp.global.exitingTyper(new MethodSymbolOutput(sym).methodString())
         }
 
         def exclude(name: String): Boolean = (

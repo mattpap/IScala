@@ -8,6 +8,7 @@ import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
 import scala.tools.nsc.util.Exceptional.unwrap
 
 import Util.{log,debug,newThread,timer}
+import Compatibility._
 
 object Results {
     final case class Value(value: AnyRef, tpe: String)

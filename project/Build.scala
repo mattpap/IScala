@@ -115,6 +115,9 @@ object IScalaBuild extends Build {
                 import Dependencies._
                 scalaio ++ Seq(ivy, jopt, jeromq, play_json, slick, h2, sqlite, slf4j, specs2, compiler.value)
             },
+            unmanagedSourceDirectories in Compile += {
+                (sourceDirectory in Compile).value / s"scala_${scalaBinaryVersion.value}"
+            },
             fork in run := true,
             initialCommands in Compile := """
                 import scala.reflect.runtime.{universe=>u}
