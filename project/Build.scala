@@ -74,7 +74,7 @@ object IScalaBuild extends Build {
     val debugPort = settingKey[Int]("Port for remote debugging")
     val debugCommand = taskKey[Seq[String]]("JVM command line options enabling remote debugging")
 
-    val develScripts = taskKey[Seq[File]]("Development scripts generated in bin/")
+    val develScripts = taskKey[Seq[File]]("Development scripts generated in bin/2.xx/")
     val userScripts = taskKey[Seq[File]]("User scripts generated in target/scala-2.xx/bin/")
 
     lazy val ideaSettings = SbtIdeaPlugin.settings
@@ -139,7 +139,7 @@ object IScalaBuild extends Build {
                 val cmd = Seq("java") ++ debugCommand.value ++ Seq("-cp", classpath, main, "--profile", "{connection_file}", "--parent", "$@")
                 val kernel_cmd = cmd.map(arg => s"""\\"$arg\\"""").mkString(", ")
 
-                val binDirectory = baseDirectory.value / "bin"
+                val binDirectory = baseDirectory.value / "bin" / scalaBinaryVersion.value
                 IO.createDirectory(binDirectory)
 
                 ipyCommands.value map { case (command, options) =>
