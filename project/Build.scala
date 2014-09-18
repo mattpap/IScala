@@ -129,46 +129,47 @@ object IScalaBuild extends Build {
                 "qtconsole" -> "",
                 "notebook"  -> ""),
             debugPort := 5005,
-            debugCommand <<= (debugPort) map { (port) =>
-                Seq("-Xdebug", s"-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:$port")
+            debugCommand := {
+                Seq("-Xdebug", s"-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=127.0.0.1:${debugPort.value}")
             },
-            develScripts <<= (fullClasspath in Compile, mainClass in Compile, baseDirectory, ipyCommands, debugCommand, streams) map {
-                    (fullClasspath, mainClass, base, commands, debug, streams) =>
-                val classpath = fullClasspath.files.mkString(java.io.File.pathSeparator)
-                val main = mainClass getOrElse sys.error("unknown main class")
+            develScripts := {
+                val classpath = (fullClasspath in Compile).value.files.mkString(java.io.File.pathSeparator)
+                val main = (mainClass in Compile).value getOrElse sys.error("unknown main class")
 
-                val cmd = Seq("java") ++ debug ++ Seq("-cp", classpath, main, "--profile", "{connection_file}", "--parent", "$@")
+                val cmd = Seq("java") ++ debugCommand.value ++ Seq("-cp", classpath, main, "--profile", "{connection_file}", "--parent", "$@")
                 val kernel_cmd = cmd.map(arg => s"""\\"$arg\\"""").mkString(", ")
 
-                val bin = base / "bin"
-                IO.createDirectory(bin)
+                val binDirectory = baseDirectory.value / "bin"
+                IO.createDirectory(binDirectory)
 
-                commands map { case (command, options) =>
+                ipyCommands.value map { case (command, options) =>
                     val output =
                         s"""
                         |#!/bin/bash
                         |ipython $command --profile scala --KernelManager.kernel_cmd="[$kernel_cmd]" $options
                         """.stripMargin.trim + "\n"
-                    val file = bin / command
-                    streams.log.info(s"Writing ${file.getPath}")
+                    val file = binDirectory / command
+                    streams.value.log.info(s"Writing ${file.getPath}")
                     IO.write(file, output)
                     file.setExecutable(true)
                     file
                 }
             },
-            userScripts <<= (jarName in assembly, crossTarget, ipyCommands, streams) map { (jarName, target, commands, streams) =>
-                val bin = target / "bin"
-                IO.createDirectory(bin)
+            userScripts := {
+                val assemblyJarName = (jarName in assembly).value
 
-                commands map { case (command, options) =>
+                val binDirectory = crossTarget.value / "bin"
+                IO.createDirectory(binDirectory)
+
+                ipyCommands.value map { case (command, options) =>
                     val output = s"""
                         |#!/bin/bash
-                        |JAR_PATH="$$(dirname $$(dirname $$(readlink -f $$0)))/lib/$jarName"
+                        |JAR_PATH="$$(dirname $$(dirname $$(readlink -f $$0)))/lib/$assemblyJarName"
                         |KERNEL_CMD="[\\"java\\", \\"-jar\\", \\"$$JAR_PATH\\", \\"--profile\\", \\"{connection_file}\\", \\"--parent\\", \\"$$@\\"]"
                         |ipython $command --profile scala --KernelManager.kernel_cmd="$$KERNEL_CMD" $options
                         """.stripMargin.trim + "\n"
-                    val file = bin / command
-                    streams.log.info(s"Writing ${file.getPath}")
+                    val file = binDirectory / command
+                    streams.value.log.info(s"Writing ${file.getPath}")
                     IO.write(file, output)
                     file.setExecutable(true)
                     file
