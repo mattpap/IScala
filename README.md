@@ -2,6 +2,8 @@
 
 **IScala** is a [Scala-language](http://scala-lang.org) backend for [IPython](http://ipython.org).
 
+[![Build Status][travis]](https://travis-ci.org/mattpap/IScala)
+
 ## Requirements
 
 * [IPython](http://ipython.org/ipython-doc/stable/install/install.html) 1.0+
@@ -299,3 +301,5 @@ a [Julia-language](http://julialang.org/) backend for IPython.
 Copyright &copy; 2013-2014 by Mateusz Paprocki and contributors.
 
 Published under The MIT License, see LICENSE.
+
+[travis]: https://api.travis-ci.org/mattpap/IScala.png?branch=master
