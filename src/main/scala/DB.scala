@@ -19,18 +19,22 @@ class Sessions(tag: Tag) extends Table[(Int, Timestamp, Option[Timestamp], Optio
 }
 
 class History(tag: Tag) extends Table[(Int, Int, String, String)](tag, "history") {
-    def session = column[Int]("session", O.PrimaryKey)
-    def line = column[Int]("line", O.PrimaryKey)
+    def session = column[Int]("session")
+    def line = column[Int]("line")
     def source = column[String]("source")
     def source_raw = column[String]("source_raw")
+
+    def pk = primaryKey("pk_session_line", (session, line))
 
     def * = (session, line, source, source_raw)
 }
 
 class OutputHistory(tag: Tag) extends Table[(Int, Int, String)](tag, "output_history") {
-    def session = column[Int]("session", O.PrimaryKey)
-    def line = column[Int]("line", O.PrimaryKey)
+    def session = column[Int]("session")
+    def line = column[Int]("line")
     def output = column[String]("output")
+
+    def pk = primaryKey("pk_session_line", (session, line))
 
     def * = (session, line, output)
 }
