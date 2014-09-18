@@ -33,7 +33,7 @@ else
 fi
 
 function get_property {
-    echo "$(cat project/build.properties | grep $1 | cut -d'=' -f2)"
+    echo $(cat project/build.properties | grep "^$1" | cut -d'=' -f2-)
 }
 
 JVM_DEFAULTS="                     \
