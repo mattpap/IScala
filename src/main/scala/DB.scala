@@ -50,10 +50,12 @@ object DB {
     lazy val db = {
         val db = Database.forURL(s"jdbc:sqlite:$dbPath", driver="org.sqlite.JDBC")
         db.withDynSession {
-            try {
-                (Sessions.ddl ++ History.ddl ++ OutputHistory.ddl).create
-            } catch {
-                case e: java.sql.SQLException =>
+            Seq(Sessions, History, OutputHistory) foreach { table =>
+                try {
+                    table.ddl.create
+                } catch {
+                    case error: java.sql.SQLException if error.getMessage contains "already exists" =>
+                }
             }
         }
         db
