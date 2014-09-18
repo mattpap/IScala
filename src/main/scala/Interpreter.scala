@@ -86,11 +86,28 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
             method.invoke(intp0, args: _*).asInstanceOf[Either[IR.Result, Request]]
         }
 
+        import intp0.memberHandlers.{MemberHandler,ValHandler,DefHandler}
+
+        def definesValue(handler: MemberHandler): Boolean = {
+            // MemberHandler.definesValue has slightly different meaning from what is
+            // needed in loadAndRunReq. We don't want to eagerly evaluate lazy vals
+            // or 0-arity defs, so we handle those cases here.
+            if (!handler.definesValue) {
+                false
+            } else {
+                handler match {
+                    case handler: ValHandler if handler.mods.isLazy => false
+                    case handler: DefHandler                        => false
+                    case _ => true
+                }
+            }
+        }
+
         def loadAndRunReq(req: Request): Results.Result = {
             import intp0.naming.sessionNames.{result,print}
 
-            val definesValue = req.handlers.last.definesValue
-            val name = if (definesValue) result else print
+            val hasValue = definesValue(req.handlers.last)
+            val name = if (hasValue) result else print
 
             val outcome = try {
                 runner.execute {
@@ -98,7 +115,7 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
                         val value = req.lineRep.call(name)
                         intp0.recordRequest(req)
                         val outcome =
-                            if (definesValue && value != null) {
+                            if (hasValue && value != null) {
                                 val tpe = intp0.typeOfTerm(intp0.mostRecentVar)
                                 Some(Results.Value(value, intp0.global.afterTyper { tpe.toString }))
                             } else
