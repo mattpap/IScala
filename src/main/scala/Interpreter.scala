@@ -117,7 +117,7 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
                         val outcome =
                             if (hasValue && value != null) {
                                 val tpe = intp0.typeOfTerm(intp0.mostRecentVar)
-                                Some(Results.Value(value, intp0.global.afterTyper { tpe.toString }))
+                                Some(Results.Value(value, intp0.global.exitingTyper { tpe.toString }))
                             } else
                                 None
                         Results.Success(outcome)
@@ -179,11 +179,11 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
 
     def typeInfo(code: String, deconstruct: Boolean): Option[String] = {
         val intp0 = intp
-        import intp0.global._
+        import intp0.global.{NullaryMethodType}
 
         val symbol = intp0.symbolOfLine(code)
         if (symbol.exists) {
-            Some(afterTyper {
+            Some(intp0.global.exitingTyper {
                 val info = symbol.info match {
                     case NullaryMethodType(restpe) if symbol.isAccessor => restpe
                     case info                                           => info
