@@ -123,7 +123,7 @@ object IScalaBuild extends Build {
                 import scalax.io.JavaConverters._
                 import scalax.file.Path
                 import scala.slick.driver.SQLiteDriver.simple._
-                import Database.threadLocalSession
+                import Database.dynamicSession
                 """,
             ipyCommands := List(
                 "console"   -> "--no-banner",
