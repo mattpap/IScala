@@ -23,7 +23,7 @@ object Dependencies {
             namespace %% "scala-io-file" % version)
     }
 
-    val ivy = "org.scala-sbt" % "ivy" % "0.13.5"
+    val ivy = "org.scala-sbt" % "ivy" % "0.13.6"
 
     val scopt = "com.github.scopt" %% "scopt" % "3.2.0"
 
