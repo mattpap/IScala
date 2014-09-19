@@ -16,7 +16,7 @@ object IScala extends App {
 
     val thread = new Thread {
         override def run() {
-            val iscala = new IScala(options)
+            val iscala = new IScala(options.config)
             iscala.heartBeat.join()
         }
     }
@@ -27,8 +27,8 @@ object IScala extends App {
     thread.join()
 }
 
-class IScala(options: Options) extends Parent {
-    val profile = options.profile match {
+class IScala(config: Options#Config) extends Parent {
+    val profile = config.profile match {
         case Some(path) => Path(path).string.as[Profile]
         case None =>
             val file = Path(s"profile-${getpid()}.json")
@@ -41,7 +41,7 @@ class IScala(options: Options) extends Parent {
     val zmq = new Sockets(profile)
     val ipy = new Communication(zmq, profile)
 
-    lazy val interpreter = new Interpreter(options.tail)
+    lazy val interpreter = new Interpreter(config.args)
 
     def welcome() {
         import scala.util.Properties._
@@ -61,7 +61,7 @@ class IScala(options: Options) extends Parent {
         def handle(signal: Signal) {
             interpreter.cancel()
 
-            if (!options.parent) {
+            if (!config.parent) {
                 val now = System.currentTimeMillis
                 if (now - previously < 500) sys.exit() else previously = now
             }
@@ -74,7 +74,7 @@ class IScala(options: Options) extends Parent {
         }
     }
 
-    (options.profile, options.parent) match {
+    (config.profile, config.parent) match {
         case (Some(file), true) =>
             // This setup means that this kernel was started by IPython. Currently
             // IPython is unable to terminate IScala without explicitly killing it

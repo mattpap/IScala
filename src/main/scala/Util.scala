@@ -45,7 +45,7 @@ trait ConsoleUtil {
     }
 
     def debug[T](message: => T) {
-        if (IScala.options.verbose) {
+        if (IScala.options.config.verbose) {
             origOut.println(message)
         }
     }

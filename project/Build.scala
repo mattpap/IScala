@@ -25,7 +25,7 @@ object Dependencies {
 
     val ivy = "org.scala-sbt" % "ivy" % "0.13.5"
 
-    val jopt = "net.sf.jopt-simple" % "jopt-simple" % "4.5"
+    val scopt = "com.github.scopt" %% "scopt" % "3.2.0"
 
     val jeromq = "org.zeromq" % "jeromq" % "0.3.4"
 
@@ -111,7 +111,7 @@ object IScalaBuild extends Build {
         import SbtAssembly.AssemblyKeys.{assembly,jarName}
         Seq(libraryDependencies ++= {
                 import Dependencies._
-                scalaio ++ Seq(ivy, jopt, jeromq, play_json, slick, sqlite, slf4j, specs2, compiler.value)
+                scalaio ++ Seq(ivy, scopt, jeromq, play_json, slick, sqlite, slf4j, specs2, compiler.value)
             },
             unmanagedSourceDirectories in Compile += {
                 (sourceDirectory in Compile).value / s"scala_${scalaBinaryVersion.value}"
@@ -186,7 +186,6 @@ object IScalaBuild extends Build {
     )
 
     lazy val IScala = project in file(".")  settings(iscalaSettings: _*) dependsOn(macros)
-
     lazy val macros = project in file("macros") settings(macrosSettings: _*)
 
     override def projects = Seq(IScala, macros)

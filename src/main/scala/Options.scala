@@ -1,31 +1,46 @@
 package org.refptr.iscala
 
 import java.io.File
-import joptsimple.{OptionParser,OptionSpec}
+import scopt.OptionParser
 
-class Options(args: Seq[String]) {
-    private val parser = new OptionParser()
-    private val _help = parser.accepts("help", "show help").forHelp()
-    private val _verbose = parser.accepts("verbose", "print debugging information")
-    private val _parent = parser.accepts("parent", "indicate that IPython started this engine")
-    private val _profile = parser.accepts("profile", "path to connection file").withRequiredArg().ofType(classOf[File])
-    private val options = parser.parse(args: _*)
+class Options(args: Array[String]) {
+    case class Config(
+        profile: Option[File] = None,
+        parent: Boolean = false,
+        verbose: Boolean = false,
+        args: List[String] = Nil)
 
-    def tail = args.dropWhile(_ != "--").drop(1).toList
+    val config: Config = {
+        val parser = new scopt.OptionParser[Config]("IScala") {
+            opt[File]('P', "profile")
+                .action { (profile, config) => config.copy(profile=Some(profile)) }
+                .text("path to IPython's connection file")
 
-    private def has[T](spec: OptionSpec[T]): Boolean =
-        options.has(spec)
+            opt[Unit]('p', "parent")
+                .action { (_, config) => config.copy(parent=true) }
+                .text("indicate that IPython started this engine")
 
-    private def get[T](spec: OptionSpec[T]): Option[T] =
-        Some(options.valueOf(spec)).filter(_ != null)
+            opt[Unit]('v', "verbose")
+                .action { (_, config) => config.copy(verbose=true) }
+                .text("print debug messages to the terminal")
 
-    val help: Boolean = has(_help)
-    val verbose: Boolean = has(_verbose)
-    val parent: Boolean = has(_parent)
-    val profile: Option[File] = get(_profile)
+            // arg[String]("<arg>...")
+            //     .unbounded()
+            //     .optional()
+            //     .action { (arg, config) => config.copy(args=config.args :+ arg) }
+            //     .text("arguments to pass directly to Scala compiler")
 
-    if (help) {
-        parser.printHelpOn(System.out)
-        sys.exit()
+            help("help") text("prints this usage text")
+        }
+
+        // parser.parse(args, Config()) getOrElse { sys.exit(1) }
+
+        val (iscala_args, scala_args) = args.span(_ != "--")
+
+        parser.parse(iscala_args, Config()) map {
+            _.copy(args=scala_args.drop(1).toList)
+        } getOrElse {
+            sys.exit(1)
+        }
     }
 }
