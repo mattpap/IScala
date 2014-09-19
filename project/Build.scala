@@ -137,7 +137,7 @@ object IScalaBuild extends Build {
                 val classpath = (fullClasspath in Compile).value.files.mkString(java.io.File.pathSeparator)
                 val main = (mainClass in Compile).value getOrElse sys.error("unknown main class")
 
-                val cmd = Seq("java") ++ debugCommand.value ++ Seq("-cp", classpath, main, "--profile", "{connection_file}", "--parent", "$@")
+                val cmd = Seq("java") ++ debugCommand.value ++ Seq("-cp", classpath, main, "--profile", "{connection_file}", "--parent")
                 val kernel_cmd = cmd.map(arg => s"""\\"$arg\\"""").mkString(", ")
 
                 val binDirectory = baseDirectory.value / "bin" / scalaBinaryVersion.value
@@ -166,7 +166,7 @@ object IScalaBuild extends Build {
                     val output = s"""
                         |#!/bin/bash
                         |JAR_PATH="$$(dirname $$(dirname $$(readlink -f $$0)))/lib/$assemblyJarName"
-                        |KERNEL_CMD="[\\"java\\", \\"-jar\\", \\"$$JAR_PATH\\", \\"--profile\\", \\"{connection_file}\\", \\"--parent\\", \\"$$@\\"]"
+                        |KERNEL_CMD="[\\"java\\", \\"-jar\\", \\"$$JAR_PATH\\", \\"--profile\\", \\"{connection_file}\\", \\"--parent\\"]"
                         |ipython $command --profile scala --KernelManager.kernel_cmd="$$KERNEL_CMD" $options
                         """.stripMargin.trim + "\n"
                     val file = binDirectory / command
