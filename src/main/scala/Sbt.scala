@@ -44,15 +44,15 @@ object Sbt {
     val defaultDependencies: Seq[ModuleID] = Seq()
     val defaultResolvers: Seq[Resolver] = Seq(Resolver.sonatypeRepo("releases"))
 
-    def resolve(projectName: String, dependencies: Seq[ModuleID], resolvers: Seq[Resolver]): Option[Seq[File]] = {
+    def resolve(dependencies: Seq[ModuleID], resolvers: Seq[Resolver]): Option[Seq[File]] = {
         val paths = new IvyPaths(new File("."), None)
         val ivyConf = new InlineIvyConfiguration(paths, resolvers, Nil, Nil, false, None, Seq("sha1", "md5"), None, UpdateOptions(), Logger)
         val ivySbt = new IvySbt(ivyConf)
         val scalaVersion = Util.scalaVersion
         val binaryScalaVersion = CrossVersion.binaryScalaVersion(scalaVersion)
         val ivyScala = new IvyScala(scalaVersion, binaryScalaVersion, Nil, checkExplicit=true, filterImplicit=true, overrideScalaVersion=false)
-        val project = ModuleID("org.example", projectName, "1")
-        val settings = new InlineConfiguration(project, ModuleInfo("IScala Session"), dependencies, ivyScala=Some(ivyScala))
+        val project = ModuleID("org.refptr.iscala", "IScala", "0.3-SNAPSHOT")
+        val settings = new InlineConfiguration(project, ModuleInfo("IScala"), dependencies, ivyScala=Some(ivyScala))
         val module = new ivySbt.Module(settings)
         val updateConf = new UpdateConfiguration(None, false, UpdateLogging.DownloadOnly)
         val updateReport = IvyActions.updateEither(module, updateConf, UnresolvedWarningConfiguration(), Logger)

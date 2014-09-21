@@ -180,7 +180,7 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
 
     def typeInfo(code: String, deconstruct: Boolean): Option[String] = {
         val intp0 = intp
-        import intp0.global.{NullaryMethodType}
+        import intp0.global.NullaryMethodType
 
         val symbol = intp0.symbolOfLine(code)
         if (symbol.exists) {

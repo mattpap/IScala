@@ -81,10 +81,8 @@ object ResolversParser extends MagicParsers[Resolvers] {
 }
 
 object Settings {
-    var projectName = "Untitled"
     var libraryDependencies: List[ModuleID] = Nil
     var resolvers: List[Resolver] = Sbt.defaultResolvers.toList
-    var managedJars: List[java.io.File] = Nil
 }
 
 abstract class Magic[T](val name: Symbol, parser: MagicParsers[T]) {
@@ -163,11 +161,10 @@ object ResolversMagic extends Magic('resolvers, ResolversParser) {
 
 object UpdateMagic extends EmptyMagic('update) {
     def handle(interpreter: Interpreter) {
-        Sbt.resolve(Settings.projectName, Settings.libraryDependencies, Settings.resolvers) map { jars =>
-            Settings.managedJars = jars.toList
-            val paths = jars.map(_.getAbsolutePath)
-            interpreter.settings.classpath.value = ClassPath.join(paths: _*)
-            debug(s"New classpath: ${interpreter.settings.classpath.value}")
+        Sbt.resolve(Settings.libraryDependencies, Settings.resolvers) map { jars =>
+            val classpath = ClassPath.join(jars.map(_.getAbsolutePath): _*)
+            interpreter.settings.classpath.value = classpath
+            debug(s"New classpath: $classpath")
             interpreter.reset()
         }
     }
