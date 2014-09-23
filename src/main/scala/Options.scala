@@ -1,17 +1,60 @@
 package org.refptr.iscala
 
 import java.io.File
-
 import scopt.{OptionParser,Read}
+import scala.util.parsing.combinator.JavaTokenParsers
 import sbt.{ModuleID,CrossVersion,Resolver,MavenRepository,Level}
 
 private object CustomReads {
     implicit val modulesReads: Read[List[ModuleID]] = Read.reads { string =>
-        Nil
+        object ModulesParsers extends JavaTokenParsers {
+            def crossVersion: Parser[CrossVersion] = "::" ^^^ CrossVersion.binary | ":" ^^^ CrossVersion.Disabled
+
+            def string: Parser[String] = "[^,:]+".r
+
+            def module: Parser[ModuleID] = string ~ crossVersion ~ string ~ ":" ~ string ^^ {
+                case organization ~ crossVersion ~ name ~ _ ~ revision =>
+                    ModuleID(organization, name, revision, crossVersion=crossVersion)
+            }
+
+            def modules: Parser[List[ModuleID]] = rep1sep(module, ",")
+
+            def parse(input: String): List[ModuleID]  = {
+                parseAll(modules, input) match {
+                    case Success(result, _) =>
+                        result
+                    case failure: NoSuccess =>
+                        throw new IllegalArgumentException(s"Invalid module specification.")
+                }
+            }
+        }
+
+        ModulesParsers.parse(string)
     }
 
     implicit val resolversReads: Read[List[Resolver]] = Read.reads { string =>
-        Nil
+        object Bintray {
+            def unapply(string: String): Option[(String, String)] = {
+                string.split(":") match {
+                    case Array("bintray", user, repo) => Some((user, repo))
+                    case _ => None
+                }
+            }
+        }
+
+        string.split(",").toList.flatMap {
+            case "sonatype" => Resolver.sonatypeRepo("releases") :: Resolver.sonatypeRepo("snapshots") :: Nil
+            case "sonatype:releases" => Resolver.sonatypeRepo("releases") :: Nil
+            case "sonatype:snapshots" => Resolver.sonatypeRepo("snapshots") :: Nil
+            case "typesafe" => Resolver.typesafeRepo("releases") :: Resolver.typesafeRepo("snapshots") :: Nil
+            case "typesafe:releases" => Resolver.typesafeRepo("releases") :: Nil
+            case "typesafe:snapshots" => Resolver.typesafeRepo("snapshots") :: Nil
+            case "typesafe-ivy" => Resolver.typesafeIvyRepo("releases") :: Resolver.typesafeIvyRepo("snapshots") :: Nil
+            case "typesafe-ivy:releases" => Resolver.typesafeIvyRepo("releases") :: Nil
+            case "typesafe-ivy:snapshots" => Resolver.typesafeIvyRepo("snapshots") :: Nil
+            case Bintray(user, repo) => Resolver.bintrayRepo(user, repo) :: Nil
+            case url => MavenRepository(url, url) :: Nil
+        }
     }
 }
 
@@ -48,12 +91,12 @@ class Options(args: Array[String]) {
             opt[List[ModuleID]]('m', "modules")
                 .unbounded()
                 .action { (modules, config) => config.copy(modules = config.modules ++ modules) }
-                .text("automatically managed dependencies")
+                .text("automatically managed dependencies, e.g. -m org.parboiled::parboiled:2.0.1")
 
             opt[List[Resolver]]('r', "resolvers")
                 .unbounded()
                 .action { (resolvers, config) => config.copy(resolvers = config.resolvers ++ resolvers) }
-                .text("additional resolvers for automatically managed dependencies")
+                .text("additional resolvers for automatically managed dependencies, e.g. -r sonatype:releases")
 
             // arg[String]("<arg>...")
             //     .unbounded()
