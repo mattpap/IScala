@@ -5,8 +5,6 @@ import org.zeromq.ZMQ
 import org.refptr.iscala.msg._
 import org.refptr.iscala.msg.formats._
 
-import Util.{log,debug}
-
 trait Parent {
     val profile: Profile
     val ipy: Communication

@@ -7,7 +7,6 @@ import org.zeromq.ZMQ
 import scalax.io.JavaConverters._
 import scalax.file.Path
 
-import Util.{getpid,log,debug}
 import json.JsonUtil._
 import msg._
 
@@ -31,8 +30,8 @@ class IScala(config: Options#Config) extends Parent {
     val profile = config.profile match {
         case Some(path) => Path(path).string.as[Profile]
         case None =>
-            val file = Path(s"profile-${getpid()}.json")
-            log(s"connect ipython with --existing ${file.toAbsolute.path}")
+            val file = Path(s"profile-${Util.getpid()}.json")
+            logger.info(s"connect ipython with --existing ${file.toAbsolute.path}")
             val profile = Profile.default
             file.write(toJSON(profile))
             profile
@@ -58,12 +57,12 @@ class IScala(config: Options#Config) extends Parent {
 
     def welcome() {
         import scala.util.Properties._
-        log(s"Welcome to Scala $versionNumberString ($javaVmName, Java $javaVersion)")
+        println(s"Welcome to Scala $versionNumberString ($javaVmName, Java $javaVersion)")
     }
 
     Runtime.getRuntime().addShutdownHook(new Thread() {
         override def run() {
-            debug("Terminating IScala")
+            logger.debug("Terminating IScala")
             interpreter.finish()
         }
     })
@@ -142,7 +141,7 @@ class IScala(config: Options#Config) extends Parent {
 
     ipy.send_status(ExecutionState.starting)
 
-    debug("Starting kernel event loops")
+    logger.debug("Starting kernel event loops")
 
     val requestsLoop = new EventLoop(zmq.requests)
     val controlLoop = new EventLoop(zmq.control)

@@ -40,21 +40,6 @@ trait IOUtil {
     }
 }
 
-trait ConsoleUtil {
-    val origOut = System.out
-    val origErr = System.err
-
-    def log[T](message: => T) {
-        origOut.println(message)
-    }
-
-    def debug[T](message: => T) {
-        if (IScala.options.config.verbose) {
-            origOut.println(message)
-        }
-    }
-}
-
 trait StringUtil {
     /** Find longest common prefix of a list of strings.
      */
@@ -91,5 +76,5 @@ trait StringUtil {
     }
 }
 
-trait Util extends ClassPathUtil with ScalaUtil with OSUtil with IOUtil with ConsoleUtil with StringUtil
+trait Util extends ClassPathUtil with ScalaUtil with OSUtil with IOUtil with StringUtil
 object Util extends Util

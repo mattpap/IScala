@@ -9,7 +9,7 @@ import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
 import scala.tools.nsc.util.Exceptional.unwrap
 import scala.tools.nsc.util.ClassPath
 
-import Util.{log,debug,newThread,timer}
+import Util.{newThread,timer}
 import Compatibility._
 
 object Results {
@@ -29,6 +29,7 @@ class Interpreter(classpath: String, args: Seq[String]) {
     private val _classpath: String = {
         val cp = commandLine.settings.classpath
         cp.value = ClassPath.join(cp.value, classpath)
+        logger.debug(s"classpath: ${cp.value}")
         cp.value
     }
 
@@ -264,7 +265,7 @@ class Runner(classLoader: ClassLoader) {
             execution.cancel()
             timer(5) {
                 if (execution.alive) {
-                    debug(s"Forcefully stopping ${execution}")
+                    logger.debug(s"Forcefully stopping ${execution}")
                     execution.stop()
                 }
             }

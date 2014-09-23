@@ -7,7 +7,6 @@ import play.api.libs.json.{Reads,Writes}
 import org.refptr.iscala.msg._
 import org.refptr.iscala.msg.formats._
 
-import org.refptr.iscala.Util.{log,debug}
 import org.refptr.iscala.json.JsonUtil._
 
 class Communication(zmq: Sockets, profile: Profile) {
@@ -23,7 +22,7 @@ class Communication(zmq: Sockets, profile: Profile) {
         val content = toJSON(msg.content)
 
         socket.synchronized {
-            debug(s"sending: $msg")
+            logger.debug(s"sending: $msg")
             idents.foreach(socket.send(_, ZMQ.SNDMORE))
             socket.send(DELIMITER, ZMQ.SNDMORE)
             socket.send(hmac(header, parent_header, metadata, content), ZMQ.SNDMORE)
@@ -63,11 +62,11 @@ class Communication(zmq: Sockets, profile: Profile) {
                 case MsgType.input_reply => content.as[input_reply]
             }
             val msg = Msg(idents, _header, _parent_header, _metadata, _content)
-            debug(s"received: $msg")
+            logger.debug(s"received: $msg")
             Some(msg)
         } catch {
             case e: play.api.libs.json.JsResultException =>
-                log(s"JSON deserialization error: ${e.getMessage}")
+                logger.error(s"JSON deserialization error: ${e.getMessage}")
                 None
         }
     }

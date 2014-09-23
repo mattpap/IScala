@@ -3,7 +3,7 @@ package org.refptr.iscala
 import java.io.File
 
 import sbt.{
-    ConsoleLogger,ShowLines,
+    ShowLines,
     ModuleID,ModuleInfo,CrossVersion,Resolver,
     IvyPaths,InlineIvyConfiguration,IvySbt,IvyScala,IvyActions,
     InlineConfiguration,UpdateConfiguration,
@@ -17,8 +17,6 @@ object Modules {
 }
 
 object Sbt {
-    val logger = ConsoleLogger()
-
     def resolve(modules: Seq[ModuleID], resolvers: Seq[Resolver]): Option[Seq[File]] = {
         val paths = new IvyPaths(new File("."), None)
         val allResolvers = Resolver.withDefaultResolvers(resolvers)

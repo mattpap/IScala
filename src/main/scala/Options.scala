@@ -3,7 +3,7 @@ package org.refptr.iscala
 import java.io.File
 
 import scopt.{OptionParser,Read}
-import sbt.{ModuleID,CrossVersion,Resolver,MavenRepository}
+import sbt.{ModuleID,CrossVersion,Resolver,MavenRepository,Level}
 
 private object CustomReads {
     implicit val modulesReads: Read[List[ModuleID]] = Read.reads { string =>
@@ -19,7 +19,7 @@ class Options(args: Array[String]) {
     case class Config(
         profile: Option[File] = None,
         parent: Boolean = false,
-        verbose: Boolean = false,
+        debug: Boolean = false,
         javacp: Boolean = true,
         modules: List[ModuleID] = Nil,
         resolvers: List[Resolver] = Nil,
@@ -37,8 +37,8 @@ class Options(args: Array[String]) {
                 .action { (_, config) => config.copy(parent = true) }
                 .text("indicate that IPython started this engine")
 
-            opt[Unit]('v', "verbose")
-                .action { (_, config) => config.copy(verbose = true) }
+            opt[Unit]('d', "debug")
+                .action { (_, config) => config.copy(debug = true) }
                 .text("print debug messages to the terminal")
 
             opt[Unit]('J', "no-javacp")
@@ -73,5 +73,9 @@ class Options(args: Array[String]) {
         } getOrElse {
             sys.exit(1)
         }
+    }
+
+    if (config.debug) {
+        logger.setLevel(Level.Debug)
     }
 }

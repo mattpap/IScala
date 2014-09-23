@@ -5,8 +5,6 @@ import scala.tools.nsc.util.ClassPath
 
 import sbt.{ModuleID,CrossVersion,Resolver,MavenRepository}
 
-import Util.{log,debug}
-
 trait MagicParsers[T] extends JavaTokenParsers {
     def string: Parser[String] = stringLiteral ^^ {
         case string => string.stripPrefix("\"").stripSuffix("\"")
