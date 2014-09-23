@@ -16,72 +16,13 @@ abstract class Handler[T <: FromIPython](parent: Parent) extends ((ZMQ.Socket, M
 class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
     import parent.{ipy,interpreter}
 
-    private def capture[T](msg: Msg[_])(block: => T): T = {
-        val size = 10240
-
-        class WatchStream(input: java.io.InputStream, name: String) extends Thread {
-            override def run() {
-                val buffer = new Array[Byte](size)
-
-                try {
-                    while (true) {
-                        val n = input.read(buffer)
-                        ipy.send_stream(msg, name, new String(buffer.take(n)))
-
-                        if (n < size) {
-                            Thread.sleep(50) // a little delay to accumulate output
-                        }
-                    }
-                } catch {
-                    case _: java.io.IOException => // stream was closed so job is done
-                }
-            }
+    class StreamCapture(msg: Msg[_]) extends Capture {
+        def stream(name: String, data: String) {
+            ipy.send_stream(msg, "stdout", data)
         }
 
-        val stdoutIn = new java.io.PipedInputStream(size)
-        val stdoutOut = new java.io.PipedOutputStream(stdoutIn)
-        val stdout = new java.io.PrintStream(stdoutOut)
-
-        val stderrIn = new java.io.PipedInputStream(size)
-        val stderrOut = new java.io.PipedOutputStream(stderrIn)
-        val stderr = new java.io.PrintStream(stderrOut)
-
-        // This is a heavyweight solution to start stream watch threads per
-        // input, but currently it's the cheapest approach that works well in
-        // multiple thread setup. Note that piped streams work only in thread
-        // pairs (producer -> consumer) and we start one thread per execution,
-        // so technically speaking we have multiple producers, which completely
-        // breaks the earlier intuitive approach.
-
-        (new WatchStream(stdoutIn, "stdout")).start()
-        (new WatchStream(stderrIn, "stderr")).start()
-
-        try {
-            val result =
-                Console.withOut(stdout) {
-                    Console.withErr(stderr) {
-                        block
-                    }
-                }
-
-            stdoutOut.flush()
-            stderrOut.flush()
-
-            // Wait until both streams get dry because we have to
-            // send messages with streams' data before execute_reply
-            // is send. Otherwise there will be no output in clients
-            // or it will be incomplete.
-            while (stdoutIn.available > 0 || stderrIn.available > 0)
-                Thread.sleep(10)
-
-            result
-        } finally {
-            // This will effectively terminate threads.
-            stdoutOut.close()
-            stderrOut.close()
-            stdoutIn.close()
-            stderrIn.close()
-        }
+        def stdout(data: String) = stream("stdout", data)
+        def stderr(data: String) = stream("stderr", data)
     }
 
     private def pyerr_content(exception: Throwable, execution_count: Int): pyerr = {
@@ -158,11 +99,12 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
         ipy.send_status(ExecutionState.busy)
 
         try {
+            val capture = new StreamCapture(msg)
             builtins(msg)
 
             code match {
                 case Magic(name, input, Some(magic)) =>
-                    val ir = capture(msg) {
+                    val ir = capture {
                         magic(interpreter, input)
                     }
 
@@ -180,7 +122,11 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                 case Magic(name, _, None) =>
                     ipy.send_error(msg, n, s"ERROR: Line magic function `%$name` not found.")
                 case _ =>
-                    capture(msg) { interpreter.interpret(code) } match {
+                    val ir = capture {
+                        interpreter.interpret(code)
+                    }
+
+                    ir match {
                         case Results.Success(Some(Results.Value(value, tpe))) if !silent =>
                             val result = interpreter.stringify(value)
 
