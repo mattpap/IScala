@@ -108,7 +108,6 @@ object IScalaBuild extends Build {
     lazy val pluginSettings = ideaSettings ++ assemblySettings ++ packagerSettings
 
     lazy val iscalaSettings = Defaults.coreDefaultSettings ++ pluginSettings ++ {
-        import SbtAssembly.AssemblyKeys.{assembly,jarName}
         Seq(libraryDependencies ++= {
                 import Dependencies._
                 scalaio ++ Seq(ivy, scopt, jeromq, play_json, slick, sqlite, slf4j, specs2, compiler.value)
@@ -137,8 +136,10 @@ object IScalaBuild extends Build {
                 val classpath = (fullClasspath in Compile).value.files.mkString(java.io.File.pathSeparator)
                 val main = (mainClass in Compile).value getOrElse sys.error("unknown main class")
 
-                val cmd = Seq("java") ++ debugCommand.value ++ Seq("-cp", classpath, main, "--profile", "{connection_file}", "--parent")
-                val kernel_cmd = cmd.map(arg => s"""\\"$arg\\"""").mkString(", ")
+                val args = Seq("java") ++ debugCommand.value ++ Seq("-cp", "$CP", main, "--profile", "{connection_file}", "--parent")
+                val kernel_args = args.map(arg => s"'$arg'").mkString(", ")
+                val extra_args = """$(python -c "import shlex; print(shlex.split('$*'))")"""
+                val kernel_cmd = s"[$kernel_args] + $extra_args"
 
                 val binDirectory = baseDirectory.value / "bin" / scalaBinaryVersion.value
                 IO.createDirectory(binDirectory)
@@ -147,7 +148,8 @@ object IScalaBuild extends Build {
                     val output =
                         s"""
                         |#!/bin/bash
-                        |ipython $command --profile scala --KernelManager.kernel_cmd="[$kernel_cmd]" $options
+                        |CP="$classpath"
+                        |ipython $command --profile scala $options --KernelManager.kernel_cmd="$kernel_cmd"
                         """.stripMargin.trim + "\n"
                     val file = binDirectory / command
                     streams.value.log.info(s"Writing ${file.getPath}")
@@ -157,7 +159,16 @@ object IScalaBuild extends Build {
                 }
             },
             userScripts := {
-                val assemblyJarName = (jarName in assembly).value
+                val baseDir = "$(dirname $(dirname $(readlink -f $0)))"
+                val jarName = {
+                    import SbtAssembly.AssemblyKeys.{assembly,jarName=>jar}
+                    (jar in assembly).value
+                }
+
+                val args = Seq("java", "-jar", "$JAR", "--profile", "{connection_file}", "--parent")
+                val kernel_args = args.map(arg => s"'$arg'").mkString(", ")
+                val extra_args = """$(python -c "import shlex; print(shlex.split('$*'))")"""
+                val kernel_cmd = s"[$kernel_args] + $extra_args"
 
                 val binDirectory = crossTarget.value / "bin"
                 IO.createDirectory(binDirectory)
@@ -165,9 +176,8 @@ object IScalaBuild extends Build {
                 ipyCommands.value map { case (command, options) =>
                     val output = s"""
                         |#!/bin/bash
-                        |JAR_PATH="$$(dirname $$(dirname $$(readlink -f $$0)))/lib/$assemblyJarName"
-                        |KERNEL_CMD="[\\"java\\", \\"-jar\\", \\"$$JAR_PATH\\", \\"--profile\\", \\"{connection_file}\\", \\"--parent\\"]"
-                        |ipython $command --profile scala --KernelManager.kernel_cmd="$$KERNEL_CMD" $options
+                        |JAR="$baseDir/lib/$jarName"
+                        |ipython $command --profile scala $options --KernelManager.kernel_cmd="$kernel_cmd"
                         """.stripMargin.trim + "\n"
                     val file = binDirectory / command
                     streams.value.log.info(s"Writing ${file.getPath}")
