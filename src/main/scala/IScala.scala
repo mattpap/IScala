@@ -38,10 +38,23 @@ class IScala(config: Options#Config) extends Parent {
             profile
     }
 
+    val classpath = if (config.javacp) {
+        sys.props("java.class.path")
+    } else {
+        val modules = Modules.Compiler :: config.modules
+        val resolvers = config.resolvers
+
+        Sbt.resolve(modules, resolvers) map { jars =>
+            Util.classpath(jars)
+        } getOrElse {
+            sys.error("Failed to resolve dependencies")
+        }
+    }
+
+    lazy val interpreter = new Interpreter(classpath, config.args)
+
     val zmq = new Sockets(profile)
     val ipy = new Communication(zmq, profile)
-
-    lazy val interpreter = new Interpreter(config.args)
 
     def welcome() {
         import scala.util.Properties._

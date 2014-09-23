@@ -23,7 +23,10 @@ object Dependencies {
             namespace %% "scala-io-file" % version)
     }
 
-    val ivy = "org.scala-sbt" % "ivy" % "0.13.6"
+    val ivy = Def.setting {
+        val organization = s"org.scala-sbt${if (isScala_2_10.value) "" else "211"}"
+        organization % "ivy" % "0.13.6"
+    }
 
     val scopt = "com.github.scopt" %% "scopt" % "3.2.0"
 
@@ -110,7 +113,7 @@ object IScalaBuild extends Build {
     lazy val iscalaSettings = Defaults.coreDefaultSettings ++ pluginSettings ++ {
         Seq(libraryDependencies ++= {
                 import Dependencies._
-                scalaio ++ Seq(ivy, scopt, jeromq, play_json, slick, sqlite, slf4j, specs2, compiler.value)
+                scalaio ++ Seq(ivy.value, scopt, jeromq, play_json, slick, sqlite, slf4j, specs2, compiler.value)
             },
             unmanagedSourceDirectories in Compile += {
                 (sourceDirectory in Compile).value / s"scala_${scalaBinaryVersion.value}"

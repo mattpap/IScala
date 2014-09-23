@@ -1,11 +1,13 @@
 package org.refptr.iscala
 
+import java.io.File
 import java.util.concurrent.locks.ReentrantLock
 
 import scala.collection.mutable
 
 import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
 import scala.tools.nsc.util.Exceptional.unwrap
+import scala.tools.nsc.util.ClassPath
 
 import Util.{log,debug,newThread,timer}
 import Compatibility._
@@ -21,10 +23,14 @@ object Results {
     final case object Cancelled extends Result
 }
 
-class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
-    val commandLine = new CommandLine(args.toList, println)
-    commandLine.settings.embeddedDefaults[this.type]
-    commandLine.settings.usejavacp.value = usejavacp
+class Interpreter(classpath: String, args: Seq[String]) {
+    protected val commandLine = new CommandLine(args.toList, println)
+
+    private val _classpath: String = {
+        val cp = commandLine.settings.classpath
+        cp.value = ClassPath.join(cp.value, classpath)
+        cp.value
+    }
 
     val output = new java.io.StringWriter
     val printer = new java.io.PrintWriter(output)
@@ -43,8 +49,6 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
     def n = _n
 
     reset()
-
-    def settings = commandLine.settings
 
     def ++ = _n += 1
 
@@ -67,6 +71,13 @@ class Interpreter(args: Seq[String], usejavacp: Boolean=true) {
 
     def resetOutput() {
         output.getBuffer.setLength(0)
+    }
+
+    def settings = commandLine.settings
+
+    def classpath(paths: Seq[File]) {
+        val cp = ClassPath.join(_classpath, Util.classpath(paths))
+        settings.classpath.value = cp
     }
 
     def completion = new IScalaCompletion(intp)
