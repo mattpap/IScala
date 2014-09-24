@@ -39,31 +39,35 @@ class Interpreter(classpath: String, args: Seq[String]) {
     val output = new java.io.StringWriter
     val printer = new java.io.PrintWriter(output)
 
-    private var _intp: IMain = _
+    val intp: IMain = new IMain(settings, printer)
+
     private var _runner: Runner = _
     private var _session: Session = _
+
     private var _n: Int = _
 
-    var In: mutable.Map[Int, String] = _
-    var Out: mutable.Map[Int, Any] = _
+    private var In: mutable.Map[Int, String] = _
+    private var Out: mutable.Map[Int, Any] = _
 
-    def intp = _intp
+    initVars()
+
     def runner = _runner
     def session = _session
+
     def n = _n
 
-    reset()
+    private def initVars() {
+        _runner = new Runner(intp.classLoader)
+        _session = new Session
+        _n = 0
+        In = mutable.Map()
+        Out = mutable.Map()
+    }
 
     def reset() {
-        synchronized {
-            finish()
-            _intp = new IMain(settings, printer)
-            _runner = new Runner(_intp.classLoader)
-            _session = new Session
-            _n = 0
-            In = mutable.Map()
-            Out = mutable.Map()
-        }
+        finish()
+        intp.reset()
+        initVars()
     }
 
     def finish() {
@@ -100,20 +104,17 @@ class Interpreter(classpath: String, args: Seq[String]) {
     def interpret(line: String): Results.Result = interpret(line, false)
 
     def interpret(line: String, synthetic: Boolean): Results.Result = {
-        // IMain#Request possibly != instance.Request
-        // intp0 is needed as a stable identifier
-        val intp0 = intp
-        import intp0.Request
+        import intp.Request
 
         def requestFromLine(line: String, synthetic: Boolean): Either[IR.Result, Request] = {
             // Dirty hack to call a private method IMain.requestFromLine
             val method = classOf[IMain].getDeclaredMethod("requestFromLine", classOf[String], classOf[Boolean])
             val args = Array(line, synthetic).map(_.asInstanceOf[AnyRef])
             method.setAccessible(true)
-            method.invoke(intp0, args: _*).asInstanceOf[Either[IR.Result, Request]]
+            method.invoke(intp, args: _*).asInstanceOf[Either[IR.Result, Request]]
         }
 
-        import intp0.memberHandlers.{MemberHandler,ValHandler,DefHandler}
+        import intp.memberHandlers.{MemberHandler,ValHandler,DefHandler}
 
         def definesValue(handler: MemberHandler): Boolean = {
             // MemberHandler.definesValue has slightly different meaning from what is
@@ -131,7 +132,7 @@ class Interpreter(classpath: String, args: Seq[String]) {
         }
 
         def loadAndRunReq(req: Request): Results.Result = {
-            import intp0.naming.sessionNames.{result,print}
+            import intp.naming.sessionNames.{result,print}
 
             val hasValue = definesValue(req.handlers.last)
             val name = if (hasValue) result else print
@@ -140,11 +141,11 @@ class Interpreter(classpath: String, args: Seq[String]) {
                 runner.execute {
                     try {
                         val value = req.lineRep.call(name)
-                        intp0.recordRequest(req)
+                        intp.recordRequest(req)
 
                         if (hasValue && value != null) {
-                            val tpe = intp0.typeOfTerm(intp0.mostRecentVar)
-                            Results.Value(value, intp0.global.exitingTyper { tpe.toString })
+                            val tpe = intp.typeOfTerm(intp.mostRecentVar)
+                            Results.Value(value, intp.global.exitingTyper { tpe.toString })
                         } else
                             Results.NoValue
                     } catch {
@@ -160,7 +161,7 @@ class Interpreter(classpath: String, args: Seq[String]) {
             outcome
         }
 
-        if (intp0.global == null) Results.Error
+        if (intp.global == null) Results.Error
         else requestFromLine(line, synthetic) match {
             case Left(IR.Incomplete) => Results.Incomplete
             case Left(_) => Results.Error
@@ -173,14 +174,12 @@ class Interpreter(classpath: String, args: Seq[String]) {
     }
 
     def bind(name: String, boundType: String, value: Any, modifiers: List[String] = Nil): IR.Result = {
-        val intp0 = intp
-
-        val imports = (intp0.definedTypes ++ intp0.definedTerms) match {
-            case Nil => "/* imports */"
-            case names => names.map(intp0.originalPath _).map("import " + _).mkString("\n  ")
+        val imports = (intp.definedTypes ++ intp.definedTerms) match {
+            case Nil   => "/* imports */"
+            case names => names.map(intp.originalPath(_)).map("import " + _).mkString("\n  ")
         }
 
-        val bindRep = new intp0.ReadEvalPrint()
+        val bindRep = new intp.ReadEvalPrint()
         val source = s"""
             |object ${bindRep.evalName} {
             |  $imports
@@ -193,7 +192,7 @@ class Interpreter(classpath: String, args: Seq[String]) {
         bindRep.callEither("set", value) match {
             case Right(_) =>
                 val line = "%sval %s = %s.value".format(modifiers map (_ + " ") mkString, name, bindRep.evalPath)
-                intp0.interpret(line)
+                intp.interpret(line)
             case Left(_) =>
                 IR.Error
         }
@@ -204,17 +203,16 @@ class Interpreter(classpath: String, args: Seq[String]) {
     def stringify(obj: Any): String = intp.naming.unmangle(obj.toString)
 
     def typeInfo(code: String, deconstruct: Boolean): Option[String] = {
-        val intp0 = intp
-        import intp0.global.NullaryMethodType
+        import intp.global.NullaryMethodType
 
-        val symbol = intp0.symbolOfLine(code)
+        val symbol = intp.symbolOfLine(code)
         if (symbol.exists) {
-            Some(intp0.global.exitingTyper {
+            Some(intp.global.exitingTyper {
                 val info = symbol.info match {
                     case NullaryMethodType(restpe) if symbol.isAccessor => restpe
                     case info                                           => info
                 }
-                stringify(if (deconstruct) intp0.deconstruct.show(info) else info)
+                stringify(if (deconstruct) intp.deconstruct.show(info) else info)
             })
         } else None
     }
