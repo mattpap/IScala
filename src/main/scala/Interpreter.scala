@@ -13,14 +13,17 @@ import Util.{newThread,timer}
 import Compatibility._
 
 object Results {
-    final case class Value(value: AnyRef, tpe: String)
-
     sealed trait Result
-    final case class Success(value: Option[Value]) extends Result
-    final case class Failure(exception: Throwable) extends Result
-    final case object Error extends Result
-    final case object Incomplete extends Result
-    final case object Cancelled extends Result
+    sealed trait Success extends Result
+    sealed trait Failure extends Result
+
+    final case class Value(value: AnyRef, tpe: String) extends Success
+    final case object NoValue extends Success
+
+    final case class Exception(exception: Throwable) extends Failure
+    final case object Error extends Failure
+    final case object Incomplete extends Failure
+    final case object Cancelled extends Failure
 }
 
 class Interpreter(classpath: String, args: Seq[String]) {
@@ -127,17 +130,16 @@ class Interpreter(classpath: String, args: Seq[String]) {
                     try {
                         val value = req.lineRep.call(name)
                         intp0.recordRequest(req)
-                        val outcome =
-                            if (hasValue && value != null) {
-                                val tpe = intp0.typeOfTerm(intp0.mostRecentVar)
-                                Some(Results.Value(value, intp0.global.exitingTyper { tpe.toString }))
-                            } else
-                                None
-                        Results.Success(outcome)
+
+                        if (hasValue && value != null) {
+                            val tpe = intp0.typeOfTerm(intp0.mostRecentVar)
+                            Results.Value(value, intp0.global.exitingTyper { tpe.toString })
+                        } else
+                            Results.NoValue
                     } catch {
                         case exception: Throwable =>
                             req.lineRep.bindError(exception)
-                            Results.Failure(unwrap(exception))
+                            Results.Exception(unwrap(exception))
                     }
                 } result()
             } finally {

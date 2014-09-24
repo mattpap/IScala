@@ -127,7 +127,7 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                     }
 
                     ir match {
-                        case Results.Success(Some(Results.Value(value, tpe))) if !silent =>
+                        case Results.Value(value, tpe) if !silent =>
                             val result = interpreter.stringify(value)
 
                             if (store_history) {
@@ -142,9 +142,9 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                                     data=Data("text/plain" -> result))))
 
                             ipy.send_ok(msg, n)
-                        case Results.Success(None) =>
+                        case _: Results.Success =>
                             ipy.send_ok(msg, n)
-                        case Results.Failure(exception) =>
+                        case Results.Exception(exception) =>
                             ipy.send_error(msg, pyerr_content(exception, n))
                         case Results.Error =>
                             ipy.send_error(msg, n, interpreter.output.toString)
