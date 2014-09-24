@@ -70,11 +70,9 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
     }
 
     def apply(socket: ZMQ.Socket, msg: Msg[execute_request]) {
-        import interpreter.{n,In,Out}
-
         val content = msg.content
-        val code = content.code.replaceAll("\\s+$", "")
-        val silent = content.silent || code.endsWith(";")
+        val code = content.code
+        val silent = content.silent || code.trim.endsWith(";")
         val store_history = content.store_history getOrElse !silent
 
         if (code.trim.isEmpty) {
@@ -82,19 +80,13 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
             return
         }
 
-        if (!silent) {
-            interpreter++
+        val n = interpreter.nextInput()
+        interpreter.storeInput(code)
 
-            if (store_history) {
-                In(n) = code
-                interpreter.session.addHistory(n, code)
-            }
-
-            ipy.publish(msg.pub(MsgType.pyin,
-                pyin(
-                    execution_count=n,
-                    code=code)))
-        }
+        ipy.publish(msg.pub(MsgType.pyin,
+            pyin(
+                execution_count=n,
+                code=code)))
 
         ipy.send_status(ExecutionState.busy)
 
@@ -127,19 +119,17 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                     }
 
                     ir match {
-                        case Results.Value(value, tpe) if !silent =>
-                            val result = interpreter.stringify(value)
+                        case result @ Results.Value(value, tpe) if !silent =>
+                            val output = interpreter.stringify(value)
 
                             if (store_history) {
-                                Out(n) = value
-                                interpreter.session.addOutputHistory(n, result)
-                                interpreter.bind("_" + interpreter.n, tpe, value)
+                                interpreter.storeOutput(result, output)
                             }
 
                             ipy.publish(msg.pub(MsgType.pyout,
                                 pyout(
                                     execution_count=n,
-                                    data=Data("text/plain" -> result))))
+                                    data=Data("text/plain" -> output))))
 
                             ipy.send_ok(msg, n)
                         case _: Results.Success =>

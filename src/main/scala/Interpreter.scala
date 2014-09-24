@@ -54,8 +54,6 @@ class Interpreter(classpath: String, args: Seq[String]) {
 
     reset()
 
-    def ++ = _n += 1
-
     def reset() {
         synchronized {
             finish()
@@ -73,8 +71,21 @@ class Interpreter(classpath: String, args: Seq[String]) {
             _session.endSession(_n)
     }
 
-    def resetOutput() {
+    def resetOutput() { // TODO: this shouldn't be maintained externally
         output.getBuffer.setLength(0)
+    }
+
+    def nextInput(): Int = { _n += 1; _n }
+
+    def storeInput(input: String) {
+        In(n) = input
+        session.addHistory(n, input)
+    }
+
+    def storeOutput(result: Results.Value, output: String) {
+        Out(n) = result.value
+        session.addOutputHistory(n, output)
+        bind("_" + n, result.tpe, result.value)
     }
 
     def settings = commandLine.settings
