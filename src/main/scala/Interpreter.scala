@@ -10,7 +10,6 @@ import scala.tools.nsc.util.Exceptional.unwrap
 import scala.tools.nsc.util.ClassPath
 
 import Util.{newThread,timer}
-import Compatibility._
 
 object Results {
     sealed trait Result
@@ -26,7 +25,7 @@ object Results {
     final case object Cancelled extends Failure
 }
 
-class Interpreter(classpath: String, args: Seq[String]) {
+class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompatibility {
     protected val commandLine = new CommandLine(args.toList, println)
 
     private val _classpath: String = {

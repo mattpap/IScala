@@ -1,3 +1,4 @@
 package org.refptr.iscala
 
-object Compatibility
+trait Compatibility
+trait InterpreterCompatibility extends Compatibility { self: Interpreter => }

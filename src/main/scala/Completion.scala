@@ -4,8 +4,6 @@ import scala.tools.nsc.interpreter.{IMain,Parsed,Completion,CompletionOutput,Nam
 import scala.collection.mutable.ListBuffer
 import scala.reflect.NameTransformer
 
-import Compatibility._
-
 /** An interface for objects which are aware of tab completion and
  *  will supply their own candidates and resolve their own paths.
  */
@@ -60,7 +58,7 @@ object CompletionAware {
         apply(() => map.keys.toList, map.get _)
 }
 
-class IScalaCompletion(val intp: IMain) extends Completion with CompletionOutput {
+class IScalaCompletion(val intp: IMain) extends Completion with CompletionOutput with Compatibility {
     val global: intp.global.type = intp.global
     import global._
     import definitions.{PredefModule,AnyClass,AnyRefClass,ScalaPackage,JavaLangPackage}
