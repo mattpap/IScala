@@ -177,7 +177,7 @@ class Interpreter(classpath: String, args: Seq[String]) {
 
         val imports = (intp0.definedTypes ++ intp0.definedTerms) match {
             case Nil => "/* imports */"
-            case names => names.map(_.decode).map("import " + _).mkString("\n  ")
+            case names => names.map(intp0.originalPath _).map("import " + _).mkString("\n  ")
         }
 
         val bindRep = new intp0.ReadEvalPrint()
