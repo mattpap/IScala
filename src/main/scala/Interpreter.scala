@@ -113,7 +113,7 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
             method.invoke(intp, args: _*).asInstanceOf[Either[IR.Result, Request]]
         }
 
-        import intp.memberHandlers.{MemberHandler,ValHandler,DefHandler}
+        import intp.memberHandlers.{MemberHandler,MemberDefHandler,ValHandler,DefHandler}
 
         def definesValue(handler: MemberHandler): Boolean = {
             // MemberHandler.definesValue has slightly different meaning from what is
@@ -143,8 +143,12 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
                         intp.recordRequest(req)
 
                         if (hasValue && value != null) {
-                            val tpe = intp.typeOfTerm(intp.mostRecentVar)
-                            Results.Value(value, intp.global.exitingTyper { tpe.toString })
+                            val name = req.handlers.last match {
+                                case handler: MemberDefHandler => handler.name
+                                case _                         => intp.global.nme.NO_NAME
+                            }
+                            val tpe = req.lookupTypeOf(name)
+                            Results.Value(value, tpe)
                         } else
                             Results.NoValue
                     } catch {
@@ -202,14 +206,15 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
     def stringify(obj: Any): String = intp.naming.unmangle(obj.toString)
 
     def typeInfo(code: String, deconstruct: Boolean): Option[String] = {
-        import intp.global.NullaryMethodType
+        typeInfo(intp.symbolOfLine(code), deconstruct)
+    }
 
-        val symbol = intp.symbolOfLine(code)
+    def typeInfo(symbol: intp.global.Symbol, deconstruct: Boolean): Option[String] = {
         if (symbol.exists) {
             Some(intp.global.exitingTyper {
                 val info = symbol.info match {
-                    case NullaryMethodType(restpe) if symbol.isAccessor => restpe
-                    case info                                           => info
+                    case intp.global.NullaryMethodType(restpe) if symbol.isAccessor => restpe
+                    case info                                                       => info
                 }
                 stringify(if (deconstruct) intp.deconstruct.show(info) else info)
             })
