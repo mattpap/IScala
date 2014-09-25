@@ -13,7 +13,7 @@ import Util.scalaVersion
 
 object Modules {
     val Compiler = ModuleID("org.scala-lang", "scala-compiler", scalaVersion)
-    val IScala = ModuleID("org.refptr.iscala", "IScala", "0.3-SNAPSHOT")
+    val IScala = ModuleID("org.refptr.iscala", "IScala", "0.3-SNAPSHOT", crossVersion=CrossVersion.binary)
 }
 
 object Sbt {
@@ -35,6 +35,14 @@ object Sbt {
                 import ShowLines._
                 warning.lines.foreach(logger.error(_))
                 None
+        }
+    }
+
+    def resolveCompiler(): String = {
+        Sbt.resolve(Modules.Compiler :: Nil, Nil) map { jars =>
+            Util.classpath(jars)
+        } getOrElse {
+            sys.error("Failed to resolve dependencies")
         }
     }
 }
