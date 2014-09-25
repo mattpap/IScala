@@ -173,6 +173,10 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
         }
     }
 
+    def interpretWithOutput(line: String): Output[Results.Result] = {
+        Capture.captureOutput { interpret(line) }
+    }
+
     def bind(name: String, boundType: String, value: Any, modifiers: List[String] = Nil): IR.Result = {
         val imports = (intp.definedTypes ++ intp.definedTerms) match {
             case Nil   => "/* imports */"

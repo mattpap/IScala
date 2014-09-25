@@ -77,3 +77,20 @@ abstract class Capture { self =>
         }
     }
 }
+
+case class Output[T](value: T, out: String = "", err: String = "")
+
+class StringCapture(out: StringBuilder, err: StringBuilder) extends Capture {
+    def stdout(data: String) = out.append(data)
+    def stderr(data: String) = err.append(data)
+}
+
+object Capture {
+    def captureOutput[T](block: => T): Output[T] = {
+        val out = new StringBuilder
+        val err = new StringBuilder
+        val capture = new StringCapture(out, err)
+        val value = capture { block }
+        Output(value, out.toString, err.toString)
+    }
+}
