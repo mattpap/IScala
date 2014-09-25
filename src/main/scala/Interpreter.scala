@@ -131,15 +131,15 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
         }
 
         def loadAndRunReq(req: Request): Results.Result = {
-            import intp.naming.sessionNames.{result,print}
-
-            val hasValue = definesValue(req.handlers.last)
-            val name = if (hasValue) result else print
-
-            val outcome = try {
+            try {
+                val hasValue = definesValue(req.handlers.last)
                 runner.execute {
                     try {
-                        val value = req.lineRep.call(name)
+                        val value = req.lineRep.call {
+                            import intp.naming.{sessionNames=>names}
+                            if (hasValue) names.result else names.print
+                        }
+
                         intp.recordRequest(req)
 
                         if (hasValue && value != null) {
@@ -160,15 +160,12 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
             } finally {
                 runner.clear()
             }
-
-            outcome
         }
 
-        if (intp.global == null) Results.Error
-        else requestFromLine(line, synthetic) match {
+        requestFromLine(line, synthetic) match {
             case Left(IR.Incomplete) => Results.Incomplete
-            case Left(_) => Results.Error
-            case Right(req)   =>
+            case Left(_)             => Results.Error      // parse error
+            case Right(req)          =>
                 // null indicates a disallowed statement type; otherwise compile
                 // and fail if false (implying e.g. a type error)
                 if (req == null || !req.compile) Results.Error
