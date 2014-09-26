@@ -17,7 +17,12 @@ object Modules {
 }
 
 case class ClassPath(jars: Seq[File]) {
-    def classpath: String = Util.classpath(jars)
+    def classpath: String = ClassPath.joinFiles(jars: _*)
+}
+
+object ClassPath {
+    def joinFiles(paths: File*): String = join(paths map (_.getAbsolutePath): _*)
+    def join(paths: String*): String = paths filterNot (_ == "") mkString File.pathSeparator
 }
 
 object Sbt {

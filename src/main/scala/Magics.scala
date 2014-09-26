@@ -158,7 +158,7 @@ object ResolversMagic extends Magic('resolvers, ResolversParser) {
 object UpdateMagic extends EmptyMagic('update) {
     def handle(interpreter: Interpreter) {
         Sbt.resolve(Settings.libraryDependencies, Settings.resolvers) map { cp =>
-            interpreter.classpath(cp.jars)
+            interpreter.classpath(cp)
             interpreter.reset()
         }
     }

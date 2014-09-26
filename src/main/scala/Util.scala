@@ -3,13 +3,6 @@ package org.refptr.iscala
 import java.io.File
 import java.util.{Timer,TimerTask}
 import java.lang.management.ManagementFactory
-import scala.tools.nsc.util.ClassPath
-
-trait ClassPathUtil {
-    def classpath(paths: Seq[File]): String = {
-        ClassPath.join(paths.map(_.getAbsolutePath): _*)
-    }
-}
 
 trait ScalaUtil {
     def scalaVersion = scala.util.Properties.versionNumberString
@@ -76,5 +69,5 @@ trait StringUtil {
     }
 }
 
-trait Util extends ClassPathUtil with ScalaUtil with OSUtil with IOUtil with StringUtil
+trait Util extends ScalaUtil with OSUtil with IOUtil with StringUtil
 object Util extends Util

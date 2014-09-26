@@ -7,7 +7,6 @@ import scala.collection.mutable
 
 import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
 import scala.tools.nsc.util.Exceptional.unwrap
-import scala.tools.nsc.util.ClassPath
 
 import Util.{newThread,timer}
 
@@ -93,9 +92,8 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
 
     def settings = commandLine.settings
 
-    def classpath(paths: Seq[File]) {
-        val cp = ClassPath.join(_classpath, Util.classpath(paths))
-        settings.classpath.value = cp
+    def classpath(cp: ClassPath) {
+        settings.classpath.value = ClassPath.join(_classpath, cp.classpath)
     }
 
     def completion = new IScalaCompletion(intp)
