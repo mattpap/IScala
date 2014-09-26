@@ -6,7 +6,8 @@ import org.specs2.mutable.Specification
 class InterpreterSpec extends Specification {
     sequential
 
-    val intp = new Interpreter(Sbt.resolveCompiler(), Nil)
+    val classpath = Sbt.resolveCompiler().classpath
+    val intp = new Interpreter(classpath, Nil)
 
     "IScala's interpreter" should {
         import intp.{interpretWithOutput=>interpret}

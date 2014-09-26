@@ -43,9 +43,7 @@ class IScala(config: Options#Config) extends Parent {
         val modules = Modules.Compiler :: config.modules
         val resolvers = config.resolvers
 
-        Sbt.resolve(modules, resolvers) map { jars =>
-            Util.classpath(jars)
-        } getOrElse {
+        Sbt.resolve(modules, resolvers).map(_.classpath) getOrElse {
             sys.error("Failed to resolve dependencies")
         }
     }

@@ -1,8 +1,6 @@
 package org.refptr.iscala
 
 import scala.util.parsing.combinator.JavaTokenParsers
-import scala.tools.nsc.util.ClassPath
-
 import sbt.{ModuleID,CrossVersion,Resolver,MavenRepository}
 
 trait MagicParsers[T] extends JavaTokenParsers {
@@ -159,8 +157,8 @@ object ResolversMagic extends Magic('resolvers, ResolversParser) {
 
 object UpdateMagic extends EmptyMagic('update) {
     def handle(interpreter: Interpreter) {
-        Sbt.resolve(Settings.libraryDependencies, Settings.resolvers) map { jars =>
-            interpreter.classpath(jars)
+        Sbt.resolve(Settings.libraryDependencies, Settings.resolvers) map { cp =>
+            interpreter.classpath(cp.jars)
             interpreter.reset()
         }
     }

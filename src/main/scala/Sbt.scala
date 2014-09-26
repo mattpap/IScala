@@ -16,8 +16,12 @@ object Modules {
     val IScala = ModuleID("org.refptr.iscala", "IScala", "0.3-SNAPSHOT", crossVersion=CrossVersion.binary)
 }
 
+case class ClassPath(jars: Seq[File]) {
+    def classpath: String = Util.classpath(jars)
+}
+
 object Sbt {
-    def resolve(modules: Seq[ModuleID], resolvers: Seq[Resolver]): Option[Seq[File]] = {
+    def resolve(modules: Seq[ModuleID], resolvers: Seq[Resolver]): Option[ClassPath] = {
         val paths = new IvyPaths(new File("."), None)
         val allResolvers = Resolver.withDefaultResolvers(resolvers)
         val ivyConf = new InlineIvyConfiguration(paths, allResolvers, Nil, Nil, false, None, Seq("sha1", "md5"), None, UpdateOptions(), logger)
@@ -30,7 +34,7 @@ object Sbt {
         val updateReport = IvyActions.updateEither(module, updateConf, UnresolvedWarningConfiguration(), logger)
         updateReport match {
             case Right(report) =>
-                Some(report.toSeq.map { case (_, _, _, jar) => jar }.distinct)
+                Some(ClassPath(report.toSeq.map { case (_, _, _, jar) => jar }.distinct))
             case Left(warning) =>
                 import ShowLines._
                 warning.lines.foreach(logger.error(_))
@@ -38,10 +42,8 @@ object Sbt {
         }
     }
 
-    def resolveCompiler(): String = {
-        Sbt.resolve(Modules.Compiler :: Nil, Nil) map { jars =>
-            Util.classpath(jars)
-        } getOrElse {
+    def resolveCompiler(): ClassPath = {
+        Sbt.resolve(Modules.Compiler :: Nil, Nil) getOrElse {
             sys.error("Failed to resolve dependencies")
         }
     }
