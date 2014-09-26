@@ -129,7 +129,7 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                             ipy.publish(msg.pub(MsgType.pyout,
                                 pyout(
                                     execution_count=n,
-                                    data=Data("text/plain" -> output))))
+                                    data=Data(MIME.`text/plain` -> output))))
 
                             ipy.send_ok(msg, n)
                         case _: Results.Success =>

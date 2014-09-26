@@ -2,6 +2,21 @@ package org.refptr.iscala.msg
 
 import org.refptr.iscala.UUID
 
+sealed abstract class MIME(val name: String)
+object MIME {
+    object `text/plain` extends MIME("text/plain")
+    object `text/html` extends MIME("text/html")
+    object `text/markdown` extends MIME("text/markdown")
+    object `text/latex` extends MIME("text/latex")
+    object `application/json` extends MIME("application/json")
+    object `application/javascript` extends MIME("application/javascript")
+    object `image/png` extends MIME("image/png")
+    object `image/jpeg` extends MIME("image/jpeg")
+    object `image/svg+xml` extends MIME("image/svg+xml")
+}
+
+case class Data(items: (MIME, String)*)
+
 object ExecutionStatus extends Enumeration {
     type ExecutionStatus = Value
     val ok = Value
@@ -481,9 +496,21 @@ import org.refptr.iscala.json.{Json,EnumJson,JsonImplicits}
 import org.refptr.iscala.msg._
 import JsonImplicits._
 
-import play.api.libs.json.Writes
+import play.api.libs.json.{JsObject,Writes}
 
 package object formats {
+    implicit val MIMEFormat = new Writes[MIME] {
+        def writes(mime: MIME) = implicitly[Writes[String]].writes(mime.name)
+    }
+
+    implicit val DataFormat = new Writes[Data] {
+        def writes(data: Data) = {
+            JsObject(data.items.map { case (mime, value) =>
+                mime.name -> implicitly[Writes[String]].writes(value)
+            })
+        }
+    }
+
     implicit val MsgTypeFormat = EnumJson.format(MsgType)
     implicit val HeaderFormat = Json.format[Header]
 
@@ -514,12 +541,12 @@ package object formats {
     implicit val ShutdownRequestJSON = Json.format[shutdown_request]
     implicit val ShutdownReplyJSON = Json.format[shutdown_reply]
 
-    implicit val StreamJSON = Json.format[stream]
-    implicit val DisplayDataJSON = Json.format[display_data]
-    implicit val PyinJSON = Json.format[pyin]
-    implicit val PyoutJSON = Json.format[pyout]
-    implicit val PyerrJSON = Json.format[pyerr]
-    implicit val StatusJSON = Json.format[status]
+    implicit val StreamJSON = Json.writes[stream]
+    implicit val DisplayDataJSON = Json.writes[display_data]
+    implicit val PyinJSON = Json.writes[pyin]
+    implicit val PyoutJSON = Json.writes[pyout]
+    implicit val PyerrJSON = Json.writes[pyerr]
+    implicit val StatusJSON = Json.writes[status]
 
     implicit val InputRequestJSON = Json.format[input_request]
     implicit val InputReplyJSON = Json.format[input_reply]
