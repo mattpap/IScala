@@ -43,11 +43,12 @@ class Communication(zmq: Sockets, profile: Profile) {
              socket.recvStr())
         }
 
-        if (signature != hmac(header, parent_header, metadata, content)) {
-            sys.error("Invalid HMAC signature") // What should we do here?
-        }
+        val expectedSignature = hmac(header, parent_header, metadata, content)
 
-        try {
+        if (signature != expectedSignature) {
+            logger.error(s"Invalid HMAC signature, got $signature, expected $expectedSignature")
+            None
+        } else try {
             val _header = header.as[Header]
             val _parent_header = parent_header.as[Option[Header]]
             val _metadata = metadata.as[Metadata]
