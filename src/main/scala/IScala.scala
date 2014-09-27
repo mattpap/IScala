@@ -47,7 +47,7 @@ class IScala(config: Options#Config) extends Parent {
         val resolved = Sbt.resolve(modules, resolvers).map(_.classpath) getOrElse {
             sys.error("Failed to resolve dependencies")
         }
-        ClassPath.join(baseClasspath, resolved)
+        ClassPath.join(baseClasspath, config.classpath, resolved)
     }
 
     lazy val interpreter = new Interpreter(classpath, config.args)

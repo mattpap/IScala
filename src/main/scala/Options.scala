@@ -64,6 +64,7 @@ class Options(args: Array[String]) {
         parent: Boolean = false,
         debug: Boolean = false,
         javacp: Boolean = true,
+        classpath: String = "",
         modules: List[ModuleID] = Nil,
         resolvers: List[Resolver] = Nil,
         args: List[String] = Nil)
@@ -87,6 +88,11 @@ class Options(args: Array[String]) {
             opt[Unit]('J', "no-javacp")
                 .action { (_, config) => config.copy(javacp = false) }
                 .text("use java's classpath for the embedded interpreter")
+
+            opt[String]('c', "classpath")
+                .unbounded()
+                .action { (classpath, config) => config.copy(classpath = ClassPath.join(config.classpath, classpath)) }
+                .text("scpecify where to find user class files, e.g. -c my_project/target/scala-2.11/classes")
 
             opt[List[ModuleID]]('m', "modules")
                 .unbounded()
