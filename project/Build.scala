@@ -126,6 +126,7 @@ object IScalaBuild extends Build {
                 import scalax.file.Path
                 import scala.slick.driver.SQLiteDriver.simple._
                 import Database.dynamicSession
+                import org.refptr.iscala._
                 """,
             ipyCommands := List(
                 "console"   -> "--no-banner",
