@@ -130,36 +130,38 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
 
         def loadAndRunReq(req: Request): Results.Result = {
             try {
-                runner.execute {
-                    try {
-                        val handler = req.handlers.last
-                        val hasValue = definesValue(handler)
+                val handler = req.handlers.last
+                val hasValue = definesValue(handler)
 
-                        val value = req.lineRep.call {
-                            import intp.naming.{sessionNames=>names}
-                            if (hasValue) names.result else names.print
-                        }
+                val value = req.lineRep.call {
+                    import intp.naming.{sessionNames=>names}
+                    if (hasValue) names.result else names.print
+                }
 
-                        intp.recordRequest(req)
+                intp.recordRequest(req)
 
-                        if (hasValue && value != null) {
-                            val name = handler match {
-                                case handler: MemberDefHandler => handler.name
-                                case _                         => intp.global.nme.NO_NAME
-                            }
-
-                            val tpe = req.lookupTypeOf(name)
-                            val repr = Data(MIME.`text/plain` -> stringify(value))
-
-                            Results.Value(value, tpe, repr)
-                        } else
-                            Results.NoValue
-                    } catch {
-                        case exception: Throwable =>
-                            req.lineRep.bindError(exception)
-                            Results.Exception(unwrap(exception))
+                if (hasValue && value != null) {
+                    val name = handler match {
+                        case handler: MemberDefHandler => handler.name
+                        case _                         => intp.global.nme.NO_NAME
                     }
-                } result()
+
+                    val tpe = req.lookupTypeOf(name)
+                    val repr = Data(MIME.`text/plain` -> stringify(value))
+
+                    Results.Value(value, tpe, repr)
+                } else
+                    Results.NoValue
+            } catch {
+                case exception: Throwable =>
+                    req.lineRep.bindError(exception)
+                    Results.Exception(unwrap(exception))
+            }
+        }
+
+        def withRunner(block: => Results.Result): Results.Result = {
+            try {
+                runner.execute { block } result()
             } finally {
                 runner.clear()
             }
@@ -172,7 +174,7 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
                 // null indicates a disallowed statement type; otherwise compile
                 // and fail if false (implying e.g. a type error)
                 if (req == null || !req.compile) Results.Error
-                else loadAndRunReq(req)
+                else withRunner { loadAndRunReq(req) }
         }
     }
 
