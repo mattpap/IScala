@@ -49,6 +49,8 @@ object Dependencies {
     val paradise = "org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full
 
     val quasiquotes = scala_2_10("org.scalamacros" %% "quasiquotes" % "2.0.0")
+
+    val xml = scala_2_11_+("org.scala-lang.modules" %% "scala-xml" % "1.0.2")
 }
 
 object IScalaBuild extends Build {
@@ -202,7 +204,7 @@ object IScalaBuild extends Build {
     lazy val libSettings = Defaults.coreDefaultSettings ++ Seq(
         libraryDependencies ++= {
             import Dependencies._
-            quasiquotes.value ++ Seq(reflect.value, specs2)
+            quasiquotes.value ++ xml.value ++ Seq(reflect.value, specs2)
         }
     )
 
