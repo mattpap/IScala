@@ -80,19 +80,24 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
 
     def completion = new IScalaCompletion(intp)
 
-    def interpret(line: String): Results.Result = interpret(line, false)
-
-    def interpret(line: String, synthetic: Boolean): Results.Result = {
-        import intp.Request
-
-        def requestFromLine(line: String, synthetic: Boolean): Either[IR.Result, Request] = {
-            // Dirty hack to call a private method IMain.requestFromLine
-            val method = classOf[IMain].getDeclaredMethod("requestFromLine", classOf[String], classOf[Boolean])
-            val args = Array(line, synthetic).map(_.asInstanceOf[AnyRef])
-            method.setAccessible(true)
-            method.invoke(intp, args: _*).asInstanceOf[Either[IR.Result, Request]]
+    def withRunner(block: => Results.Result): Results.Result = {
+        try {
+            runner.execute { block } result()
+        } finally {
+            runner.clear()
         }
+    }
 
+    def withOutput[T](block: => T): (T, String) = {
+        resetOutput()
+        try {
+            (block, output.toString)
+        } finally {
+            resetOutput()
+        }
+    }
+
+    def loadAndRunReq(req: intp.Request): Results.Result = {
         import intp.memberHandlers.{MemberHandler,MemberDefHandler,ValHandler,DefHandler}
 
         def definesValue(handler: MemberHandler): Boolean = {
@@ -110,43 +115,47 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
             }
         }
 
-        def loadAndRunReq(req: Request): Results.Result = {
-            try {
-                val handler = req.handlers.last
-                val hasValue = definesValue(handler)
+        try {
+            val handler = req.handlers.last
+            val hasValue = definesValue(handler)
 
-                val value = req.lineRep.call {
-                    import intp.naming.{sessionNames=>names}
-                    if (hasValue) names.result else names.print
+            val value = req.lineRep.call {
+                import intp.naming.{sessionNames=>names}
+                if (hasValue) names.result else names.print
+            }
+
+            intp.recordRequest(req)
+
+            if (hasValue && value != null) {
+                val name = handler match {
+                    case handler: MemberDefHandler => handler.name
+                    case _                         => intp.global.nme.NO_NAME
                 }
 
-                intp.recordRequest(req)
+                val tpe = req.lookupTypeOf(name)
+                val repr = Data(MIME.`text/plain` -> stringify(value))
 
-                if (hasValue && value != null) {
-                    val name = handler match {
-                        case handler: MemberDefHandler => handler.name
-                        case _                         => intp.global.nme.NO_NAME
-                    }
-
-                    val tpe = req.lookupTypeOf(name)
-                    val repr = Data(MIME.`text/plain` -> stringify(value))
-
-                    Results.Value(value, tpe, repr)
-                } else
-                    Results.NoValue
-            } catch {
-                case exception: Throwable =>
-                    req.lineRep.bindError(exception)
-                    Results.Exception(unwrap(exception))
-            }
+                Results.Value(value, tpe, repr)
+            } else
+                Results.NoValue
+        } catch {
+            case exception: Throwable =>
+                req.lineRep.bindError(exception)
+                Results.Exception(unwrap(exception))
         }
+    }
 
-        def withRunner(block: => Results.Result): Results.Result = {
-            try {
-                runner.execute { block } result()
-            } finally {
-                runner.clear()
-            }
+    def interpret(line: String): Results.Result = interpret(line, false)
+
+    def interpret(line: String, synthetic: Boolean): Results.Result = {
+        import intp.Request
+
+        def requestFromLine(line: String, synthetic: Boolean): Either[IR.Result, Request] = {
+            // XXX: Dirty hack to call a private method IMain.requestFromLine
+            val method = classOf[IMain].getDeclaredMethod("requestFromLine", classOf[String], classOf[Boolean])
+            val args = Array(line, synthetic).map(_.asInstanceOf[AnyRef])
+            method.setAccessible(true)
+            method.invoke(intp, args: _*).asInstanceOf[Either[IR.Result, Request]]
         }
 
         requestFromLine(line, synthetic) match {
