@@ -14,15 +14,15 @@ class InterpreterSpec extends Specification {
         import Results._
 
         "support primitive values" in {
-            interpret("1") === Output(Value(1: java.lang.Integer, "Int"))
-            interpret("1.0") === Output(Value(1.0: java.lang.Double, "Double"))
-            interpret("\"XXX\"") === Output(Value("XXX": java.lang.String, "String"))
+            interpret("1") must beLike { case Output(Value(_, "Int", _), "", "") => ok }
+            interpret("1.0") must beLike { case Output(Value(_, "Double", _), "", "") => ok }
+            interpret("\"XXX\"") must beLike { case Output(Value(_, "String", _), "", "") => ok }
         }
 
         "support function values" in {
-            interpret("() => 1") must beLike { case Output(Value(_, "() => Int"), "", "") => ok }
-            interpret("(x: Int) => x + 1") must beLike { case Output(Value(_, "Int => Int"), "", "") => ok }
-            interpret("(x: Int, y: Int) => x*y + 1") must beLike { case Output(Value(_, "(Int, Int) => Int"), "", "") => ok }
+            interpret("() => 1") must beLike { case Output(Value(_, "() => Int", _), "", "") => ok }
+            interpret("(x: Int) => x + 1") must beLike { case Output(Value(_, "Int => Int", _), "", "") => ok }
+            interpret("(x: Int, y: Int) => x*y + 1") must beLike { case Output(Value(_, "(Int, Int) => Int", _), "", "") => ok }
         }
 
         "support printing" in {

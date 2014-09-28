@@ -15,7 +15,7 @@ object Results {
     sealed trait Success extends Result
     sealed trait Failure extends Result
 
-    final case class Value(value: AnyRef, tpe: String) extends Success
+    final case class Value(value: AnyRef, tpe: String, repr: Data) extends Success
     final case object NoValue extends Success
 
     final case class Exception(exception: Throwable) extends Failure
@@ -130,9 +130,11 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
 
         def loadAndRunReq(req: Request): Results.Result = {
             try {
-                val hasValue = definesValue(req.handlers.last)
                 runner.execute {
                     try {
+                        val handler = req.handlers.last
+                        val hasValue = definesValue(handler)
+
                         val value = req.lineRep.call {
                             import intp.naming.{sessionNames=>names}
                             if (hasValue) names.result else names.print
@@ -141,12 +143,15 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
                         intp.recordRequest(req)
 
                         if (hasValue && value != null) {
-                            val name = req.handlers.last match {
+                            val name = handler match {
                                 case handler: MemberDefHandler => handler.name
                                 case _                         => intp.global.nme.NO_NAME
                             }
+
                             val tpe = req.lookupTypeOf(name)
-                            Results.Value(value, tpe)
+                            val repr = Data(MIME.`text/plain` -> stringify(value))
+
+                            Results.Value(value, tpe, repr)
                         } else
                             Results.NoValue
                     } catch {
@@ -202,7 +207,9 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
 
     def cancel() = runner.cancel()
 
-    def stringify(obj: Any): String = intp.naming.unmangle(obj.toString)
+    def stringify(obj: Any): String = unmangle(obj.toString)
+
+    def unmangle(string: String): String = intp.naming.unmangle(string)
 
     def typeInfo(code: String, deconstruct: Boolean): Option[String] = {
         typeInfo(intp.symbolOfLine(code), deconstruct)

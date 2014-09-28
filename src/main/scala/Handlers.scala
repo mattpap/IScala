@@ -119,17 +119,17 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                     }
 
                     ir match {
-                        case result @ Results.Value(value, tpe) if !silent =>
-                            val output = interpreter.stringify(value)
-
+                        case result @ Results.Value(value, tpe, repr) if !silent =>
                             if (store_history) {
-                                interpreter.storeOutput(result, output)
+                                repr(MIME.`text/plain`) foreach { output =>
+                                    interpreter.storeOutput(result, output)
+                                }
                             }
 
                             ipy.publish(msg.pub(MsgType.pyout,
                                 pyout(
                                     execution_count=n,
-                                    data=Data(MIME.`text/plain` -> output))))
+                                    data=repr)))
 
                             ipy.send_ok(msg, n)
                         case _: Results.Success =>
