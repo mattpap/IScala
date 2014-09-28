@@ -10,6 +10,13 @@ object Plain {
     }
 }
 
+object NoOutput {
+    def unapply[T](output: Output[T]): Option[T] = output match {
+        case Output(value, "", "") => Some(value)
+        case _ => None
+    }
+}
+
 class InterpreterSpec extends Specification {
     sequential
 
@@ -21,15 +28,15 @@ class InterpreterSpec extends Specification {
         import Results._
 
         "support primitive values" in {
-            interpret("1") must beLike { case Output(Value(_, "Int", Plain("1")), "", "") => ok }
-            interpret("1.0") must beLike { case Output(Value(_, "Double", Plain("1.0")), "", "") => ok }
-            interpret("\"XXX\"") must beLike { case Output(Value(_, "String", Plain("XXX")), "", "") => ok }
+            interpret("1") must beLike { case NoOutput(Value(_, "Int", Plain("1"))) => ok }
+            interpret("1.0") must beLike { case NoOutput(Value(_, "Double", Plain("1.0"))) => ok }
+            interpret("\"XXX\"") must beLike { case NoOutput(Value(_, "String", Plain("XXX"))) => ok }
         }
 
         "support function values" in {
-            interpret("() => 1") must beLike { case Output(Value(_, "() => Int", Plain("<function0>")), "", "") => ok }
-            interpret("(x: Int) => x + 1") must beLike { case Output(Value(_, "Int => Int", Plain("<function1>")), "", "") => ok }
-            interpret("(x: Int, y: Int) => x*y + 1") must beLike { case Output(Value(_, "(Int, Int) => Int", Plain("<function2>")), "", "") => ok }
+            interpret("() => 1") must beLike { case NoOutput(Value(_, "() => Int", Plain("<function0>"))) => ok }
+            interpret("(x: Int) => x + 1") must beLike { case NoOutput(Value(_, "Int => Int", Plain("<function1>"))) => ok }
+            interpret("(x: Int, y: Int) => x*y + 1") must beLike { case NoOutput(Value(_, "(Int, Int) => Int", Plain("<function2>"))) => ok }
         }
 
         "support printing" in {
