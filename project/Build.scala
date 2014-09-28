@@ -210,7 +210,7 @@ object IScalaBuild extends Build {
 
     lazy val IScala = project in file(".") settings(iscalaSettings: _*) dependsOn(core, lib)
     lazy val core   = project in file("core") settings(coreSettings: _*)
-    lazy val lib    = project in file("lib") settings(libSettings: _*)
+    lazy val lib    = project in file("lib") settings(libSettings: _*) dependsOn(core)
 
     override def projects = Seq(IScala, core, lib)
 }
