@@ -1,4 +1,4 @@
-package org.refptr.iscala.macros.json
+package org.refptr.iscala.core
 
 import play.api.libs.json.{Reads,Writes,Format,JsMacroImpl=>PlayMacroImpl}
 

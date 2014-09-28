@@ -1,13 +1,11 @@
-package org.refptr.iscala.json
+package org.refptr.iscala
+package json
 
 import scala.reflect.ClassTag
 
 import play.api.libs.json.{Json=>PlayJson,Reads,Writes,OWrites,Format,JsPath}
 import play.api.libs.json.{JsResult,JsSuccess,JsError}
 import play.api.libs.json.{JsValue,JsString,JsArray,JsObject}
-
-import org.refptr.iscala.macros.json.JsonImpl
-import org.refptr.iscala.UUID
 
 object JsonUtil {
     def toJSON[T:Writes](obj: T): String =
@@ -21,7 +19,7 @@ object JsonUtil {
     }
 }
 
-object Json extends JsonImpl {
+object Json extends core.JsonImpl {
     import PlayJson.{JsValueWrapper,toJsFieldJsValueWrapper}
 
     def fromJson[T:Reads](json: JsValue): JsResult[T] = PlayJson.fromJson(json)

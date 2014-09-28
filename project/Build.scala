@@ -192,15 +192,23 @@ object IScalaBuild extends Build {
             })
     }
 
-    lazy val macrosSettings = Defaults.coreDefaultSettings ++ Seq(
+    lazy val coreSettings = Defaults.coreDefaultSettings ++ Seq(
         libraryDependencies ++= {
             import Dependencies._
             quasiquotes.value ++ Seq(reflect.value, play_json, specs2)
         }
     )
 
-    lazy val IScala = project in file(".")  settings(iscalaSettings: _*) dependsOn(macros)
-    lazy val macros = project in file("macros") settings(macrosSettings: _*)
+    lazy val libSettings = Defaults.coreDefaultSettings ++ Seq(
+        libraryDependencies ++= {
+            import Dependencies._
+            quasiquotes.value ++ Seq(reflect.value, specs2)
+        }
+    )
 
-    override def projects = Seq(IScala, macros)
+    lazy val IScala = project in file(".") settings(iscalaSettings: _*) dependsOn(core, lib)
+    lazy val core   = project in file("core") settings(coreSettings: _*)
+    lazy val lib    = project in file("lib") settings(libSettings: _*)
+
+    override def projects = Seq(IScala, core, lib)
 }
