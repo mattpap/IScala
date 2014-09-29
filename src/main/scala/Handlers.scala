@@ -41,34 +41,6 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
               traceback=traceback)
     }
 
-    private def builtins(msg: Msg[_]) {
-        object Builtins {
-            def raw_input(): String = {
-                // TODO: drop stale replies
-                // TODO: prompt
-                ipy.send_stdin(msg, "")
-                ipy.recv_stdin().collect {
-                    case msg if msg.header.msg_type == MsgType.input_reply =>
-                        msg.asInstanceOf[Msg[input_reply]]
-                } map {
-                    _.content.value match {
-                        case "\u0004" => throw new java.io.EOFException()
-                        case value    => value
-                    }
-                } getOrElse ""
-            }
-        }
-
-        val bindings = List(
-            ("raw_input", "() => String", Builtins.raw_input _))
-
-        interpreter.intp.beSilentDuring {
-            bindings.foreach { case (name, tpe, value) =>
-                interpreter.intp.bind(name, tpe, value)
-            }
-        }
-    }
-
     def apply(socket: ZMQ.Socket, msg: Msg[execute_request]) {
         val content = msg.content
         val code = content.code
@@ -90,10 +62,10 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
 
         ipy.send_status(ExecutionState.busy)
 
-        try {
-            val capture = new StreamCapture(msg)
-            builtins(msg)
+        val capture = new StreamCapture(msg)
+        val builtins = new Builtins(interpreter, ipy, msg)
 
+        try {
             code match {
                 case Magic(name, input, Some(magic)) =>
                     val ir = capture {
