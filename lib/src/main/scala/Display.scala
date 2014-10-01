@@ -39,16 +39,22 @@ object Display {
 }
 
 case class Repr[-T](
-    plain: Option[Plain[T]],
-    html: Option[HTML[T]],
-    markdown: Option[Markdown[T]],
-    math: Option[Math[T]],
-    latex: Option[Latex[T]],
-    json: Option[JSON[T]],
-    javascript: Option[Javascript[T]],
-    svg: Option[SVG[T]],
-    png: Option[PNG[T]],
-    jpeg: Option[JPEG[T]])
+    plain      : Option[Plain[T]]      = None,
+    html       : Option[HTML[T]]       = None,
+    markdown   : Option[Markdown[T]]   = None,
+    math       : Option[Math[T]]       = None,
+    latex      : Option[Latex[T]]      = None,
+    json       : Option[JSON[T]]       = None,
+    javascript : Option[Javascript[T]] = None,
+    svg        : Option[SVG[T]]        = None,
+    png        : Option[PNG[T]]        = None,
+    jpeg       : Option[JPEG[T]]       = None) {
+
+    def stringify(obj: T): Data = {
+        val displays = List(plain, html, markdown, math, latex, json, javascript, svg, png, jpeg)
+        Data(displays.flatten.map { display => display.mime -> display.stringify(obj) }: _*)
+    }
+}
 
 object DisplayUtil {
     import scala.reflect.macros.Context
@@ -72,4 +78,11 @@ object DisplayUtil {
     }
 
     def displays[T]: Repr[T] = macro displaysImpl[T]
+
+    def stringifyImpl[T: c.WeakTypeTag](c: Context)(obj: c.Expr[T]): c.Expr[Data] = {
+        import c.universe._
+        reify { displaysImpl[T](c).splice.stringify(obj.splice) }
+    }
+
+    def stringify[T](obj: T): Data = macro stringifyImpl[T]
 }

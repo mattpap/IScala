@@ -97,6 +97,67 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
         }
     }
 
+    def display(req: intp.Request): Data = {
+        import intp.memberHandlers.MemberHandler
+
+        val displayName = "$display"
+
+        object DisplayObjectSourceCode extends IMain.CodeAssembler[MemberHandler] {
+            import intp.global.NoSymbol
+
+            val displayResult = req.value match {
+                case NoSymbol =>  "org.refptr.iscala.Data()"
+                case symbol   => s"org.refptr.iscala.DisplayUtil.stringify(${intp.originalPath(symbol)})"
+            }
+
+            val preamble =
+                s"""
+                |object $displayName {
+                |  lazy val $displayName: org.refptr.iscala.Data = ${intp.executionWrapper} {
+                |    ${req.fullAccessPath}
+                |    $displayResult
+                """.stripMargin
+
+            val postamble =
+                """
+                |  }
+                |}
+                """.stripMargin
+
+            val generate = (handler: MemberHandler) => ""
+        }
+
+        req.lineRep.compile(DisplayObjectSourceCode(req.handlers))
+
+        def displayPath = req.lineRep.pathTo(displayName)
+
+        def displayError(path: String, ex: Throwable) =
+            throw new req.lineRep.EvalException("Failed to load '" + path + "': " + ex.getMessage, ex)
+
+        def load(path: String): Class[_] = {
+            try Class.forName(path, true, intp.classLoader)
+            catch { case ex: Throwable => displayError(path, unwrap(ex)) }
+        }
+
+        lazy val displayClass = load(displayPath)
+
+        def displayMethod(name: String) = displayClass.getMethods filter (_.getName == name) match {
+            case Array(method) => method
+            case xs            => sys.error("Internal error: display object " + displayClass + ", " + xs.mkString("\n", "\n", ""))
+        }
+
+        def call(name: String, args: Any*): AnyRef = {
+          val method = displayMethod(name)
+          method.invoke(displayClass, args.map(_.asInstanceOf[AnyRef]): _*)
+        }
+
+        def display(): Data = {
+            call(displayName).asInstanceOf[Data]
+        }
+
+        Data(display().items map { case (mime, string) => (mime, unmangle(string)) }: _*)
+    }
+
     def loadAndRunReq(req: intp.Request): Results.Result = {
         import intp.memberHandlers.{MemberHandler,MemberDefHandler,ValHandler,DefHandler}
 
@@ -127,13 +188,13 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
             intp.recordRequest(req)
 
             if (hasValue && value != null) {
-                val name = handler match {
+                val symbolName = handler match {
                     case handler: MemberDefHandler => handler.name
                     case _                         => intp.global.nme.NO_NAME
                 }
 
-                val tpe = req.lookupTypeOf(name)
-                val repr = Data(MIME.`text/plain` -> stringify(value))
+                val tpe = req.lookupTypeOf(symbolName)
+                val repr = display(req)
 
                 Results.Value(value, tpe, repr)
             } else
