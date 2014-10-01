@@ -37,16 +37,17 @@ class IScala(config: Options#Config) extends Parent {
             profile
     }
 
-    val baseClasspath = if (!config.javacp) "" else sys.props("java.class.path")
-    val baseModules = if (!config.javacp) Modules.Compiler :: Nil else Nil
-
-    val modules = baseModules ++ config.modules
-    val resolvers = config.resolvers
-
     val classpath = {
+        val baseClasspath = if (!config.javacp) "" else sys.props("java.class.path")
+        val baseModules = if (!config.javacp) Modules.Compiler :: Nil else Nil
+
+        val modules = baseModules ++ config.modules
+        val resolvers = config.resolvers
+
         val resolved = Sbt.resolve(modules, resolvers).map(_.classpath) getOrElse {
             sys.error("Failed to resolve dependencies")
         }
+
         ClassPath.join(baseClasspath, config.classpath, resolved)
     }
 
