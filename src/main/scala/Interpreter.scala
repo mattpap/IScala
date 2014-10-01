@@ -113,14 +113,15 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
             val preamble =
                 s"""
                 |object $displayName {
-                |  lazy val $displayName: org.refptr.iscala.Data = ${intp.executionWrapper} {
-                |    ${req.fullAccessPath}
+                |  ${req.importsPreamble}
+                |  val $displayName: org.refptr.iscala.Data = ${intp.executionWrapper} {
                 |    $displayResult
                 """.stripMargin
 
             val postamble =
-                """
+                s"""
                 |  }
+                |  ${req.importsTrailer}
                 |}
                 """.stripMargin
 
@@ -129,33 +130,21 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
 
         req.lineRep.compile(DisplayObjectSourceCode(req.handlers))
 
-        def displayPath = req.lineRep.pathTo(displayName)
+        def displayPath = req.lineRep.pathTo(displayName) + req.accessPath
 
-        def displayError(path: String, ex: Throwable) =
-            throw new req.lineRep.EvalException("Failed to load '" + path + "': " + ex.getMessage, ex)
-
-        def load(path: String): Class[_] = {
-            try Class.forName(path, true, intp.classLoader)
-            catch { case ex: Throwable => displayError(path, unwrap(ex)) }
+        def getField(moduleName: String, fieldName: String): Any = {
+            import scala.reflect.runtime.{universe=>u}
+            val mirror = u.runtimeMirror(intp.classLoader)
+            val module = mirror.staticModule(moduleName)
+            val instance = mirror.reflectModule(module).instance
+            val im = mirror.reflect(instance)
+            val fieldTerm = u.newTermName(fieldName)
+            val field = im.symbol.typeSignature.member(fieldTerm).asTerm
+            im.reflectField(field).get
         }
 
-        lazy val displayClass = load(displayPath)
-
-        def displayMethod(name: String) = displayClass.getMethods filter (_.getName == name) match {
-            case Array(method) => method
-            case xs            => sys.error("Internal error: display object " + displayClass + ", " + xs.mkString("\n", "\n", ""))
-        }
-
-        def call(name: String, args: Any*): AnyRef = {
-          val method = displayMethod(name)
-          method.invoke(displayClass, args.map(_.asInstanceOf[AnyRef]): _*)
-        }
-
-        def display(): Data = {
-            call(displayName).asInstanceOf[Data]
-        }
-
-        Data(display().items map { case (mime, string) => (mime, unmangle(string)) }: _*)
+        val Data(items @ _*) = getField(displayPath, displayName).asInstanceOf[Data]
+        Data(items map { case (mime, string) => (mime, unmangle(string)) }: _*)
     }
 
     def loadAndRunReq(req: intp.Request): Results.Result = {
