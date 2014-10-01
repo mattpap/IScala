@@ -28,14 +28,69 @@ trait PNG[-T] extends Display[T] { val mime = MIME.`image/png` }
 @implicitNotFound(msg="Can't find JPEG display type class for type ${T}.")
 trait JPEG[-T] extends Display[T] { val mime = MIME.`image/jpeg` }
 
-object Display {
-    implicit val PlainDisplayAny = new Plain[Any] {
-        def stringify(obj: Any) = obj.toString
+object Plain {
+    def apply[T](fn: T => String): Plain[T] = new Plain[T] {
+        def stringify(obj: T) = fn(obj)
     }
+}
 
-    implicit val HTMLDisplayNodeSeq = new HTML[xml.NodeSeq] {
-        def stringify(obj: xml.NodeSeq) = obj.toString
+object HTML {
+    def apply[T](fn: T => String): HTML[T] = new HTML[T] {
+        def stringify(obj: T) = fn(obj)
     }
+}
+
+object Markdown {
+    def apply[T](fn: T => String): Markdown[T] = new Markdown[T] {
+        def stringify(obj: T) = fn(obj)
+    }
+}
+
+object Math {
+    def apply[T](fn: T => String): Math[T] = new Math[T] {
+        def stringify(obj: T) = fn(obj)
+    }
+}
+
+object Latex {
+    def apply[T](fn: T => String): Latex[T] = new Latex[T] {
+        def stringify(obj: T) = fn(obj)
+    }
+}
+
+object JSON {
+    def apply[T](fn: T => String): JSON[T] = new JSON[T] {
+        def stringify(obj: T) = fn(obj)
+    }
+}
+
+object Javascript {
+    def apply[T](fn: T => String): Javascript[T] = new Javascript[T] {
+        def stringify(obj: T) = fn(obj)
+    }
+}
+
+object SVG {
+    def apply[T](fn: T => String): SVG[T] = new SVG[T] {
+        def stringify(obj: T) = fn(obj)
+    }
+}
+
+object PNG {
+    def apply[T](fn: T => String): PNG[T] = new PNG[T] {
+        def stringify(obj: T) = fn(obj)
+    }
+}
+
+object JPEG {
+    def apply[T](fn: T => String): JPEG[T] = new JPEG[T] {
+        def stringify(obj: T) = fn(obj)
+    }
+}
+
+object Display {
+    implicit val PlainAny    = Plain[Any](_.toString)
+    implicit val HTMLNodeSeq = HTML[xml.NodeSeq](_.toString)
 }
 
 case class Repr[-T](
