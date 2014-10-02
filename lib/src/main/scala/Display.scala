@@ -81,34 +81,9 @@ object JPEG {
     }
 }
 
-object Display {
+object Display extends DisplayObjectImplicits {
     implicit val PlainAny    = Plain[Any](_.toString)
     implicit val HTMLNodeSeq = HTML[xml.NodeSeq](_.toString)
-    implicit val LatexMath   = Latex[Math](_.toLatex)
-    implicit val LatexLaTeX  = Latex[LaTeX](_.toLatex)
-    implicit val HTMLIFrame  = HTML[IFrame](_.toHTML)
-}
-
-trait DisplayObject {
-    def toPlainOpt: Option[String] = None
-    def toHTMLOpt: Option[String] = None
-    def toMarkdownOpt: Option[String] = None
-    def toLatexOpt: Option[String] = None
-    def toJSONOpt: Option[String] = None
-    def toJavascriptOpt: Option[String] = None
-    def toSVGOpt: Option[String] = None
-    def toPNGOpt: Option[String] = None
-    def toJPEGOpt: Option[String] = None
-}
-
-trait HTMLDisplayObject extends DisplayObject {
-    override def toHTMLOpt = Some(toHTML)
-    def toHTML: String
-}
-
-trait LatexDisplayObject extends DisplayObject {
-    override def toLatexOpt = Some(toLatex)
-    def toLatex: String
 }
 
 case class Math(math: String) extends LatexDisplayObject {
