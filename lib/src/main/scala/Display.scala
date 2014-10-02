@@ -1,6 +1,7 @@
 package org.refptr.iscala
 
 import scala.annotation.implicitNotFound
+import java.net.URL
 
 trait Display[-T] {
     def mime: MIME
@@ -83,9 +84,52 @@ object JPEG {
 object Display {
     implicit val PlainAny    = Plain[Any](_.toString)
     implicit val HTMLNodeSeq = HTML[xml.NodeSeq](_.toString)
-    implicit val LatexMath   = Latex[Math]("$$" + _.math + "$$")
+    implicit val LatexMath   = Latex[Math](_.toLatex)
+    implicit val HTMLIFrame  = HTML[IFrame](_.toHTML)
 }
 
-trait DisplayObject
+trait DisplayObject {
+    def toPlainOpt: Option[String] = None
+    def toHTMLOpt: Option[String] = None
+    def toMarkdownOpt: Option[String] = None
+    def toLatexOpt: Option[String] = None
+    def toJSONOpt: Option[String] = None
+    def toJavascriptOpt: Option[String] = None
+    def toSVGOpt: Option[String] = None
+    def toPNGOpt: Option[String] = None
+    def toJPEGOpt: Option[String] = None
+}
 
-case class Math(math: String) extends DisplayObject
+trait HTMLDisplayObject extends DisplayObject {
+    override def toHTMLOpt = Some(toHTML)
+    def toHTML: String
+}
+
+trait LatexDisplayObject extends DisplayObject {
+    override def toLatexOpt = Some(toLatex)
+    def toLatex: String
+}
+
+case class Math(math: String) extends LatexDisplayObject {
+    def toLatex = "$$" + math + "$$"
+}
+
+class IFrame(src: URL, width: Int, height: Int) extends HTMLDisplayObject {
+    protected def iframe() =
+        <iframe width={width.toString}
+                height={height.toString}
+                src={src.toString}
+                frameborder="0"
+                allowfullscreen="allowfullscreen"></iframe>
+
+    def toHTML = iframe().toString
+}
+
+case class YouTubeVideo(id: String, width: Int=400, height: Int=300)
+    extends IFrame(new URL("https", "www.youtube.com", s"/embed/$id"), width, height)
+
+case class VimeoVideo(id: String, width: Int=400, height: Int=300)
+    extends IFrame(new URL("https", "player.vimeo.com", s"/video/$id"), width, height)
+
+case class ScribdDocument(id: String, width: Int=400, height: Int=300)
+    extends IFrame(new URL("https", "www.scribd.com", s"/embeds/$id/content"), width, height)
