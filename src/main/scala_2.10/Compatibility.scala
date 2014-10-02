@@ -12,9 +12,19 @@ trait Compatibility {
 trait InterpreterCompatibility extends Compatibility { self: Interpreter =>
     val intp: IMain
 
+    import intp.global.{nme,newTermName,afterTyper}
+
     implicit class IMainOps(imain: intp.type) {
-        def originalPath(name: intp.global.Name): String = imain.pathToName(name)
-        def originalPath(symbol: intp.global.Symbol): String = originalPath(symbol.name)
+        def originalPath(name: intp.global.Name): String     = imain.pathToName(name)
+        def originalPath(symbol: intp.global.Symbol): String = backticked(afterTyper(symbol.fullName))
+
+        def backticked(s: String): String = (
+            (s split '.').toList map {
+                case "_"                               => "_"
+                case s if nme.keywords(newTermName(s)) => s"`$s`"
+                case s                                 => s
+            } mkString "."
+        )
     }
 
     implicit class RequestOps(req: intp.Request) {
