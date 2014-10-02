@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 
 object Plain {
     def unapply(data: Data): Option[String] = data match {
-        case Data((MIME.`text/plain`, output)) => Some(output)
+        case Data((display.MIME.`text/plain`, output)) => Some(output)
         case _ => None
     }
 }
@@ -20,8 +20,7 @@ object NoOutput {
 class InterpreterSpec extends Specification {
     sequential
 
-    val classpath = Sbt.resolveCompiler().classpath
-    val intp = new Interpreter(classpath, Nil)
+    val intp = new Interpreter("", Nil, true)
 
     "IScala's interpreter" should {
         import intp.{interpretWithOutput=>interpret}

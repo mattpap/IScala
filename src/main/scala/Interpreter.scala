@@ -6,8 +6,12 @@ import scala.collection.mutable
 import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
 import scala.tools.nsc.util.Exceptional.unwrap
 
-class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompatibility {
+class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false) extends InterpreterCompatibility {
     protected val commandLine = new CommandLine(args.toList, println)
+
+    if (embedded) {
+        commandLine.settings.embeddedDefaults[this.type]
+    }
 
     private val _classpath: String = {
         val cp = commandLine.settings.classpath
