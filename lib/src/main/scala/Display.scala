@@ -85,6 +85,7 @@ object Display {
     implicit val PlainAny    = Plain[Any](_.toString)
     implicit val HTMLNodeSeq = HTML[xml.NodeSeq](_.toString)
     implicit val LatexMath   = Latex[Math](_.toLatex)
+    implicit val LatexLaTeX  = Latex[LaTeX](_.toLatex)
     implicit val HTMLIFrame  = HTML[IFrame](_.toHTML)
 }
 
@@ -112,6 +113,10 @@ trait LatexDisplayObject extends DisplayObject {
 
 case class Math(math: String) extends LatexDisplayObject {
     def toLatex = "$$" + math + "$$"
+}
+
+case class LaTeX(latex: String) extends LatexDisplayObject {
+    def toLatex = latex
 }
 
 class IFrame(src: URL, width: Int, height: Int) extends HTMLDisplayObject {
