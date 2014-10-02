@@ -72,12 +72,12 @@ class IScala(config: Options#Config) extends Parent {
         private var previously = System.currentTimeMillis
 
         def handle(signal: Signal) {
-            interpreter.cancel()
-
             if (!config.parent) {
                 val now = System.currentTimeMillis
                 if (now - previously < 500) sys.exit() else previously = now
             }
+
+            interpreter.cancel()
         }
     })
 
