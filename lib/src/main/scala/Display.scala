@@ -37,6 +37,10 @@ object HTML {
     def apply[T](fn: T => String): HTML[T] = new HTML[T] {
         def stringify(obj: T) = fn(obj)
     }
+
+    def apply[T, U: HTML](fn: T => U): HTML[T] = new HTML[T] {
+        def stringify(obj: T) = implicitly[HTML[U]].stringify(fn(obj))
+    }
 }
 
 object Markdown {
