@@ -13,8 +13,6 @@ trait Plain[-T] extends Display[T] { val mime = MIME.`text/plain` }
 trait HTML[-T] extends Display[T] { val mime = MIME.`text/html` }
 @implicitNotFound(msg="Can't find Markdown display type class for type ${T}.")
 trait Markdown[-T] extends Display[T] { val mime = MIME.`text/markdown` }
-@implicitNotFound(msg="Can't find Math display type class for type ${T}.")
-trait Math[-T] extends Display[T] { val mime = MIME.`text/latex` }
 @implicitNotFound(msg="Can't find Latex display type class for type ${T}.")
 trait Latex[-T] extends Display[T] { val mime = MIME.`text/latex` }
 @implicitNotFound(msg="Can't find JSON display type class for type ${T}.")
@@ -42,12 +40,6 @@ object HTML {
 
 object Markdown {
     def apply[T](fn: T => String): Markdown[T] = new Markdown[T] {
-        def stringify(obj: T) = fn(obj)
-    }
-}
-
-object Math {
-    def apply[T](fn: T => String): Math[T] = new Math[T] {
         def stringify(obj: T) = fn(obj)
     }
 }
@@ -91,13 +83,13 @@ object JPEG {
 object Display {
     implicit val PlainAny    = Plain[Any](_.toString)
     implicit val HTMLNodeSeq = HTML[xml.NodeSeq](_.toString)
+    implicit val LatexMath   = Latex[Math]("$$" + _.math + "$$")
 }
 
 case class Repr[-T](
     plain      : Option[Plain[T]]      = None,
     html       : Option[HTML[T]]       = None,
     markdown   : Option[Markdown[T]]   = None,
-    math       : Option[Math[T]]       = None,
     latex      : Option[Latex[T]]      = None,
     json       : Option[JSON[T]]       = None,
     javascript : Option[Javascript[T]] = None,
@@ -106,7 +98,7 @@ case class Repr[-T](
     jpeg       : Option[JPEG[T]]       = None) {
 
     def stringify(obj: T): Data = {
-        val displays = List(plain, html, markdown, math, latex, json, javascript, svg, png, jpeg)
+        val displays = List(plain, html, markdown, latex, json, javascript, svg, png, jpeg)
         Data(displays.flatten.map { display => display.mime -> display.stringify(obj) }: _*)
     }
 }
@@ -122,7 +114,6 @@ object DisplayUtil {
             Repr(plain      = implicitlyOptImpl[Plain[T]](c)      splice,
                  html       = implicitlyOptImpl[HTML[T]](c)       splice,
                  markdown   = implicitlyOptImpl[Markdown[T]](c)   splice,
-                 math       = implicitlyOptImpl[Math[T]](c)       splice,
                  latex      = implicitlyOptImpl[Latex[T]](c)      splice,
                  json       = implicitlyOptImpl[JSON[T]](c)       splice,
                  javascript = implicitlyOptImpl[Javascript[T]](c) splice,
@@ -141,3 +132,7 @@ object DisplayUtil {
 
     def stringify[T](obj: T): Data = macro stringifyImpl[T]
 }
+
+trait DisplayObject
+
+case class Math(math: String) extends DisplayObject
