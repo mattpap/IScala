@@ -69,7 +69,7 @@ class IScala(config: Options#Config) extends Parent {
     })
 
     Signal.handle(new Signal("INT"), new SignalHandler {
-        private var previously: Long = 0
+        private var previously = System.currentTimeMillis
 
         def handle(signal: Signal) {
             interpreter.cancel()
