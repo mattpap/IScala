@@ -1,4 +1,5 @@
 package org.refptr.iscala
+package display
 
 sealed abstract class MIME(val name: String)
 object MIME {

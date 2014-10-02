@@ -1,4 +1,5 @@
 package org.refptr.iscala
+package display
 
 trait DisplayObject
 

@@ -93,7 +93,7 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                     ir match {
                         case result @ Results.Value(value, tpe, repr) if !silent =>
                             if (store_history) {
-                                repr(MIME.`text/plain`) foreach { output =>
+                                repr.default foreach { output =>
                                     interpreter.storeOutput(result, output)
                                 }
                             }

@@ -1,4 +1,5 @@
 package org.refptr.iscala
+package display
 
 import scala.annotation.implicitNotFound
 import java.net.URL

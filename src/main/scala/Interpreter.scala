@@ -101,20 +101,21 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
         import intp.memberHandlers.MemberHandler
 
         val displayName = "$display"
+        val NS = "org.refptr.iscala"
 
         object DisplayObjectSourceCode extends IMain.CodeAssembler[MemberHandler] {
             import intp.global.NoSymbol
 
             val displayResult = req.value match {
-                case NoSymbol =>  "org.refptr.iscala.Data()"
-                case symbol   => s"org.refptr.iscala.Repr.stringify(${intp.originalPath(symbol)})"
+                case NoSymbol => s"$NS.Data()"
+                case symbol   => s"$NS.display.Repr.stringify(${intp.originalPath(symbol)})"
             }
 
             val preamble =
                 s"""
                 |object $displayName {
                 |  ${req.importsPreamble}
-                |  val $displayName: org.refptr.iscala.Data = ${intp.executionWrapper} {
+                |  val $displayName: $NS.Data = ${intp.executionWrapper} {
                 |    $displayResult
                 """.stripMargin
 

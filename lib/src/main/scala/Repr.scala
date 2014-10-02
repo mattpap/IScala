@@ -1,4 +1,5 @@
 package org.refptr.iscala
+package display
 
 case class Repr[-T](
     plain      : Option[Plain[T]]      = None,
@@ -45,8 +46,4 @@ object Repr {
     }
 
     def stringify[T](obj: T): Data = macro stringifyImpl[T]
-}
-
-case class Data(items: (MIME, String)*) {
-    def apply(mime: MIME): Option[String] = items.find(_._1 == mime).map(_._2)
 }

@@ -483,6 +483,8 @@ import JsonImplicits._
 import play.api.libs.json.{JsObject,Writes}
 
 package object formats {
+    import display.MIME
+
     implicit val MIMEFormat = new Writes[MIME] {
         def writes(mime: MIME) = implicitly[Writes[String]].writes(mime.name)
     }
