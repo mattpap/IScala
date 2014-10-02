@@ -72,7 +72,7 @@ object IScalaBuild extends Build {
 
     val release = taskKey[File]("Create a set of archives and installers for new release")
 
-    val ipyCommands = settingKey[Seq[(String, String)]]("IPython commands (e.g. console) and their command line options")
+    val ipyCommands = settingKey[List[(String, String)]]("IPython commands (e.g. console) and their command line options")
 
     val debugPort = settingKey[Int]("Port for remote debugging")
     val debugCommand = taskKey[Seq[String]]("JVM command line options enabling remote debugging")
@@ -142,24 +142,27 @@ object IScalaBuild extends Build {
                 val classpath = (fullClasspath in Compile).value.files.mkString(java.io.File.pathSeparator)
                 val main = (mainClass in Compile).value getOrElse sys.error("unknown main class")
 
-                val args = Seq("java") ++ debugCommand.value ++ Seq("-cp", "$CP", main, "--profile", "{connection_file}", "--parent")
-                val kernel_args = args.map(arg => s"'$arg'").mkString(", ")
+                val java_args = Seq("java", "-cp", classpath, main)
+                val ipy_args = Seq("--profile", "{connection_file}", "--parent")
+                val kernel_args = (java_args ++ ipy_args).map(arg => s"'$arg'").mkString(", ")
                 val extra_args = """$(python -c "import shlex; print(shlex.split('$*'))")"""
                 val kernel_cmd = s"[$kernel_args] + $extra_args"
 
                 val binDirectory = baseDirectory.value / "bin" / scalaBinaryVersion.value
                 IO.createDirectory(binDirectory)
 
-                ipyCommands.value map { case (command, options) =>
-                    val output =
-                        s"""
-                        |#!/bin/bash
-                        |CP="$classpath"
-                        |ipython $command --profile scala $options --KernelManager.kernel_cmd="$kernel_cmd"
-                        """.stripMargin.trim + "\n"
-                    val file = binDirectory / command
+                def shebang(script: String) = s"#!/bin/bash\n$script"
+
+                val kernel = "kernel" -> (java_args :+ "$*").mkString(" ")
+
+                val scripts = kernel :: (ipyCommands.value map { case (name, options) =>
+                    name -> s"""ipython $name --profile scala $options --KernelManager.kernel_cmd="$kernel_cmd""""
+                })
+
+                scripts map { case (name, content) =>
+                    val file = binDirectory / name
                     streams.value.log.info(s"Writing ${file.getPath}")
-                    IO.write(file, output)
+                    IO.write(file, shebang(content))
                     file.setExecutable(true)
                     file
                 }
