@@ -12,7 +12,3 @@ object MIME {
     object `image/jpeg` extends MIME("image/jpeg")
     object `image/svg+xml` extends MIME("image/svg+xml")
 }
-
-case class Data(items: (MIME, String)*) {
-    def apply(mime: MIME): Option[String] = items.find(_._1 == mime).map(_._2)
-}

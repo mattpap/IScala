@@ -107,7 +107,7 @@ class Interpreter(classpath: String, args: Seq[String]) extends InterpreterCompa
 
             val displayResult = req.value match {
                 case NoSymbol =>  "org.refptr.iscala.Data()"
-                case symbol   => s"org.refptr.iscala.DisplayUtil.stringify(${intp.originalPath(symbol)})"
+                case symbol   => s"org.refptr.iscala.Repr.stringify(${intp.originalPath(symbol)})"
             }
 
             val preamble =
