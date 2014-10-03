@@ -24,7 +24,7 @@ object Dependencies {
     }
 
     val ivy = Def.setting {
-        val organization = s"org.scala-sbt${if (isScala_2_10.value) "" else "211"}"
+        val organization = if (isScala_2_10.value) "org.scala-sbt" else "org.refptr.sbt211"
         organization % "ivy" % "0.13.6"
     }
 
@@ -113,7 +113,11 @@ object IScalaBuild extends Build {
     lazy val pluginSettings = ideaSettings ++ assemblySettings ++ packagerSettings
 
     lazy val iscalaSettings = Defaults.coreDefaultSettings ++ pluginSettings ++ {
-        Seq(libraryDependencies ++= {
+        Seq(resolvers += {
+                val github = url("https://raw.githubusercontent.com/mattpap/mvn-repo/master/releases")
+                Resolver.url("github-releases", github)(Resolver.ivyStylePatterns)
+            },
+            libraryDependencies ++= {
                 import Dependencies._
                 scalaio ++ Seq(ivy.value, scopt, jeromq, play_json, slick, sqlite, slf4j, specs2, compiler.value)
             },
