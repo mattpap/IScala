@@ -3,7 +3,8 @@ package org.refptr.iscala
 import java.util.concurrent.locks.ReentrantLock
 import Util.{newThread,timer}
 
-class Runner(classLoader: ClassLoader) {
+class Runner(classLoader: => ClassLoader) {
+
     class Execution(body: => Results.Result) {
         private var _result: Option[Results.Result] = None
 

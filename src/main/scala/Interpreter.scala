@@ -23,40 +23,29 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
     val output = new java.io.StringWriter
     val printer = new java.io.PrintWriter(output)
 
-    val intp: IMain = new IMain(settings, printer)
+    val intp = new IMain(settings, printer)
+    val runner = new Runner(intp.classLoader)
 
-    private var _runner: Runner = _
-    private var _session: Session = _
+    private var _session = new Session
+    private var _n: Int = 0
 
-    private var _n: Int = _
-
-    private var In: mutable.Map[Int, String] = _
-    private var Out: mutable.Map[Int, Any] = _
-
-    initVars()
-
-    def runner = _runner
     def session = _session
-
     def n = _n
 
-    private def initVars() {
-        _runner = new Runner(intp.classLoader)
-        _session = new Session
-        _n = 0
-        In = mutable.Map()
-        Out = mutable.Map()
-    }
+    val In = mutable.Map.empty[Int, String]
+    val Out = mutable.Map.empty[Int, Any]
 
     def reset() {
         finish()
+        _session = new Session
+        _n = 0
+        In.clear()
+        Out.clear()
         intp.reset()
-        initVars()
     }
 
     def finish() {
-        if (_session != null)
-            _session.endSession(_n)
+        _session.endSession(_n)
     }
 
     def resetOutput() { // TODO: this shouldn't be maintained externally

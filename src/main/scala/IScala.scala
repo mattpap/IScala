@@ -53,7 +53,7 @@ class IScala(config: Options#Config) extends Parent {
         ClassPath.join(baseClasspath, config.classpath, resolved)
     }
 
-    lazy val interpreter = new Interpreter(classpath, config.args)
+    val interpreter = new Interpreter(classpath, config.args)
 
     val zmq = new Sockets(profile)
     val ipy = new Communication(zmq, profile)
