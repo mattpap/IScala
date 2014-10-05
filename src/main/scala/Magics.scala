@@ -159,7 +159,7 @@ object UpdateMagic extends EmptyMagic('update) {
     def handle(interpreter: Interpreter) {
         Sbt.resolve(Settings.libraryDependencies, Settings.resolvers) map { cp =>
             interpreter.classpath(cp)
-            interpreter.reset()
+            if (interpreter.isInitialized) interpreter.reset()
         }
     }
 }

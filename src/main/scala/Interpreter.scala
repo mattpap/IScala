@@ -48,6 +48,8 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         _session.endSession(_n)
     }
 
+    def isInitialized = intp.isInitializeComplete
+
     def resetOutput() { // TODO: this shouldn't be maintained externally
         output.getBuffer.setLength(0)
     }
