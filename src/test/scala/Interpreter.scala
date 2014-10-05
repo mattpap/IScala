@@ -137,12 +137,39 @@ class InterpreterSpec extends Specification {
 
                     def members[A] = macro membersImpl[A]
                 }
-                """) must beLike { case NoOutput(Value(_, "Macros.type", Plain(Obj("Macros$", _)))) => ok }
+                """) must beLike {
+                case NoOutput(Value(_, "Macros.type", Plain(Obj("Macros$", _)))) => ok
+            }
 
             val plain = "List(<init>, toByte, toShort, toChar, toInt, toLong, toFloat, toDouble, unary_~, unary_+, unary_-, +, <<, >>>, >>, ==, !=, <, <=, >, >=, |, &, ^, -, *, /, %, getClass)"
 
             interpret("Macros.members[Int]") must beLike {
-                case NoOutput(Value(_, "List[String]", Plain(plain))) => ok }
+                case NoOutput(Value(_, "List[String]", Plain(plain))) => ok
+            }
+        }
+
+        "support display framework" in {
+            interpret("Nil") must beLike {
+                case NoOutput(Value(_, "scala.collection.immutable.Nil.type", Plain("List()"))) => ok
+            }
+            interpret("implicit val PlainNil = org.refptr.iscala.display.Plain[Nil.type](obj => \"Nil\")") must beLike {
+                case NoOutput(Value(_, "org.refptr.iscala.display.Plain[scala.collection.immutable.Nil.type]", _)) => ok
+            }
+            interpret("Nil") must beLike {
+                case NoOutput(Value(_, "scala.collection.immutable.Nil.type", Plain("Nil"))) => ok
+            }
+            interpret("implicit val PlainNil = org.refptr.iscala.display.Plain[Nil.type](obj => \"NIL\")") must beLike {
+                case NoOutput(Value(_, "org.refptr.iscala.display.Plain[scala.collection.immutable.Nil.type]", _)) => ok
+            }
+            interpret("Nil") must beLike {
+                case NoOutput(Value(_, "scala.collection.immutable.Nil.type", Plain("NIL"))) => ok
+            }
+            interpret("implicit val PlainNil = org.refptr.iscala.display.Plain[Nothing](obj => ???)") must beLike {
+                case NoOutput(Value(_, "org.refptr.iscala.display.Plain[Nothing]", _)) => ok
+            }
+            interpret("Nil") must beLike {
+                case NoOutput(Value(_, "scala.collection.immutable.Nil.type", Plain("List()"))) => ok
+            }
         }
     }
 }
