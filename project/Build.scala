@@ -36,6 +36,8 @@ object Dependencies {
 
     val slick = "com.typesafe.slick" %% "slick" % "2.1.0"
 
+    val codec = "commons-codec" % "commons-codec" % "1.9"
+
     val sqlite = "org.xerial" % "sqlite-jdbc" % "3.7.2"
 
     val slf4j = "org.slf4j" % "slf4j-nop" % "1.6.4"
@@ -211,7 +213,7 @@ object IScalaBuild extends Build {
     lazy val libSettings = Defaults.coreDefaultSettings ++ Seq(
         libraryDependencies ++= {
             import Dependencies._
-            quasiquotes.value ++ xml.value ++ Seq(reflect.value, specs2)
+            quasiquotes.value ++ xml.value ++ Seq(reflect.value, codec, specs2)
         }
     )
 

@@ -85,7 +85,7 @@ object JPEG {
     }
 }
 
-object Display extends DisplayObjectImplicits {
+object Display extends DisplayObjectImplicits with ImageImplicits {
     implicit val PlainAny    = Plain[Any](_.toString)
     implicit val HTMLNodeSeq = HTML[xml.NodeSeq](_.toString)
 }
