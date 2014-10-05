@@ -9,5 +9,6 @@ target/
 
 /bin/
 /profile*.json
-/*.ipynb
-/.ipynb_checkpoints/
+
+Untitled*.ipynb
+.ipynb_checkpoints/
