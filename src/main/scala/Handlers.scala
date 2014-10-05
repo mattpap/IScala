@@ -64,10 +64,8 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
 
         ipy.send_status(ExecutionState.busy)
 
-        val capture = new StreamCapture(msg)
-        val builtins = new Builtins(interpreter, ipy, msg)
-
         try {
+            val capture = new StreamCapture(msg)
             code match {
                 case Magic(name, input, Some(magic)) =>
                     val ir = capture {
