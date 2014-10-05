@@ -42,17 +42,19 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
     }
 
     def apply(socket: ZMQ.Socket, msg: Msg[execute_request]) {
+        import interpreter.n
+
         val content = msg.content
         val code = content.code
         val silent = content.silent || code.trim.endsWith(";")
         val store_history = content.store_history getOrElse !silent
 
         if (code.trim.isEmpty) {
-            ipy.send_ok(msg, interpreter.n)
+            ipy.send_ok(msg, n)
             return
         }
 
-        val n = interpreter.nextInput()
+        interpreter.nextInput()
         interpreter.storeInput(code)
 
         ipy.publish(msg.pub(MsgType.pyin,
