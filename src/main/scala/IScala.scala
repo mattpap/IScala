@@ -38,8 +38,10 @@ class IScala(config: Options#Config) extends Parent {
     }
 
     val classpath = {
-        val baseClasspath = if (!config.javacp) "" else sys.props("java.class.path")
-        val baseModules = if (!config.javacp) Modules.Compiler :: Nil else Nil
+        val (baseClasspath, baseModules) = config.javacp match {
+            case false => ("",                           Modules.Compiler :: Nil)
+            case true  => (sys.props("java.class.path"), Nil)
+        }
 
         val modules = baseModules ++ config.modules
         val resolvers = config.resolvers
