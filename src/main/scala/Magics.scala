@@ -60,10 +60,40 @@ object TypeParser extends MagicParsers[TypeSpec] {
 }
 
 object ResolversParser extends MagicParsers[Resolvers] {
-    def resolver: Parser[Resolver] = string ~ "at" ~ string ^^ {
-        case name ~ _ ~ root =>
-            MavenRepository(name, root)
+
+    def sonatypeReleases: Parser[Resolver] =
+        "sonatypeReleases"  ^^^ Resolver.sonatypeRepo("releases")
+    def sonatypeSnapshots: Parser[Resolver] =
+        "sonatypeSnapshots" ^^^ Resolver.sonatypeRepo("snapshots")
+
+    def optsRepo: Parser[Resolver] =
+        sonatypeReleases | sonatypeSnapshots
+
+    def sonatypeRepo: Parser[Resolver] =
+        "sonatypeRepo"    ~> "(" ~> string <~ ")" ^^ { case name => Resolver.sonatypeRepo(name) }
+    def typesafeRepo: Parser[Resolver] =
+        "typesafeRepo"    ~> "(" ~> string <~ ")" ^^ { case name => Resolver.typesafeRepo(name) }
+    def typesafeIvyRepo: Parser[Resolver] =
+        "typesafeIvyRepo" ~> "(" ~> string <~ ")" ^^ { case name => Resolver.typesafeIvyRepo(name) }
+    def sbtPluginRepo: Parser[Resolver] =
+        "sbtPluginRepo"   ~> "(" ~> string <~ ")" ^^ { case name => Resolver.sbtPluginRepo(name) }
+    def bintrayRepo: Parser[Resolver] =
+        "bintrayRepo"     ~> "(" ~> string ~ "," ~ string <~ ")" ^^ { case user ~ _ ~ repo => Resolver.bintrayRepo(user, repo) }
+    def jcenterRepo: Parser[Resolver] =
+        "jcenterRepo" ^^^ Resolver.jcenterRepo
+
+    def resolverRepo: Parser[Resolver] =
+        sonatypeRepo | typesafeRepo | typesafeIvyRepo | sbtPluginRepo | bintrayRepo | jcenterRepo
+
+    def optsRepos: Parser[Resolver] = "Opts" ~> "." ~> "resolver" ~> "." ~> optsRepo
+
+    def resolverRepos: Parser[Resolver] = "Resolver" ~> "." ~> resolverRepo
+
+    def mavenRepo: Parser[Resolver] = string ~ "at" ~ string ^^ {
+        case name ~ _ ~ root => MavenRepository(name, root)
     }
+
+    def resolver: Parser[Resolver] = optsRepos | resolverRepos | mavenRepo
 
     def op: Parser[Op] = "+=" ^^^ Add | "-=" ^^^ Del
 
