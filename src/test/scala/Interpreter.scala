@@ -3,27 +3,10 @@ package tests
 
 import org.specs2.mutable.Specification
 
-object Plain {
-    def unapply(data: Data): Option[String] = data match {
-        case Data((display.MIME.`text/plain`, output)) => Some(output)
-        case _ => None
-    }
-}
-
-object NoOutput {
-    def unapply[T](output: Output[T]): Option[T] = output match {
-        case Output(value, "", "") => Some(value)
-        case _ => None
-    }
-}
-
-class InterpreterSpec extends Specification {
+class InterpreterSpec extends Specification with InterpreterUtil {
     sequential
 
-    val intp = new Interpreter("", Nil, true)
-
     "IScala's interpreter" should {
-        import intp.{interpretWithOutput=>interpret}
         import Results._
 
         val Obj = "^([^@]+)@([0-9a-fA-F]+)$".r
