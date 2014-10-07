@@ -149,7 +149,7 @@ class KernelInfoHandler(parent: Parent) extends Handler[kernel_info_request](par
 
         ipy.send(socket, msg.reply(MsgType.kernel_info_reply,
             kernel_info_reply(
-                protocol_version=(4, 0),
+                protocol_version=Protocol.version,
                 language_version=scalaVersion,
                 language="scala")))
     }

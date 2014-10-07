@@ -3,6 +3,10 @@ package msg
 
 // Implementation of IPython protocol specification 4.1
 
+object Protocol {
+    val version = (4, 1)
+}
+
 object ExecutionStatus extends Enumeration {
     type ExecutionStatus = Value
     val ok = Value
