@@ -64,10 +64,10 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                 execution_count=n,
                 code=code)))
 
-        ipy.send_status(ExecutionState.busy)
-
-        try {
+        ipy.busy {
             val capture = new StreamCapture(msg)
+            interpreter.resetOutput()
+
             code match {
                 case Magic(name, input, Some(magic)) =>
                     val ir = capture {
@@ -118,9 +118,6 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                             ipy.send_abort(msg, n)
                     }
             }
-        } finally {
-            interpreter.resetOutput()
-            ipy.send_status(ExecutionState.idle)
         }
     }
 }

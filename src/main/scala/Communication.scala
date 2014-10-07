@@ -139,4 +139,14 @@ class Communication(zmq: Sockets, profile: Profile) {
             case _: ZMQException =>
         }
     }
+
+    def busy[T](block: => T): T = {
+        send_status(ExecutionState.busy)
+
+        try {
+            block
+        } finally {
+            send_status(ExecutionState.idle)
+        }
+    }
 }
