@@ -110,7 +110,14 @@ class CompleteHandler(parent: Parent) extends Handler[complete_request](parent) 
     import parent.{ipy,interpreter}
 
     def apply(socket: ZMQ.Socket, msg: Msg[complete_request]) {
-        val text = msg.content.text
+        val text = if (msg.content.text.isEmpty) {
+            // Notebook only gives us line and cursor_pos
+            val pos = msg.content.cursor_pos
+            val upToCursor = msg.content.line.splitAt(pos)._1
+            upToCursor.split("""[^\w.%]""").last
+        } else {
+            msg.content.text
+        }
 
         val matches = if (msg.content.line.startsWith("%")) {
             val prefix = text.stripPrefix("%")
