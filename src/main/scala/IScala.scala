@@ -121,19 +121,27 @@ class IScala(config: Options#Config) extends Parent {
     val HistoryHandler = new HistoryHandler(this)
 
     class EventLoop(socket: ZMQ.Socket) extends Thread {
+        def dispatch[T <: FromIPython](msg: Msg[T]) {
+            msg.header.msg_type match {
+                case MsgType.execute_request => ExecuteHandler(socket, msg.asInstanceOf[Msg[execute_request]])
+                case MsgType.complete_request => CompleteHandler(socket, msg.asInstanceOf[Msg[complete_request]])
+                case MsgType.kernel_info_request => KernelInfoHandler(socket, msg.asInstanceOf[Msg[kernel_info_request]])
+                case MsgType.object_info_request => ObjectInfoHandler(socket, msg.asInstanceOf[Msg[object_info_request]])
+                case MsgType.connect_request => ConnectHandler(socket, msg.asInstanceOf[Msg[connect_request]])
+                case MsgType.shutdown_request => ShutdownHandler(socket, msg.asInstanceOf[Msg[shutdown_request]])
+                case MsgType.history_request => HistoryHandler(socket, msg.asInstanceOf[Msg[history_request]])
+            }
+        }
+
         override def run() {
-            while (true) {
-                ipy.recv(socket).foreach { msg =>
-                    msg.header.msg_type match {
-                        case MsgType.execute_request => ExecuteHandler(socket, msg.asInstanceOf[Msg[execute_request]])
-                        case MsgType.complete_request => CompleteHandler(socket, msg.asInstanceOf[Msg[complete_request]])
-                        case MsgType.kernel_info_request => KernelInfoHandler(socket, msg.asInstanceOf[Msg[kernel_info_request]])
-                        case MsgType.object_info_request => ObjectInfoHandler(socket, msg.asInstanceOf[Msg[object_info_request]])
-                        case MsgType.connect_request => ConnectHandler(socket, msg.asInstanceOf[Msg[connect_request]])
-                        case MsgType.shutdown_request => ShutdownHandler(socket, msg.asInstanceOf[Msg[shutdown_request]])
-                        case MsgType.history_request => HistoryHandler(socket, msg.asInstanceOf[Msg[history_request]])
-                    }
+            try {
+                while (true) {
+                    ipy.recv(socket).foreach(dispatch)
                 }
+            } catch {
+                case exc: Exception =>
+                    zmq.terminate() // this will gracefully terminate heartbeat
+                    throw exc
             }
         }
     }
@@ -142,18 +150,12 @@ class IScala(config: Options#Config) extends Parent {
     heartBeat.setName("HeartBeat")
     heartBeat.start()
 
+    logger.debug("Starting kernel event loop")
     ipy.send_status(ExecutionState.starting)
 
-    logger.debug("Starting kernel event loops")
-
     val requestsLoop = new EventLoop(zmq.requests)
-    val controlLoop = new EventLoop(zmq.control)
-
     requestsLoop.setName("RequestsEventLoop")
-    controlLoop.setName("ControlEventLoop")
-
     requestsLoop.start()
-    controlLoop.start()
 
     welcome()
 }

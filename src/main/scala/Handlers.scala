@@ -18,7 +18,9 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
 
     class StreamCapture(msg: Msg[_]) extends Capture {
         def stream(name: String, data: String) {
-            ipy.send_stream(msg, "stdout", data)
+            ipy.silently {
+                ipy.send_stream(msg, "stdout", data)
+            }
         }
 
         def stdout(data: String) = stream("stdout", data)
@@ -116,9 +118,6 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                             ipy.send_abort(msg, n)
                     }
             }
-        } catch {
-            case exception: Throwable =>
-                ipy.send_error(msg, pyerr_content(exception, n)) // Internal Error
         } finally {
             interpreter.resetOutput()
             ipy.send_status(ExecutionState.idle)

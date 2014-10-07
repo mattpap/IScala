@@ -185,7 +185,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
             } else
                 Results.NoValue
         } catch {
-            case exception: Throwable =>
+            case exception: Exception =>
                 req.lineRep.bindError(exception)
                 Results.Exception(unwrap(exception))
         }

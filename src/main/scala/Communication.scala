@@ -1,6 +1,6 @@
 package org.refptr.iscala
 
-import org.zeromq.ZMQ
+import org.zeromq.{ZMQ,ZMQException}
 
 import play.api.libs.json.{Reads,Writes}
 
@@ -131,4 +131,12 @@ class Communication(zmq: Sockets, profile: Profile) {
     }
 
     def recv_stdin(): Option[Msg[FromIPython]] = recv(zmq.stdin)
+
+    def silently[T](block: => T) {
+        try {
+            block
+        } catch {
+            case _: ZMQException =>
+        }
+    }
 }
