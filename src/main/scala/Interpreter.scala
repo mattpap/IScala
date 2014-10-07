@@ -92,14 +92,27 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         }
     }
 
+    def runCode(moduleName: String, fieldName: String): Any = {
+        import scala.reflect.runtime.{universe=>u}
+        val mirror = u.runtimeMirror(intp.classLoader)
+        val module = mirror.staticModule(moduleName)
+        val instance = mirror.reflectModule(module).instance
+        val im = mirror.reflect(instance)
+        val fieldTerm = u.newTermName(fieldName)
+        val field = im.symbol.typeSignature.member(fieldTerm).asTerm
+        im.reflectField(field).get
+    }
+
     def display(req: intp.Request): Data = {
         import intp.memberHandlers.MemberHandler
 
         val displayName = "$display"
-        val NS = "org.refptr.iscala"
+        val displayPath = req.lineRep.pathTo(displayName) + req.accessPath
 
         object DisplayObjectSourceCode extends IMain.CodeAssembler[MemberHandler] {
             import intp.global.NoSymbol
+
+            val NS = "org.refptr.iscala"
 
             val displayResult = req.value match {
                 case NoSymbol => s"$NS.Data()"
@@ -126,20 +139,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
 
         req.lineRep.compile(DisplayObjectSourceCode(req.handlers))
 
-        def displayPath = req.lineRep.pathTo(displayName) + req.accessPath
-
-        def getField(moduleName: String, fieldName: String): Any = {
-            import scala.reflect.runtime.{universe=>u}
-            val mirror = u.runtimeMirror(intp.classLoader)
-            val module = mirror.staticModule(moduleName)
-            val instance = mirror.reflectModule(module).instance
-            val im = mirror.reflect(instance)
-            val fieldTerm = u.newTermName(fieldName)
-            val field = im.symbol.typeSignature.member(fieldTerm).asTerm
-            im.reflectField(field).get
-        }
-
-        val Data(items @ _*) = getField(displayPath, displayName).asInstanceOf[Data]
+        val Data(items @ _*) = runCode(displayPath, displayName).asInstanceOf[Data]
         Data(items map { case (mime, string) => (mime, unmangle(string)) }: _*)
     }
 
