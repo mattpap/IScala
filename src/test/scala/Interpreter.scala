@@ -52,11 +52,11 @@ class InterpreterSpec extends Specification with InterpreterUtil {
         }
 
         "support defining variables" in {
-            interpret("var y = 1")  must beLike { case NoOutput(Value(_, "Int", Plain("1"))) => ok }
-            interpret("y")          must beLike { case NoOutput(Value(_, "Int", Plain("1"))) => ok }
-            interpret("100*y + 17") must beLike { case NoOutput(Value(_, "Int", Plain("117"))) => ok }
-            //interpret("y = 2")      must beLike { case NoOutput(Value(_, "Int", Plain("2"))) => ok }
-            //interpret("100*y + 17") must beLike { case NoOutput(Value(_, "Int", Plain("118"))) => ok }
+            interpret("var y = 1")  must beLike { case NoOutput(Value(1, "Int", Plain("1"))) => ok }
+            interpret("y")          must beLike { case NoOutput(Value(1, "Int", Plain("1"))) => ok }
+            interpret("100*y + 17") must beLike { case NoOutput(Value(117, "Int", Plain("117"))) => ok }
+            interpret("y = 2")      must beLike { case NoOutput(Value(2, "Int", Plain("2"))) => ok }
+            interpret("100*y + 17") must beLike { case NoOutput(Value(217, "Int", Plain("217"))) => ok }
         }
 
         "support defining classes" in {

@@ -144,7 +144,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
     }
 
     def loadAndRunReq(req: intp.Request): Results.Result = {
-        import intp.memberHandlers.{MemberHandler,MemberDefHandler,ValHandler,DefHandler}
+        import intp.memberHandlers.{MemberHandler,MemberDefHandler,ValHandler,DefHandler,AssignHandler}
 
         def definesValue(handler: MemberHandler): Boolean = {
             // MemberHandler.definesValue has slightly different meaning from what is
@@ -175,6 +175,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
             if (hasValue && value != null) {
                 val symbolName = handler match {
                     case handler: MemberDefHandler => handler.name
+                    case handler: AssignHandler    => handler.name
                     case _                         => intp.global.nme.NO_NAME
                 }
 
