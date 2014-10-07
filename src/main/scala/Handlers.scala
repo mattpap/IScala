@@ -27,19 +27,21 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
         def stderr(data: String) = stream("stderr", data)
     }
 
-    private def pyerr_content(exception: Throwable, execution_count: Int): pyerr = {
-        val ename = interpreter.stringify(exception.getClass.getName)
-        val evalue = interpreter.stringify(exception.getMessage)
+    def pyerr_content(execution_count: Int, exception: Throwable): pyerr = {
+        import interpreter.stringify
+
+        val name = stringify(exception.getClass.getName)
+        val value = Option(exception.getMessage).map(stringify _) getOrElse ""
         val stacktrace = exception
              .getStackTrace()
              .takeWhile(_.getFileName != "<console>")
-             .map(interpreter.stringify)
+             .map(stringify)
              .toList
-        val traceback = s"$ename: $evalue" :: stacktrace.map("    " + _)
+        val traceback = s"$name: $value" :: stacktrace.map("    " + _)
 
         pyerr(execution_count=execution_count,
-              ename=ename,
-              evalue=evalue,
+              ename=name,
+              evalue=value,
               traceback=traceback)
     }
 
@@ -109,7 +111,7 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                         case _: Results.Success =>
                             ipy.send_ok(msg, n)
                         case Results.Exception(exception) =>
-                            ipy.send_error(msg, pyerr_content(exception, n))
+                            ipy.send_error(msg, pyerr_content(n, exception))
                         case Results.Error =>
                             ipy.send_error(msg, n, interpreter.output.toString)
                         case Results.Incomplete =>
