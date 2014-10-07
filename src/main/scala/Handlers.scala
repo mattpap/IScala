@@ -30,19 +30,11 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
     def pyerr_content(execution_count: Int, exception: Throwable): pyerr = {
         import interpreter.stringify
 
-        val name = stringify(exception.getClass.getName)
-        val value = Option(exception.getMessage).map(stringify _) getOrElse ""
-        val stacktrace = exception
-             .getStackTrace()
-             .takeWhile(_.getFileName != "<console>")
-             .map(stringify)
-             .toList
-        val traceback = s"$name: $value" :: stacktrace.map("    " + _)
-
-        pyerr(execution_count=execution_count,
-              ename=name,
-              evalue=value,
-              traceback=traceback)
+        val err = pyerr.fromThrowable(execution_count, exception)
+        err.copy(
+            ename=stringify(err.ename),
+            evalue=stringify(err.evalue),
+            traceback=err.traceback.map(stringify _))
     }
 
     def apply(socket: ZMQ.Socket, msg: Msg[execute_request]) {

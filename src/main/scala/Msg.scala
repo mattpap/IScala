@@ -458,6 +458,24 @@ case class pyerr(
     // written.
     traceback: List[String]) extends ToIPython
 
+object pyerr {
+    // XXX: can't use apply(), because of https://github.com/playframework/playframework/issues/2031
+    def fromThrowable(execution_count: Int, exception: Throwable): pyerr = {
+        val name = exception.getClass.getName
+        val value = Option(exception.getMessage) getOrElse ""
+        val stacktrace = exception
+             .getStackTrace()
+             .takeWhile(_.getFileName != "<console>")
+             .toList
+        val traceback = s"$name: $value" :: stacktrace.map("    " + _)
+
+        pyerr(execution_count=execution_count,
+              ename=name,
+              evalue=value,
+              traceback=traceback)
+    }
+}
+
 case class status(
     // When the kernel starts to execute code, it will enter the 'busy'
     // state and when it finishes, it will enter the 'idle' state.
