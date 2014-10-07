@@ -1,6 +1,8 @@
 package org.refptr.iscala
 package msg
 
+// Implementation of IPython protocol specification 4.1
+
 object ExecutionStatus extends Enumeration {
     type ExecutionStatus = Value
     val ok = Value
@@ -46,7 +48,10 @@ object MsgType extends Enumeration {
         pyerr,
         status,
         input_request,
-        input_reply = Value
+        input_reply,
+        comm_open,
+        comm_msg,
+        comm_close = Value
 }
 
 sealed trait Content
@@ -482,11 +487,32 @@ case class status(
     // The kernel will publish state 'starting' exactly once at process startup.
     execution_state: ExecutionState) extends ToIPython
 
+case class clear_output(
+    // Wait to clear the output until new output is available.  Clears the
+    // existing output immediately before the new output is displayed.
+    // Useful for creating simple animations with minimal flickering.
+    _wait: Boolean) extends ToIPython
+
 case class input_request(
     prompt: String) extends ToIPython
 
 case class input_reply(
     value: String) extends FromIPython
+
+import play.api.libs.json.JsObject
+
+case class comm_open(
+    comm_id: UUID,
+    target_name: String,
+    data: JsObject) extends ToIPython with FromIPython
+
+case class comm_msg(
+    comm_id: UUID,
+    data: JsObject) extends ToIPython with FromIPython
+
+case class comm_close(
+    comm_id: UUID,
+    data: JsObject) extends ToIPython with FromIPython
 
 // XXX: This was originally in src/main/scala/Formats.scala, but due to
 // a bug in the compiler related to `knownDirectSubclasses` and possibly
@@ -551,7 +577,17 @@ package object formats {
     implicit val PyoutJSON = Json.writes[pyout]
     implicit val PyerrJSON = Json.writes[pyerr]
     implicit val StatusJSON = Json.writes[status]
+    implicit val ClearOutputJSON = new Writes[clear_output] {
+        def writes(obj: clear_output) = {
+            // NOTE: `wait` is a final member on Object, so we have to go through hoops
+            JsObject(Seq("wait" -> implicitly[Writes[Boolean]].writes(obj._wait)))
+        }
+    }
 
     implicit val InputRequestJSON = Json.format[input_request]
     implicit val InputReplyJSON = Json.format[input_reply]
+
+    implicit val CommOpenJSON = Json.format[comm_open]
+    implicit val CommMsgJSON = Json.format[comm_msg]
+    implicit val CommCloseJSON = Json.format[comm_close]
 }
