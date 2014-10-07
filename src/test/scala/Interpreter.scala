@@ -70,13 +70,33 @@ class InterpreterSpec extends Specification with InterpreterUtil {
 
         "support exceptions" in {
             interpret("1/0") must beLike {
-                case NoOutput(Exception(exc: java.lang.ArithmeticException))
-                    if exc.getMessage() == "/ by zero" => ok
+                case NoOutput(Exception("java.lang.ArithmeticException", "/ by zero", _, exc: ArithmeticException)) => ok
             }
 
             interpret("java.util.UUID.fromString(\"xyz\")") must beLike {
-                case NoOutput(Exception(exc: java.lang.IllegalArgumentException))
-                    if exc.getMessage() == "Invalid UUID string: xyz" => ok
+                case NoOutput(Exception("java.lang.IllegalArgumentException", "Invalid UUID string: xyz", _, exc: IllegalArgumentException)) => ok
+            }
+
+            interpret("throw new java.lang.IllegalArgumentException") must beLike {
+                case NoOutput(Exception("java.lang.IllegalArgumentException", "", _, exc: IllegalArgumentException)) => ok
+            }
+
+            interpret("throw new java.lang.IllegalArgumentException(\"custom message\")") must beLike {
+                case NoOutput(Exception("java.lang.IllegalArgumentException", "custom message", _, exc: IllegalArgumentException)) => ok
+            }
+
+            interpret("throw new java.lang.IllegalArgumentException(foo.getClass.getName)") must beLike {
+                case NoOutput(Exception("java.lang.IllegalArgumentException", "Foo", _, exc: IllegalArgumentException)) => ok
+            }
+        }
+
+        "support custom exceptions" in {
+            interpret("class MyException(x: Int) extends Exception(s\"failed with $x\")") must beLike {
+                case NoOutput(NoValue) => ok
+            }
+
+            interpret("throw new MyException(117)") must beLike {
+                case NoOutput(Exception("MyException", "failed with 117", _, _)) => ok
             }
         }
 
@@ -99,8 +119,7 @@ class InterpreterSpec extends Specification with InterpreterUtil {
             }
 
             interpret("""val obj(name, hash) = "Macros$@88a4ee1x"""") must beLike {
-                case NoOutput(Exception(exc: scala.MatchError))
-                    if exc.getMessage() == "Macros$@88a4ee1x (of class java.lang.String)" => ok
+                case NoOutput(Exception("scala.MatchError", "Macros$@88a4ee1x (of class java.lang.String)", _, exc: scala.MatchError)) => ok
             }
         }
 

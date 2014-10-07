@@ -185,9 +185,19 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
             } else
                 Results.NoValue
         } catch {
-            case exception: Exception =>
-                req.lineRep.bindError(exception)
-                Results.Exception(unwrap(exception))
+            case original: Exception =>
+                val exception = unwrap(original)
+                req.lineRep.bindError(original)
+
+                val name = unmangle(exception.getClass.getName)
+                val msg = Option(exception.getMessage).map(unmangle _) getOrElse ""
+                val stacktrace = exception
+                     .getStackTrace()
+                     .takeWhile(_.getFileName != "<console>")
+                     .map(stringify _)
+                     .toList
+
+                Results.Exception(name, msg, stacktrace, exception)
         }
     }
 
