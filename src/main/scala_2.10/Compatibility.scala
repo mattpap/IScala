@@ -10,13 +10,12 @@ trait Compatibility {
 }
 
 trait InterpreterCompatibility extends Compatibility { self: Interpreter =>
-    val intp: IMain
-
-    import intp.global.{nme,newTermName,afterTyper}
+    import intp.Request
+    import intp.global.{nme,newTermName,afterTyper,Name,Symbol}
 
     implicit class IMainOps(imain: intp.type) {
-        def originalPath(name: intp.global.Name): String     = imain.pathToName(name)
-        def originalPath(symbol: intp.global.Symbol): String = backticked(afterTyper(symbol.fullName))
+        def originalPath(name: Name): String     = imain.pathToName(name)
+        def originalPath(symbol: Symbol): String = backticked(afterTyper(symbol.fullName))
 
         def backticked(s: String): String = (
             (s split '.').toList map {
@@ -27,8 +26,8 @@ trait InterpreterCompatibility extends Compatibility { self: Interpreter =>
         )
     }
 
-    implicit class RequestOps(req: intp.Request) {
-        def value: intp.global.Symbol =
+    implicit class RequestOps(req: Request) {
+        def value: Symbol =
             Some(req.handlers.last)
                 .filter(_.definesValue)
                 .map(handler => req.definedSymbols(handler.definesTerm.get))

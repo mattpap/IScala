@@ -23,7 +23,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
     val output = new java.io.StringWriter
     val printer = new java.io.PrintWriter(output)
 
-    val intp = new IMain(settings, printer)
+    val intp: IMain = new IMain(settings, printer)
     val runner = new Runner(intp.classLoader)
 
     private var _session = new Session
