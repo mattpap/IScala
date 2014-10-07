@@ -5,7 +5,7 @@ object Results {
     sealed trait Success extends Result
     sealed trait Failure extends Result
 
-    final case class Value(value: AnyRef, tpe: String, repr: Data) extends Success
+    final case class Value(value: Any, tpe: String, repr: Data) extends Success
     final case object NoValue extends Success
 
     final case class Exception(name: String, msg: String, stacktrace: List[String], exception: Throwable) extends Failure {

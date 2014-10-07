@@ -12,9 +12,12 @@ class InterpreterSpec extends Specification with InterpreterUtil {
         val Obj = "^([^@]+)@([0-9a-fA-F]+)$".r
 
         "support primitive values" in {
-            interpret("1") must beLike { case NoOutput(Value(_, "Int", Plain("1"))) => ok }
-            interpret("1.0") must beLike { case NoOutput(Value(_, "Double", Plain("1.0"))) => ok }
-            interpret("\"XXX\"") must beLike { case NoOutput(Value(_, "String", Plain("XXX"))) => ok }
+            interpret("1") must beLike { case NoOutput(Value(1, "Int", Plain("1"))) => ok }
+            interpret("1.0") must beLike { case NoOutput(Value(1.0, "Double", Plain("1.0"))) => ok }
+            interpret("true") must beLike { case NoOutput(Value(true, "Boolean", Plain("true"))) => ok }
+            interpret("false") must beLike { case NoOutput(Value(false, "Boolean", Plain("false"))) => ok }
+            interpret("\"XXX\"") must beLike { case NoOutput(Value("XXX", "String", Plain("XXX"))) => ok }
+
         }
 
         "support function values" in {
@@ -43,9 +46,9 @@ class InterpreterSpec extends Specification with InterpreterUtil {
         }
 
         "support defining values" in {
-            interpret("val x = 1")  must beLike { case NoOutput(Value(_, "Int", Plain("1"))) => ok }
-            interpret("x")          must beLike { case NoOutput(Value(_, "Int", Plain("1"))) => ok }
-            interpret("100*x + 17") must beLike { case NoOutput(Value(_, "Int", Plain("117"))) => ok }
+            interpret("val x = 1")  must beLike { case NoOutput(Value(1, "Int", Plain("1"))) => ok }
+            interpret("x")          must beLike { case NoOutput(Value(1, "Int", Plain("1"))) => ok }
+            interpret("100*x + 17") must beLike { case NoOutput(Value(117, "Int", Plain("117"))) => ok }
         }
 
         "support defining variables" in {
