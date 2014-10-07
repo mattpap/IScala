@@ -59,6 +59,14 @@ class InterpreterSpec extends Specification with InterpreterUtil {
             interpret("100*y + 17") must beLike { case NoOutput(Value(217, "Int", Plain("217"))) => ok }
         }
 
+        "support defining lazy values" in {
+            interpret("var initialized = false") must beLike { case NoOutput(Value(false, "Boolean", _)) => ok }
+            interpret("lazy val z = { initialized = true; 1 }") must beLike { case NoOutput(NoValue) => ok }
+            interpret("initialized") must beLike { case NoOutput(Value(false, "Boolean", _)) => ok }
+            interpret("z + 1") must beLike { case NoOutput(Value(_, "Int", _)) => ok }
+            interpret("initialized") must beLike { case NoOutput(Value(true, "Boolean", _)) => ok }
+        }
+
         "support defining classes" in {
             interpret("class Foo(a: Int) { def bar(b: String) = b*a }") must beLike {
                 case NoOutput(NoValue) => ok
