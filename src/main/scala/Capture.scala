@@ -24,6 +24,39 @@ abstract class Capture { self =>
     def stdout(data: String): Unit
     def stderr(data: String): Unit
 
+    def withOut[T](newOut: java.io.PrintStream)(block: => T): T = {
+        Console.withOut(newOut) {
+            val oldOut = System.out
+            System.setOut(newOut)
+            try {
+                block
+            } finally {
+                System.setOut(oldOut)
+            }
+        }
+    }
+
+    def withErr[T](newErr: java.io.PrintStream)(block: => T): T = {
+        Console.withErr(newErr) {
+            val oldErr = System.err
+            System.setErr(newErr)
+            try {
+                block
+            } finally {
+                System.setErr(oldErr)
+            }
+        }
+    }
+
+    def withOutAndErr[T](newOut: java.io.PrintStream,
+                         newErr: java.io.PrintStream)(block: => T): T = {
+        withOut(newOut) {
+            withErr(newErr) {
+                block
+            }
+        }
+    }
+
     // This is a heavyweight solution to start stream watch threads per
     // input, but currently it's the cheapest approach that works well in
     // multiple thread setup. Note that piped streams work only in thread
@@ -50,12 +83,7 @@ abstract class Capture { self =>
         stderrThread.start()
 
         try {
-            val result =
-                Console.withOut(stdout) {
-                    Console.withErr(stderr) {
-                        block
-                    }
-                }
+            val result = withOutAndErr(stdout, stderr) { block }
 
             stdoutOut.flush()
             stderrOut.flush()

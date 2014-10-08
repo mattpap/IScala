@@ -33,6 +33,13 @@ class InterpreterSpec extends Specification with InterpreterUtil {
             interpret("print(\"XXX\")") must beLike {
                 case Output(NoValue, _, "") => ok     // TODO: "XXX"
             }
+
+            interpret("System.out.println(\"XXX\")") must beLike {
+                case Output(NoValue, _, "") => ok     // TODO: "XXX\n"
+            }
+            interpret("System.out.print(\"XXX\")") must beLike {
+                case Output(NoValue, _, "") => ok     // TODO: "XXX"
+            }
         }
 
         "support long running code" in {
