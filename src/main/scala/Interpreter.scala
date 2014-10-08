@@ -92,6 +92,26 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         }
     }
 
+    def withException[T](req: intp.Request)(block: => T): Either[T, Results.Result] = {
+        try {
+            Left(block)
+        } catch {
+            case original: Throwable =>
+                val exception = unwrap(original)
+                req.lineRep.bindError(original)
+
+                val name = unmangle(exception.getClass.getName)
+                val msg = Option(exception.getMessage).map(unmangle _) getOrElse ""
+                val stacktrace = exception
+                     .getStackTrace()
+                     .takeWhile(_.getFileName != "<console>")
+                     .map(stringify _)
+                     .toList
+
+                Right(Results.Exception(name, msg, stacktrace, exception))
+        }
+    }
+
     def runCode(moduleName: String, fieldName: String): Any = {
         import scala.reflect.runtime.{universe=>u}
         val mirror = u.runtimeMirror(intp.classLoader)
@@ -145,6 +165,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
 
     def loadAndRunReq(req: intp.Request): Results.Result = {
         import intp.memberHandlers.{MemberHandler,MemberDefHandler,ValHandler,DefHandler,AssignHandler}
+        import intp.naming.sessionNames
 
         def definesValue(handler: MemberHandler): Boolean = {
             // MemberHandler.definesValue has slightly different meaning from what is
@@ -161,44 +182,34 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
             }
         }
 
-        try {
-            val handler = req.handlers.last
-            val hasValue = definesValue(handler)
-
-            val value = req.lineRep.call {
-                import intp.naming.{sessionNames=>names}
-                if (hasValue) names.result else names.print
+        def typeOf(handler: MemberHandler): String = {
+            val symbolName = handler match {
+                case handler: MemberDefHandler => handler.name
+                case handler: AssignHandler    => handler.name
+                case _                         => intp.global.nme.NO_NAME
             }
 
-            intp.recordRequest(req)
+            req.lookupTypeOf(symbolName)
+        }
 
-            if (hasValue && value != null) {
-                val symbolName = handler match {
-                    case handler: MemberDefHandler => handler.name
-                    case handler: AssignHandler    => handler.name
-                    case _                         => intp.global.nme.NO_NAME
-                }
+        val handler = req.handlers.last
+        val hasValue = definesValue(handler)
 
-                val tpe = req.lookupTypeOf(symbolName)
-                val repr = display(req)
+        val evalName = if (hasValue) sessionNames.result else sessionNames.print
+        val evalResult = withException(req) { req.lineRep.call(evalName) }
 
-                Results.Value(value, tpe, repr)
-            } else
-                Results.NoValue
-        } catch {
-            case original: Exception =>
-                val exception = unwrap(original)
-                req.lineRep.bindError(original)
+        intp.recordRequest(req)
 
-                val name = unmangle(exception.getClass.getName)
-                val msg = Option(exception.getMessage).map(unmangle _) getOrElse ""
-                val stacktrace = exception
-                     .getStackTrace()
-                     .takeWhile(_.getFileName != "<console>")
-                     .map(stringify _)
-                     .toList
-
-                Results.Exception(name, msg, stacktrace, exception)
+        evalResult match {
+            case Left(value) =>
+                if (hasValue && value != null) {
+                    withException(req) { display(req) } match {
+                        case Left(repr)    => Results.Value(value, typeOf(handler), repr)
+                        case Right(result) => result
+                    }
+                } else
+                    Results.NoValue
+            case Right(result) => result
         }
     }
 
