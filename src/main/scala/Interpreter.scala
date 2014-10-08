@@ -118,7 +118,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         val module = mirror.staticModule(moduleName)
         val instance = mirror.reflectModule(module).instance
         val im = mirror.reflect(instance)
-        val fieldTerm = u.newTermName(fieldName)
+        val fieldTerm = u.TermName(fieldName)
         val field = im.symbol.typeSignature.member(fieldTerm).asTerm
         im.reflectField(field).get
     }
