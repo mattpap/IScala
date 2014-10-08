@@ -4,6 +4,7 @@ import java.io.File
 
 import sbt.{
     ShowLines,
+    Logger, ConsoleLogger,
     ModuleID,ModuleInfo,CrossVersion,Resolver,
     IvyPaths,InlineIvyConfiguration,IvySbt,IvyScala,IvyActions,
     InlineConfiguration,UpdateConfiguration,
@@ -26,7 +27,10 @@ object ClassPath {
 }
 
 object Sbt {
-    def resolve(modules: Seq[ModuleID], resolvers: Seq[Resolver]): Option[ClassPath] = {
+    def resolve(modules: Seq[ModuleID], resolvers: Seq[Resolver]): Option[ClassPath] =
+        resolve(modules, resolvers, ConsoleLogger())
+
+    def resolve(modules: Seq[ModuleID], resolvers: Seq[Resolver], logger: Logger): Option[ClassPath] = {
         val paths = new IvyPaths(new File("."), None)
         val allResolvers = Resolver.withDefaultResolvers(resolvers)
         val ivyConf = new InlineIvyConfiguration(paths, allResolvers, Nil, Nil, false, None, Seq("sha1", "md5"), None, UpdateOptions(), logger)
