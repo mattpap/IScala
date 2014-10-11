@@ -57,7 +57,7 @@ then
 fi
 
 EXPECTED_MD5="$(get_property sbt.launcher.md5)"
-COMPUTED_MD5="$(openssl md5 -r < $SBT_LAUNCHER | cut -d' ' -f1)"
+COMPUTED_MD5="$(openssl md5 -hex < $SBT_LAUNCHER | cut -d' ' -f2)"
 
 if [ "$EXPECTED_MD5" != "$COMPUTED_MD5" ];
 then
