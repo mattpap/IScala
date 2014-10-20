@@ -8,6 +8,8 @@ trait Display[-T] {
     def stringify(obj: T): String
 }
 
+object Display extends DisplayImplicits with DisplayObjectImplicits with ImageImplicits
+
 @implicitNotFound(msg="Can't find Plain display type class for type ${T}.")
 trait Plain[-T] extends Display[T] { val mime = MIME.`text/plain` }
 @implicitNotFound(msg="Can't find HTML display type class for type ${T}.")
@@ -85,7 +87,7 @@ object JPEG {
     }
 }
 
-object Display extends DisplayObjectImplicits with ImageImplicits {
-    implicit val PlainAny    = Plain[Any](_.toString)
+trait DisplayImplicits {
+    implicit val PlainAny    = Plain[Any](scala.runtime.ScalaRunTime.stringOf _)
     implicit val HTMLNodeSeq = HTML[xml.NodeSeq](_.toString)
 }

@@ -204,7 +204,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
 
         evalResult match {
             case Left(value) =>
-                if (hasValue && value != null) {
+                if (hasValue) {
                     withException(req) { display(req) } joinLeft match {
                         case Left(repr)    => Results.Value(value, typeOf(handler), repr)
                         case Right(result) => result

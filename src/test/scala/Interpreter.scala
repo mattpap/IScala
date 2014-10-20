@@ -26,6 +26,16 @@ class InterpreterSpec extends Specification with InterpreterUtil {
             interpret("(x: Int, y: Int) => x*y + 1") must beLike { case NoOutput(Value(_, "(Int, Int) => Int", Plain("<function2>"))) => ok }
         }
 
+        "support container values" in {
+            interpret("List(1, 2, 3)") must beLike { case NoOutput(Value(_, "List[Int]", Plain("List(1, 2, 3)"))) => ok }
+            interpret("Array(1, 2, 3)") must beLike { case NoOutput(Value(_, "Array[Int]", Plain("Array(1, 2, 3)"))) => ok }
+        }
+
+        "support null values" in {
+            // TODO: interpret("null") must beLike { case NoOutput(Value(null, "Null", Plain("null"))) => ok }
+            interpret("null: String") must beLike { case NoOutput(Value(null, "String", Plain("null"))) => ok }
+        }
+
         "support printing" in {
             interpret("println(\"XXX\")") must beLike {
                 case Output(NoValue, _, "") => ok     // TODO: "XXX\n"
