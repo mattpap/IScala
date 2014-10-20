@@ -123,7 +123,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         im.reflectField(field).get
     }
 
-    def display(req: intp.Request): Data = {
+    def display(req: intp.Request): Either[Data, Results.Result] = {
         import intp.memberHandlers.MemberHandler
 
         val displayName = "$display"
@@ -157,10 +157,12 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
             val generate = (handler: MemberHandler) => ""
         }
 
-        req.lineRep.compile(DisplayObjectSourceCode(req.handlers))
-
-        val Data(items @ _*) = runCode(displayPath, displayName).asInstanceOf[Data]
-        Data(items map { case (mime, string) => (mime, unmangle(string)) }: _*)
+        val code = DisplayObjectSourceCode(req.handlers)
+        if (!req.lineRep.compile(code)) Right(Results.Error)
+        else {
+            val Data(items @ _*) = runCode(displayPath, displayName).asInstanceOf[Data]
+            Left(Data(items map { case (mime, string) => (mime, unmangle(string)) }: _*))
+        }
     }
 
     def loadAndRunReq(req: intp.Request): Results.Result = {
@@ -203,7 +205,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         evalResult match {
             case Left(value) =>
                 if (hasValue && value != null) {
-                    withException(req) { display(req) } match {
+                    withException(req) { display(req) } joinLeft match {
                         case Left(repr)    => Results.Value(value, typeOf(handler), repr)
                         case Right(result) => result
                     }
