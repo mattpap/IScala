@@ -204,9 +204,11 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
 
         evalResult match {
             case Left(value) =>
-                if (hasValue) {
+                val valueType = typeOf(handler)
+
+                if (hasValue && valueType != "Unit") {
                     withException(req) { display(req) } joinLeft match {
-                        case Left(repr)    => Results.Value(value, typeOf(handler), repr)
+                        case Left(repr)    => Results.Value(value, valueType, repr)
                         case Right(result) => result
                     }
                 } else

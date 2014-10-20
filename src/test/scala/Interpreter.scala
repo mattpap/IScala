@@ -36,6 +36,10 @@ class InterpreterSpec extends Specification with InterpreterUtil {
             interpret("null: String") must beLike { case NoOutput(Value(null, "String", Plain("null"))) => ok }
         }
 
+        "support unit value" in {
+            interpret("()") must beLike { case NoOutput(NoValue) => ok }
+        }
+
         "support printing" in {
             interpret("println(\"XXX\")") must beLike {
                 case Output(NoValue, _, "") => ok     // TODO: "XXX\n"
