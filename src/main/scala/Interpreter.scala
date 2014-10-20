@@ -160,8 +160,9 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         val code = DisplayObjectSourceCode(req.handlers)
         if (!req.lineRep.compile(code)) Right(Results.Error)
         else {
-            val Data(items @ _*) = runCode(displayPath, displayName).asInstanceOf[Data]
-            Left(Data(items map { case (mime, string) => (mime, unmangle(string)) }: _*))
+            withException(req) { runCode(displayPath, displayName) }.left.map {
+                case Data(items @ _*) => Data(items map { case (mime, string) => (mime, unmangle(string)) }: _*)
+            }
         }
     }
 
@@ -207,7 +208,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
                 lazy val valueType = typeOf(handler)
 
                 if (hasValue && valueType != "Unit") {
-                    withException(req) { display(req) } joinLeft match {
+                    display(req) match {
                         case Left(repr)    => Results.Value(value, valueType, repr)
                         case Right(result) => result
                     }
