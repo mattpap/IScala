@@ -59,15 +59,10 @@ class ExecuteHandler(parent: Parent) extends Handler[execute_request](parent) {
                     }
 
                     ir match {
-                        case Some(error) =>
-                            ipy.send_error(msg, n, error)
-                        case None =>
-                            val output = interpreter.output.toString
-
-                            if (!output.trim.isEmpty)
-                                ipy.send_error(msg, n, output)
-                            else
-                                ipy.send_ok(msg, n)
+                        case _: Results.Success =>
+                            ipy.send_ok(msg, n)
+                        case _: Results.Failure =>
+                            ipy.send_error(msg, n, interpreter.output.toString)
                     }
                 case Magic(name, _, None) =>
                     ipy.send_error(msg, n, s"ERROR: Line magic function `%$name` not found.")

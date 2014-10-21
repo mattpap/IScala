@@ -112,17 +112,17 @@ object Settings {
 }
 
 abstract class Magic[T](val name: Symbol, parser: MagicParsers[T]) {
-    def apply(interpreter: Interpreter, input: String) = {
+    def apply(interpreter: Interpreter, input: String): Results.Result = {
         parser.parse(input) match {
             case Left(result) =>
                 handle(interpreter, result)
-                None
             case Right(error) =>
-                Some(error)
+                println(error)
+                Results.Error  // TODO: error
         }
     }
 
-    def handle(interpreter: Interpreter, result: T): Unit
+    def handle(interpreter: Interpreter, result: T): Results.Result
 }
 
 object Magic {
@@ -136,16 +136,16 @@ object Magic {
 }
 
 abstract class EmptyMagic(name: Symbol) extends Magic(name, EmptyParsers) {
-    def handle(interpreter: Interpreter, unit: Unit) = handle(interpreter)
-    def handle(interpreter: Interpreter): Unit
+    def handle(interpreter: Interpreter, unit: Unit): Results.Result = handle(interpreter)
+    def handle(interpreter: Interpreter): Results.Result
 }
 
 abstract class EntireMagic(name: Symbol) extends Magic(name, EntireParsers) {
-    def handle(interpreter: Interpreter, code: String)
+    def handle(interpreter: Interpreter, code: String): Results.Result
 }
 
 object LibraryDependenciesMagic extends Magic('libraryDependencies, LibraryDependenciesParser) {
-    def handle(interpreter: Interpreter, dependencies: LibraryDependencies) {
+    def handle(interpreter: Interpreter, dependencies: LibraryDependencies) = {
         dependencies match {
             case LibraryDependencies(Show, _) =>
                 println(Settings.libraryDependencies)
@@ -169,11 +169,12 @@ object LibraryDependenciesMagic extends Magic('libraryDependencies, LibraryDepen
                     } isDefined
                 }
         }
+        Results.NoValue
     }
 }
 
 object ResolversMagic extends Magic('resolvers, ResolversParser) {
-    def handle(interpreter: Interpreter, resolvers: Resolvers) {
+    def handle(interpreter: Interpreter, resolvers: Resolvers) = {
         resolvers match {
             case Resolvers(Show, _) =>
                 println(Settings.resolvers)
@@ -182,34 +183,41 @@ object ResolversMagic extends Magic('resolvers, ResolversParser) {
             case Resolvers(Del, resolvers) =>
                 Settings.resolvers = Settings.resolvers.filterNot(resolvers contains _)
         }
+        Results.NoValue
     }
 }
 
 object UpdateMagic extends EmptyMagic('update) {
-    def handle(interpreter: Interpreter) {
+    def handle(interpreter: Interpreter) = {
         Sbt.resolve(Settings.libraryDependencies, Settings.resolvers) map { cp =>
             interpreter.classpath(cp)
             if (interpreter.isInitialized) interpreter.reset()
+            Results.NoValue
+        } getOrElse {
+            Results.Error
         }
     }
 }
 
 object TypeMagic extends Magic('type, TypeParser) {
-    def handle(interpreter: Interpreter, spec: TypeSpec) {
+    def handle(interpreter: Interpreter, spec: TypeSpec) = {
         interpreter.typeInfo(spec.code, spec.verbose).map(println)
+        Results.NoValue
     }
 }
 
 object ResetMagic extends EmptyMagic('reset) {
-    def handle(interpreter: Interpreter) {
+    def handle(interpreter: Interpreter) = {
         interpreter.reset()
+        Results.NoValue
     }
 }
 
 object ClassPathMagic extends EmptyMagic('classpath) {
-    def handle(interpreter: Interpreter) {
+    def handle(interpreter: Interpreter) = {
         val cp = interpreter.settings.classpath.value.split(java.io.File.pathSeparator).toList
         interpreter.intp.beSilentDuring { interpreter.bind("cp", "List[String]", cp) }
         println(interpreter.settings.classpath.value)
+        Results.NoValue
     }
 }

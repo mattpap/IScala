@@ -158,11 +158,10 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         }
 
         val code = DisplayObjectSourceCode(req.handlers)
+
         if (!req.lineRep.compile(code)) Right(Results.Error)
-        else {
-            withException(req) { runCode(displayPath, displayName) }.left.map {
-                case Data(items @ _*) => Data(items map { case (mime, string) => (mime, unmangle(string)) }: _*)
-            }
+        else withException(req) { runCode(displayPath, displayName) }.left.map {
+            case Data(items @ _*) => Data(items map { case (mime, string) => (mime, unmangle(string)) }: _*)
         }
     }
 
@@ -240,10 +239,6 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
                 if (req == null || !req.compile) Results.Error
                 else withRunner { loadAndRunReq(req) }
         }
-    }
-
-    def interpretWithOutput(line: String): Output[Results.Result] = {
-        Capture.captureOutput { interpret(line) }
     }
 
     def bind(name: String, boundType: String, value: Any, modifiers: List[String] = Nil): IR.Result = {
