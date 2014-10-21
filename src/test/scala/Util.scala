@@ -25,7 +25,18 @@ trait InterpreterUtil {
     protected val intp = new Interpreter(sys.props("java.class.path"), Nil, false)
 
     def interpret(code: String): Output[Results.Result] = {
-        intp.interpretWithOutput(code)
+        Capture.captureOutput {
+            code match {
+                case Magic(name, input, Some(magic)) =>
+                    magic(intp, input)
+                case Magic(name, _, None) =>
+                    Results.Error // s"ERROR: Line magic function `%$name` not found."
+                case "" =>
+                    Results.NoValue
+                case _ =>
+                    intp.interpret(code)
+            }
+        }
     }
 }
 

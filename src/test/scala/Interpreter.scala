@@ -209,5 +209,15 @@ class InterpreterSpec extends Specification with InterpreterUtil {
                 case NoOutput(Value(_, "scala.collection.immutable.Nil.type", Plain("List()"))) => ok
             }
         }
+
+        "support empty input" in {
+            interpret("") must beLike {
+                case NoOutput(NoValue) => ok
+            }
+
+            interpret("       ") must beLike {
+                case NoOutput(Incomplete) => ok
+            }
+        }
     }
 }
