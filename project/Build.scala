@@ -126,7 +126,7 @@ object IScalaBuild extends Build {
             unmanagedSourceDirectories in Compile += {
                 (sourceDirectory in Compile).value / s"scala_${scalaBinaryVersion.value}"
             },
-            fork in run := true,
+            fork := true,
             initialCommands in Compile := """
                 import scala.reflect.runtime.{universe=>u}
                 import scala.tools.nsc.interpreter._

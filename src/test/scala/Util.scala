@@ -21,7 +21,8 @@ trait InterpreterUtil {
         }
     }
 
-    protected val intp = new Interpreter("", Nil, true)
+    // XXX: if (fork) ("", true) else (sys.props("java.class.path"), false)
+    protected val intp = new Interpreter(sys.props("java.class.path"), Nil, false)
 
     def interpret(code: String): Output[Results.Result] = {
         intp.interpretWithOutput(code)
