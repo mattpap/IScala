@@ -7,7 +7,7 @@ import org.specs2.mutable.Specification
 class NotebooksSpec extends Specification with NotebookUtil {
     sequential
 
-    "IScala's interpreter" should {
+    "IScala" should {
         "interpret Display.ipynb" in {
             new File("examples/Display.ipynb") must beInterpretable
         }

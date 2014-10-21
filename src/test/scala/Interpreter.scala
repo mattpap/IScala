@@ -6,7 +6,7 @@ import org.specs2.mutable.Specification
 class InterpreterSpec extends Specification with InterpreterUtil {
     sequential
 
-    "IScala's interpreter" should {
+    "Interpreter" should {
         import Results._
 
         val Obj = "^([^@]+)@([0-9a-fA-F]+)$".r

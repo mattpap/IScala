@@ -1,11 +1,12 @@
-package org.refptr.iscala.json
+package org.refptr.iscala
+package tests
 
-import org.refptr.iscala.UUID
+import json._
+import JsonImplicits._
 
-// for now only check if at least it compiles
-object JsonTest {
-    import JsonImplicits._
+import org.specs2.mutable.Specification
 
+class JsonSpec extends Specification {
     type MyType = Int
 
     object FooBarBaz extends Enumeration {
@@ -138,4 +139,18 @@ object JsonTest {
     implicit val CaseClassJSON = Json.format[CaseClass]
     implicit val NoFieldsJSON = Json.noFields[NoFields]
     implicit val OneFieldJSON = Json.format[OneField]
+
+    "Json" should {
+        "support enumerations" in {
+            skipped
+        }
+
+        "support case classes" in {
+            skipped
+        }
+
+        "support empty case classes" in {
+            skipped
+        }
+    }
 }
