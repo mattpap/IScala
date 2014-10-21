@@ -2,15 +2,15 @@ package org.refptr.iscala
 package display
 
 case class Repr[-T](
-    plain      : Option[Plain[T]]      = None,
-    html       : Option[HTML[T]]       = None,
-    markdown   : Option[Markdown[T]]   = None,
-    latex      : Option[Latex[T]]      = None,
-    json       : Option[JSON[T]]       = None,
-    javascript : Option[Javascript[T]] = None,
-    svg        : Option[SVG[T]]        = None,
-    png        : Option[PNG[T]]        = None,
-    jpeg       : Option[JPEG[T]]       = None) {
+    plain      : Option[PlainDisplay[T]]      = None,
+    html       : Option[HTMLDisplay[T]]       = None,
+    markdown   : Option[MarkdownDisplay[T]]   = None,
+    latex      : Option[LatexDisplay[T]]      = None,
+    json       : Option[JSONDisplay[T]]       = None,
+    javascript : Option[JavascriptDisplay[T]] = None,
+    svg        : Option[SVGDisplay[T]]        = None,
+    png        : Option[PNGDisplay[T]]        = None,
+    jpeg       : Option[JPEGDisplay[T]]       = None) {
 
     def stringify(obj: T): Data = {
         val displays = List(plain, html, markdown, latex, json, javascript, svg, png, jpeg)
@@ -26,15 +26,15 @@ object Repr {
         import Core.implicitlyOptImpl
 
         reify {
-            Repr(plain      = implicitlyOptImpl[Plain[T]](c)      splice,
-                 html       = implicitlyOptImpl[HTML[T]](c)       splice,
-                 markdown   = implicitlyOptImpl[Markdown[T]](c)   splice,
-                 latex      = implicitlyOptImpl[Latex[T]](c)      splice,
-                 json       = implicitlyOptImpl[JSON[T]](c)       splice,
-                 javascript = implicitlyOptImpl[Javascript[T]](c) splice,
-                 svg        = implicitlyOptImpl[SVG[T]](c)        splice,
-                 png        = implicitlyOptImpl[PNG[T]](c)        splice,
-                 jpeg       = implicitlyOptImpl[JPEG[T]](c)       splice)
+            Repr(plain      = implicitlyOptImpl[PlainDisplay[T]](c)      splice,
+                 html       = implicitlyOptImpl[HTMLDisplay[T]](c)       splice,
+                 markdown   = implicitlyOptImpl[MarkdownDisplay[T]](c)   splice,
+                 latex      = implicitlyOptImpl[LatexDisplay[T]](c)      splice,
+                 json       = implicitlyOptImpl[JSONDisplay[T]](c)       splice,
+                 javascript = implicitlyOptImpl[JavascriptDisplay[T]](c) splice,
+                 svg        = implicitlyOptImpl[SVGDisplay[T]](c)        splice,
+                 png        = implicitlyOptImpl[PNGDisplay[T]](c)        splice,
+                 jpeg       = implicitlyOptImpl[JPEGDisplay[T]](c)       splice)
         }
     }
 

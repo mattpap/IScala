@@ -7,7 +7,7 @@ case class Math(math: String) extends LatexDisplayObject {
     def toLatex = "$$" + math + "$$"
 }
 
-case class LaTeX(latex: String) extends LatexDisplayObject {
+case class Latex(latex: String) extends LatexDisplayObject {
     def toLatex = latex
 }
 

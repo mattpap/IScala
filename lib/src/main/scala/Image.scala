@@ -19,5 +19,5 @@ trait ImageImplicits {
         Base64.encodeBase64String(bytes)
     }
 
-    implicit val PNGRenderedImage = PNG[RenderedImage](encodeImage("PNG") _)
+    implicit val PNGDisplayRenderedImage = PNGDisplay[RenderedImage](encodeImage("PNG") _)
 }

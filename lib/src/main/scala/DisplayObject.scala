@@ -40,13 +40,13 @@ trait JPEGDisplayObject extends DisplayObject {
 }
 
 trait DisplayObjectImplicits {
-    implicit val PlainDisplay      = Plain[PlainDisplayObject]           (_.toPlain)
-    implicit val HTMLDisplay       = HTML[HTMLDisplayObject]             (_.toHTML)
-    implicit val MarkdownDisplay   = Markdown[MarkdownDisplayObject]     (_.toMarkdown)
-    implicit val LatexDisplay      = Latex[LatexDisplayObject]           (_.toLatex)
-    implicit val JSONDisplay       = JSON[JSONDisplayObject]             (_.toJSON)
-    implicit val JavascriptDisplay = Javascript[JavascriptDisplayObject] (_.toJavascript)
-    implicit val SVGDisplay        = SVG[SVGDisplayObject]               (_.toSVG)
-    implicit val PNGDisplay        = PNG[PNGDisplayObject]               (_.toPNG)
-    implicit val JPEGDisplay       = JPEG[JPEGDisplayObject]             (_.toJPEG)
+    implicit val PlainDisplayPlainObject           = PlainDisplay[PlainDisplayObject]           (_.toPlain)
+    implicit val HTMLDisplayHTMLObject             = HTMLDisplay[HTMLDisplayObject]             (_.toHTML)
+    implicit val MarkdownDisplayMarkdownObject     = MarkdownDisplay[MarkdownDisplayObject]     (_.toMarkdown)
+    implicit val LatexDisplayLatexObject           = LatexDisplay[LatexDisplayObject]           (_.toLatex)
+    implicit val JSONDisplayJSONObject             = JSONDisplay[JSONDisplayObject]             (_.toJSON)
+    implicit val JavascriptDisplayJavaScriptObject = JavascriptDisplay[JavascriptDisplayObject] (_.toJavascript)
+    implicit val SVGDisplaySVGObject               = SVGDisplay[SVGDisplayObject]               (_.toSVG)
+    implicit val PNGDisplayPNGObject               = PNGDisplay[PNGDisplayObject]               (_.toPNG)
+    implicit val JPEGDisplayJPEGObject             = JPEGDisplay[JPEGDisplayObject]             (_.toJPEG)
 }
