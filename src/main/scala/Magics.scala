@@ -107,8 +107,8 @@ object ResolversParser extends MagicParsers[Resolvers] {
 }
 
 object Settings {
-    var libraryDependencies: List[ModuleID] = IScala.options.config.modules
-    var resolvers: List[Resolver] = IScala.options.config.resolvers
+    var libraryDependencies: List[ModuleID] = Nil
+    var resolvers: List[Resolver] = Nil
 }
 
 abstract class Magic[T](val name: Symbol, parser: MagicParsers[T]) {

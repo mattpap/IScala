@@ -127,4 +127,7 @@ class Options(args: Array[String]) {
     if (config.debug) {
         logger.setLevel(Level.Debug)
     }
+
+    Settings.libraryDependencies = config.modules
+    Settings.resolvers = config.resolvers
 }
