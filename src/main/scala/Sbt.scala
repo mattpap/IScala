@@ -50,10 +50,4 @@ object Sbt {
                 None
         }
     }
-
-    def resolveCompiler(): ClassPath = {
-        Sbt.resolve(Modules.Compiler :: Nil, Nil) getOrElse {
-            sys.error("Failed to resolve dependencies")
-        }
-    }
 }
