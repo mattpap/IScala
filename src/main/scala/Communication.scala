@@ -126,6 +126,10 @@ class Communication(zmq: Sockets, profile: Profile) {
 
     def recv_stdin(): Option[Msg[FromIPython]] = recv(zmq.stdin)
 
+    def send_display_data(msg: Msg[_], data: Data) {
+        publish(msg.pub(MsgType.display_data, display_data(source="IScala", data=data, metadata=Map.empty)))
+    }
+
     def silently[T](block: => T) {
         try {
             block

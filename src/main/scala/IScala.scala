@@ -120,16 +120,24 @@ class IScala(config: Options#Config) extends Parent {
     val ShutdownHandler   = new ShutdownHandler(this)
     val HistoryHandler    = new HistoryHandler(this)
 
+    class Conn(msg: Msg[_]) extends display.Conn {
+        def display_data(data: Data) {
+            ipy.send_display_data(msg, data)
+        }
+    }
+
     class EventLoop(socket: ZMQ.Socket) extends Thread {
         def dispatch[T <: FromIPython](msg: Msg[T]) {
-            msg.header.msg_type match {
-                case MsgType.execute_request     => ExecuteHandler(socket, msg.asInstanceOf[Msg[execute_request]])
-                case MsgType.complete_request    => CompleteHandler(socket, msg.asInstanceOf[Msg[complete_request]])
-                case MsgType.kernel_info_request => KernelInfoHandler(socket, msg.asInstanceOf[Msg[kernel_info_request]])
-                case MsgType.object_info_request => ObjectInfoHandler(socket, msg.asInstanceOf[Msg[object_info_request]])
-                case MsgType.connect_request     => ConnectHandler(socket, msg.asInstanceOf[Msg[connect_request]])
-                case MsgType.shutdown_request    => ShutdownHandler(socket, msg.asInstanceOf[Msg[shutdown_request]])
-                case MsgType.history_request     => HistoryHandler(socket, msg.asInstanceOf[Msg[history_request]])
+            display.IScala.withConn(new Conn(msg)) {
+                msg.header.msg_type match {
+                    case MsgType.execute_request     => ExecuteHandler(socket, msg.asInstanceOf[Msg[execute_request]])
+                    case MsgType.complete_request    => CompleteHandler(socket, msg.asInstanceOf[Msg[complete_request]])
+                    case MsgType.kernel_info_request => KernelInfoHandler(socket, msg.asInstanceOf[Msg[kernel_info_request]])
+                    case MsgType.object_info_request => ObjectInfoHandler(socket, msg.asInstanceOf[Msg[object_info_request]])
+                    case MsgType.connect_request     => ConnectHandler(socket, msg.asInstanceOf[Msg[connect_request]])
+                    case MsgType.shutdown_request    => ShutdownHandler(socket, msg.asInstanceOf[Msg[shutdown_request]])
+                    case MsgType.history_request     => HistoryHandler(socket, msg.asInstanceOf[Msg[history_request]])
+                }
             }
         }
 
