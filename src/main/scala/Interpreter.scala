@@ -127,7 +127,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         import intp.memberHandlers.MemberHandler
 
         val displayName = "$display"
-        val displayPath = req.lineRep.pathTo(displayName) + req.accessPath
+        val displayPath = req.lineRep.pathTo(displayName)
 
         object DisplayObjectSourceCode extends IMain.CodeAssembler[MemberHandler] {
             import intp.global.NoSymbol
@@ -151,6 +151,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
                 s"""
                 |  }
                 |  ${req.importsTrailer}
+                |  val $displayName = this${req.accessPath}.$displayName
                 |}
                 """.stripMargin
 
