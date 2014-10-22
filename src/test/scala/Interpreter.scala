@@ -32,7 +32,7 @@ class InterpreterSpec extends Specification with InterpreterUtil {
         }
 
         "support null values" in {
-            // TODO: interpret("null") must beLike { case NoOutput(Value(null, "Null", Plain("null"))) => ok }
+            interpret("null") must beLike { case NoOutput(Value(null, "Null", Plain("null"))) => ok }
             interpret("null: String") must beLike { case NoOutput(Value(null, "String", Plain("null"))) => ok }
         }
 

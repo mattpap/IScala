@@ -25,16 +25,25 @@ object Repr {
         import c.universe._
         import Core.implicitlyOptImpl
 
-        reify {
-            Repr(plain      = implicitlyOptImpl[PlainDisplay[T]](c)      splice,
-                 html       = implicitlyOptImpl[HTMLDisplay[T]](c)       splice,
-                 markdown   = implicitlyOptImpl[MarkdownDisplay[T]](c)   splice,
-                 latex      = implicitlyOptImpl[LatexDisplay[T]](c)      splice,
-                 json       = implicitlyOptImpl[JSONDisplay[T]](c)       splice,
-                 javascript = implicitlyOptImpl[JavascriptDisplay[T]](c) splice,
-                 svg        = implicitlyOptImpl[SVGDisplay[T]](c)        splice,
-                 png        = implicitlyOptImpl[PNGDisplay[T]](c)        splice,
-                 jpeg       = implicitlyOptImpl[JPEGDisplay[T]](c)       splice)
+        // XXX: Null causes "ambiguous implicit values" error together with a contravariant
+        // type param of display type class, so handle it in a special way (Null is anyway
+        // useless, but lets cover all cases).
+        if (weakTypeOf[T] <:< weakTypeOf[Null]) {
+            reify {
+                Repr(plain      = implicitlyOptImpl[PlainDisplay[T]](c)      splice)
+            }
+        } else {
+            reify {
+                Repr(plain      = implicitlyOptImpl[PlainDisplay[T]](c)      splice,
+                     html       = implicitlyOptImpl[HTMLDisplay[T]](c)       splice,
+                     markdown   = implicitlyOptImpl[MarkdownDisplay[T]](c)   splice,
+                     latex      = implicitlyOptImpl[LatexDisplay[T]](c)      splice,
+                     json       = implicitlyOptImpl[JSONDisplay[T]](c)       splice,
+                     javascript = implicitlyOptImpl[JavascriptDisplay[T]](c) splice,
+                     svg        = implicitlyOptImpl[SVGDisplay[T]](c)        splice,
+                     png        = implicitlyOptImpl[PNGDisplay[T]](c)        splice,
+                     jpeg       = implicitlyOptImpl[JPEGDisplay[T]](c)       splice)
+            }
         }
     }
 
