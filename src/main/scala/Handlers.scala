@@ -235,3 +235,15 @@ class HistoryHandler(parent: Parent) extends Handler[history_request](parent) {
                 history=history)))
     }
 }
+
+class CommOpenHandler(parent: Parent) extends Handler[comm_open](parent) {
+    def apply(socket: ZMQ.Socket, msg: Msg[comm_open]) { println(msg) }
+}
+
+class CommMsgHandler(parent: Parent) extends Handler[comm_msg](parent) {
+    def apply(socket: ZMQ.Socket, msg: Msg[comm_msg]) { println(msg) }
+}
+
+class CommCloseHandler(parent: Parent) extends Handler[comm_close](parent) {
+    def apply(socket: ZMQ.Socket, msg: Msg[comm_close]) { println(msg) }
+}

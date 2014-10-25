@@ -119,6 +119,9 @@ class IScala(config: Options#Config) extends Parent {
     val ConnectHandler    = new ConnectHandler(this)
     val ShutdownHandler   = new ShutdownHandler(this)
     val HistoryHandler    = new HistoryHandler(this)
+    val CommOpenHandler   = new CommOpenHandler(this)
+    val CommMsgHandler    = new CommMsgHandler(this)
+    val CommCloseHandler  = new CommCloseHandler(this)
 
     class Conn(msg: Msg[_]) extends display.Conn {
         def display_data(data: Data) {
@@ -137,6 +140,9 @@ class IScala(config: Options#Config) extends Parent {
                     case MsgType.connect_request     => ConnectHandler(socket, msg.asInstanceOf[Msg[connect_request]])
                     case MsgType.shutdown_request    => ShutdownHandler(socket, msg.asInstanceOf[Msg[shutdown_request]])
                     case MsgType.history_request     => HistoryHandler(socket, msg.asInstanceOf[Msg[history_request]])
+                    case MsgType.comm_open           => CommOpenHandler(socket, msg.asInstanceOf[Msg[comm_open]])
+                    case MsgType.comm_msg            => CommMsgHandler(socket, msg.asInstanceOf[Msg[comm_msg]])
+                    case MsgType.comm_close          => CommCloseHandler(socket, msg.asInstanceOf[Msg[comm_close]])
                 }
             }
         }
