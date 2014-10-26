@@ -1,7 +1,7 @@
 package org.refptr.iscala
 package widgets
 
-sealed trait BorderStyle extends EnumType
+sealed trait BorderStyle extends EnumType with SnakeCase
 @enum object BorderStyle extends EnumT[BorderStyle] {
     case object None extends BorderStyle
     case object Hidden extends BorderStyle
@@ -17,7 +17,7 @@ sealed trait BorderStyle extends EnumType
     case object Inherit extends BorderStyle
 }
 
-sealed trait FontStyle extends EnumType
+sealed trait FontStyle extends EnumType with SnakeCase
 @enum object FontStyle extends EnumT[FontStyle] {
     case object Normal extends FontStyle
     case object Italic extends FontStyle
@@ -26,7 +26,7 @@ sealed trait FontStyle extends EnumType
     case object Inherit extends FontStyle
 }
 
-sealed trait FontWeight extends EnumType
+sealed trait FontWeight extends EnumType with SnakeCase
 @enum object FontWeight extends EnumT[FontWeight] {
     case object Normal extends FontWeight
     case object Bold extends FontWeight
@@ -45,7 +45,7 @@ sealed trait FontWeight extends EnumType
     case object `900` extends FontWeight
 }
 
-sealed trait ButtonStyle extends EnumType
+sealed trait ButtonStyle extends EnumType with SnakeCase
 @enum object ButtonStyle extends EnumT[ButtonStyle] {
     case object Primary extends ButtonStyle
     case object Success extends ButtonStyle
@@ -54,7 +54,7 @@ sealed trait ButtonStyle extends EnumType
     case object Danger extends ButtonStyle
 }
 
-sealed trait BoxStyle extends EnumType
+sealed trait BoxStyle extends EnumType with SnakeCase
 @enum object BoxStyle extends EnumT[BoxStyle] {
     case object Success extends BoxStyle
     case object Info extends BoxStyle
@@ -62,13 +62,13 @@ sealed trait BoxStyle extends EnumType
     case object Danger extends BoxStyle
 }
 
-sealed trait Orientation extends EnumType
+sealed trait Orientation extends EnumType with SnakeCase
 @enum object Orientation extends EnumT[Orientation] {
     case object Horizontal extends Orientation
     case object Vertical extends Orientation
 }
 
-sealed trait Location extends EnumType
+sealed trait Location extends EnumType with SnakeCase
 @enum object Location extends EnumT[Location] {
     case object Start extends Location
     case object Center extends Location
@@ -77,7 +77,7 @@ sealed trait Location extends EnumType
     case object Stretch extends Location
 }
 
-sealed trait Overflow extends EnumType
+sealed trait Overflow extends EnumType with SnakeCase
 @enum object Overflow extends EnumT[Overflow] {
     case object Visible extends Overflow
     case object Hidden extends Overflow

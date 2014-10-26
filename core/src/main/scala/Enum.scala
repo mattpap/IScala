@@ -4,7 +4,15 @@ import scala.annotation.StaticAnnotation
 import scala.reflect.macros.Context
 
 trait EnumType {
-    val name = toString.toLowerCase
+    val name: String = toString
+}
+
+trait LowerCase { self: EnumType =>
+    override val name = toString.toLowerCase
+}
+
+trait SnakeCase { self: EnumType =>
+    override val name = Utils.snakify(toString)
 }
 
 trait EnumT[T <: EnumType] {
