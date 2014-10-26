@@ -2,7 +2,7 @@ package org.refptr.iscala
 
 import org.zeromq.{ZMQ,ZMQException}
 
-import play.api.libs.json.{Reads,Writes}
+import play.api.libs.json.{Reads,Writes,JsResultException}
 
 import org.refptr.iscala.msg._
 import org.refptr.iscala.msg.formats._
@@ -53,20 +53,28 @@ class Communication(zmq: Sockets, profile: Profile) {
             val _parent_header = parent_header.as[Option[Header]]
             val _metadata = metadata.as[Metadata]
             val _content = _header.msg_type match {
-                case MsgType.execute_request     => content.as[execute_request]
-                case MsgType.complete_request    => content.as[complete_request]
-                case MsgType.kernel_info_request => content.as[kernel_info_request]
-                case MsgType.object_info_request => content.as[object_info_request]
-                case MsgType.connect_request     => content.as[connect_request]
-                case MsgType.shutdown_request    => content.as[shutdown_request]
-                case MsgType.history_request     => content.as[history_request]
-                case MsgType.input_reply         => content.as[input_reply]
+                case MsgType.execute_request     => Some(content.as[execute_request])
+                case MsgType.complete_request    => Some(content.as[complete_request])
+                case MsgType.kernel_info_request => Some(content.as[kernel_info_request])
+                case MsgType.object_info_request => Some(content.as[object_info_request])
+                case MsgType.connect_request     => Some(content.as[connect_request])
+                case MsgType.shutdown_request    => Some(content.as[shutdown_request])
+                case MsgType.history_request     => Some(content.as[history_request])
+                case MsgType.input_reply         => Some(content.as[input_reply])
+                case MsgType.comm_open           => Some(content.as[comm_open])
+                case MsgType.comm_msg            => Some(content.as[comm_msg])
+                case MsgType.comm_close          => Some(content.as[comm_close])
+                case _                           =>
+                    logger.warn(s"Unexpected message type: ${_header.msg_type}")
+                    None
             }
-            val msg = Msg(idents, _header, _parent_header, _metadata, _content)
-            logger.debug(s"received: $msg")
-            Some(msg)
+            _content.map { _content =>
+                val msg = Msg(idents, _header, _parent_header, _metadata, _content)
+                logger.debug(s"received: $msg")
+                msg
+            }
         } catch {
-            case e: play.api.libs.json.JsResultException =>
+            case e: JsResultException =>
                 logger.error(s"JSON deserialization error: ${e.getMessage}")
                 None
         }

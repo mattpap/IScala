@@ -7,55 +7,54 @@ object Protocol {
     val version = (4, 1)
 }
 
-object ExecutionStatus extends Enumeration {
-    type ExecutionStatus = Value
-    val ok = Value
-    val error = Value
-    val abort = Value
+sealed trait ExecutionStatus extends EnumType
+@enum object ExecutionStatus extends EnumT[ExecutionStatus] {
+    case object ok extends ExecutionStatus
+    case object error extends ExecutionStatus
+    case object abort extends ExecutionStatus
 }
 
-object HistAccessType extends Enumeration {
-    type HistAccessType = Value
-    val range = Value
-    val tail = Value
-    val search = Value
+sealed trait HistAccessType extends EnumType
+@enum object HistAccessType extends EnumT[HistAccessType] {
+    case object range extends HistAccessType
+    case object tail extends HistAccessType
+    case object search extends HistAccessType
 }
 
-object ExecutionState extends Enumeration {
-    type ExecutionState = Value
-    val busy = Value
-    val idle = Value
-    val starting = Value
+sealed trait ExecutionState extends EnumType
+@enum object ExecutionState extends EnumT[ExecutionState] {
+    case object busy extends ExecutionState
+    case object idle extends ExecutionState
+    case object starting extends ExecutionState
 }
 
-object MsgType extends Enumeration {
-    type MsgType = Value
-
-    val execute_request,
-        execute_reply,
-        object_info_request,
-        object_info_reply,
-        complete_request,
-        complete_reply,
-        history_request,
-        history_reply,
-        connect_request,
-        connect_reply,
-        kernel_info_request,
-        kernel_info_reply,
-        shutdown_request,
-        shutdown_reply,
-        stream,
-        display_data,
-        pyin,
-        pyout,
-        pyerr,
-        status,
-        input_request,
-        input_reply,
-        comm_open,
-        comm_msg,
-        comm_close = Value
+sealed trait MsgType extends EnumType
+@enum object MsgType extends EnumT[MsgType] {
+    case object execute_request extends MsgType
+    case object execute_reply extends MsgType
+    case object object_info_request extends MsgType
+    case object object_info_reply extends MsgType
+    case object complete_request extends MsgType
+    case object complete_reply extends MsgType
+    case object history_request extends MsgType
+    case object history_reply extends MsgType
+    case object connect_request extends MsgType
+    case object connect_reply extends MsgType
+    case object kernel_info_request extends MsgType
+    case object kernel_info_reply extends MsgType
+    case object shutdown_request extends MsgType
+    case object shutdown_reply extends MsgType
+    case object stream extends MsgType
+    case object display_data extends MsgType
+    case object pyin extends MsgType
+    case object pyout extends MsgType
+    case object pyerr extends MsgType
+    case object status extends MsgType
+    case object input_request extends MsgType
+    case object input_reply extends MsgType
+    case object comm_open extends MsgType
+    case object comm_msg extends MsgType
+    case object comm_close extends MsgType
 }
 
 sealed trait Content

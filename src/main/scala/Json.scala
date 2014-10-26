@@ -50,7 +50,7 @@ object NoFields {
     }
 }
 
-object EnumJson {
+object EnumerationJson {
     def reads[E <: Enumeration](enum: E): Reads[E#Value] = new Reads[E#Value] {
         def reads(json: JsValue): JsResult[E#Value] = json match {
             case JsString(string) =>
@@ -70,6 +70,25 @@ object EnumJson {
     }
 
     def format[E <: Enumeration](enum: E): Format[E#Value] = {
+        Format(reads(enum), writes)
+    }
+}
+
+object EnumJson {
+    def reads[T <: EnumType](enum: EnumT[T]): Reads[T] = new Reads[T] {
+        def reads(json: JsValue): JsResult[T] = json match {
+            case JsString(enum(value)) => JsSuccess(value)
+            case _ =>
+                JsError("Value of type String expected")
+                //JsError(s"Enumeration expected of type: ${enum.getClass}, but it does not appear to contain the value: $string")
+        }
+    }
+
+    def writes[T <: EnumType]: Writes[T] = new Writes[T] {
+        def writes(value: T): JsValue = JsString(value.name)
+    }
+
+    def format[T <: EnumType](enum: EnumT[T]): Format[T] = {
         Format(reads(enum), writes)
     }
 }

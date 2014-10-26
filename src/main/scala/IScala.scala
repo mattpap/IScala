@@ -143,6 +143,7 @@ class IScala(config: Options#Config) extends Parent {
                     case MsgType.comm_open           => CommOpenHandler(socket, msg.asInstanceOf[Msg[comm_open]])
                     case MsgType.comm_msg            => CommMsgHandler(socket, msg.asInstanceOf[Msg[comm_msg]])
                     case MsgType.comm_close          => CommCloseHandler(socket, msg.asInstanceOf[Msg[comm_close]])
+                    case _                           =>
                 }
             }
         }
