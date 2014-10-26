@@ -1,19 +1,46 @@
 package org.refptr.iscala
 
+import scala.annotation.StaticAnnotation
 import scala.reflect.macros.Context
 
 trait EnumType {
-    def name = toString.toLowerCase
+    val name = toString.toLowerCase
 }
 
-trait Enum[T <: EnumType] {
+trait EnumT[T <: EnumType] {
     type ValueType = T
 
-    def values: Set[T] = macro EnumImpl.valuesImpl[T]
-    def fromString: PartialFunction[String, T] = macro EnumImpl.fromStringImpl[T]
+    val values: Set[T]
+    val fromString: PartialFunction[String, T]
+
+    final def unapply(name: String): Option[T] = fromString.lift(name)
+
+    override def toString: String = {
+        val name = getClass.getSimpleName.stripSuffix("$")
+        s"$name(${values.map(_.name).mkString(", ")})"
+    }
 }
 
-object EnumImpl {
+class enum extends StaticAnnotation {
+    def macroTransform(annottees: Any*): Any = macro EnumImpl.enumTransformImpl
+}
+
+private object EnumImpl {
+    def enumTransformImpl(c: Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+        import c.universe._
+
+        annottees.map(_.tree) match {
+            case ModuleDef(mods, name, tpl @ Template(parents, sf, body)) :: Nil =>
+                val enumImpl = q"org.refptr.iscala.EnumImpl"
+                val methods = List(
+                    q"final val values: Set[ValueType] = $enumImpl.values[ValueType]",
+                    q"final val fromString: PartialFunction[String, ValueType] = $enumImpl.fromString[ValueType]")
+                val module = ModuleDef(mods, name, Template(parents, sf, body ++ methods))
+                c.Expr[Any](Block(module :: Nil, Literal(Constant(()))))
+            case _ => c.abort(c.enclosingPosition, "@enum annotation can only be applied to an object")
+        }
+    }
+
     private def children[T <: EnumType : c.WeakTypeTag](c: Context): Set[c.universe.Symbol] = {
         import c.universe._
 
@@ -27,17 +54,25 @@ object EnumImpl {
         children
     }
 
+    def values[T <: EnumType]: Set[T] = macro EnumImpl.valuesImpl[T]
+
     def valuesImpl[T <: EnumType : c.WeakTypeTag](c: Context): c.Expr[Set[T]] = {
         import c.universe._
 
-        val values = children[T](c).map { child => q"${c.prefix.tree}.$child" }
-        c.Expr[Set[T]](q"Set(..$values)")
+        val tpe = weakTypeOf[T]
+        val values = children[T](c).map(_.name.toTermName)
+
+        c.Expr[Set[T]](q"Set[$tpe](..$values)")
     }
+
+    def fromString[T <: EnumType]: PartialFunction[String, T] = macro EnumImpl.fromStringImpl[T]
 
     def fromStringImpl[T <: EnumType : c.WeakTypeTag](c: Context): c.Expr[PartialFunction[String, T]] = {
         import c.universe._
 
-        val cases = children[T](c).map { child => cq"${child.name.decoded} => ${c.prefix.tree}.$child" }
-        c.Expr[PartialFunction[String, T]](q"{ case ..$cases }")
+        val tpe = weakTypeOf[T]
+        val cases = children[T](c).map { child => cq"${child.name.toTermName}.name => ${child.name.toTermName}" }
+
+        c.Expr[PartialFunction[String, T]](q"{ case ..$cases }: PartialFunction[String, $tpe]")
     }
 }
