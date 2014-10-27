@@ -39,7 +39,7 @@ private object EnumImpl {
 
         annottees.map(_.tree) match {
             case ModuleDef(mods, name, tpl @ Template(parents, sf, body)) :: Nil =>
-                val enumImpl = q"org.refptr.iscala.EnumImpl"
+                val enumImpl = reify { EnumImpl }
                 val methods = List(
                     q"final val values: Set[ValueType] = $enumImpl.values[ValueType]",
                     q"final val fromString: PartialFunction[String, ValueType] = $enumImpl.fromString[ValueType]")
