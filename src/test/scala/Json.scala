@@ -9,6 +9,12 @@ import org.specs2.mutable.Specification
 class JsonSpec extends Specification {
     type MyType = Int
 
+    sealed trait FooBar extends EnumType with SnakeCase
+    @enum object FooBar extends Enumerated[FooBar] {
+        case object FooBaz extends FooBar
+        case object BarBaz extends FooBar
+    }
+
     object FooBarBaz extends Enumeration {
         type FooBarBaz = Value
         val Foo = Value
@@ -23,7 +29,8 @@ class JsonSpec extends Specification {
         string: Tuple1[String],
         int: Tuple1[Int],
         double: Tuple1[Double],
-        enum: Tuple1[FooBarBaz.Value],
+        enum: Tuple1[FooBar],
+        enumeration: Tuple1[FooBarBaz.Value],
         embedded: Tuple1[Embedded],
         myType: Tuple1[MyType],
         uuid: Tuple1[UUID],
@@ -40,7 +47,8 @@ class JsonSpec extends Specification {
     case class EitherCaseClass(
         eitherBooleanString: Either[Boolean, String],
         eitherIntDouble: Either[Int, Double],
-        eitherEnumEmbedded: Either[FooBarBaz.Value, Embedded],
+        eitherEnumEmbedded: Either[FooBar, Embedded],
+        eitherEnumerationEmbedded: Either[FooBarBaz.Value, Embedded],
         eitherMyTypeEither: Either[MyType, Either[Boolean, String]],
         eitherOptionArray: Either[Option[Boolean], Array[String]],
         eitherListMap: Either[List[Boolean], Map[String, String]])
@@ -50,7 +58,8 @@ class JsonSpec extends Specification {
         optionString: Option[String],
         optionInt: Option[Int],
         optionDouble: Option[Double],
-        optionEnum: Option[FooBarBaz.Value],
+        optionEnum: Option[FooBar],
+        optionEnumeation: Option[FooBarBaz.Value],
         optionEmbedded: Option[Embedded],
         optionMyType: Option[MyType],
         optionUUID: Option[UUID],
@@ -66,7 +75,8 @@ class JsonSpec extends Specification {
         arrayString: Array[String],
         arrayInt: Array[Int],
         arrayDouble: Array[Double],
-        arrayEnum: Array[FooBarBaz.Value],
+        arrayEnum: Array[FooBar],
+        arrayEnumeration: Array[FooBarBaz.Value],
         arrayEmbedded: Array[Embedded],
         arrayMyType: Array[MyType],
         arrayUUID: Array[UUID],
@@ -82,7 +92,8 @@ class JsonSpec extends Specification {
         listString: List[String],
         listInt: List[Int],
         listDouble: List[Double],
-        listEnum: List[FooBarBaz.Value],
+        listEnum: List[FooBar],
+        listEnumeration: List[FooBarBaz.Value],
         listEmbedded: List[Embedded],
         listMyType: List[MyType],
         listUUID: List[UUID],
@@ -98,7 +109,8 @@ class JsonSpec extends Specification {
         mapString: Map[String, String],
         mapInt: Map[String, Int],
         mapDouble: Map[String, Double],
-        mapEnum: Map[String, FooBarBaz.Value],
+        mapEnum: Map[String, FooBar],
+        mapEnumeration: Map[String, FooBarBaz.Value],
         mapEmbedded: Map[String, Embedded],
         mapMyType: Map[String, MyType],
         mapUUID: Map[String, UUID],
@@ -114,7 +126,8 @@ class JsonSpec extends Specification {
         string: String,
         int: Int,
         double: Double,
-        enum: FooBarBaz.Value,
+        enum: FooBar,
+        enumeration: FooBarBaz.Value,
         embedded: Embedded,
         myType: MyType,
         uuid: UUID,
@@ -128,7 +141,8 @@ class JsonSpec extends Specification {
     case class NoFields()
     case class OneField(field: String)
 
-    implicit val FooBarBazJSON = EnumJson.format(FooBarBaz)
+    implicit val FooBarJSON = EnumJson.format(FooBar)
+    implicit val FooBarBazJSON = EnumerationJson.format(FooBarBaz)
     implicit val EmbeddedJSON = Json.format[Embedded]
     implicit val TupleCaseClassJSON = Json.format[TupleCaseClass]
     implicit val EitherCaseClassJSON = Json.format[EitherCaseClass]
