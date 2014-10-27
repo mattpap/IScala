@@ -273,18 +273,31 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
 
     def unmangle(string: String): String = intp.naming.unmangle(string)
 
+    def typeInfo(code: String): Option[String] = {
+        typeInfo(code, false)
+    }
+
     def typeInfo(code: String, deconstruct: Boolean): Option[String] = {
         typeInfo(intp.symbolOfLine(code), deconstruct)
     }
 
     def typeInfo(symbol: intp.global.Symbol, deconstruct: Boolean): Option[String] = {
+        import intp.global.{Symbol,Type,NullaryMethodType,OverloadedType}
+
+        def removeNullaryMethod(symbol: Symbol): Type = {
+            symbol.typeSignature match {
+                case tpe @ OverloadedType(_, alt) =>
+                    val alternatives = alt.map(removeNullaryMethod _).map(_.typeSymbol)
+                    tpe.copy(alternatives=alternatives)
+                case NullaryMethodType(resultType) if symbol.isAccessor => resultType
+                case tpe                                                => tpe
+            }
+        }
+
         if (symbol.exists) {
             Some(intp.global.exitingTyper {
-                val info = symbol.info match {
-                    case intp.global.NullaryMethodType(restpe) if symbol.isAccessor => restpe
-                    case info                                                       => info
-                }
-                stringify(if (deconstruct) intp.deconstruct.show(info) else info)
+                val tpe = removeNullaryMethod(symbol)
+                stringify(if (deconstruct) intp.deconstruct.show(tpe) else tpe)
             })
         } else None
     }

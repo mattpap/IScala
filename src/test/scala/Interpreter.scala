@@ -219,5 +219,11 @@ class InterpreterSpec extends Specification with InterpreterUtil {
                 case NoOutput(Incomplete) => ok
             }
         }
+
+        "support typeInfo()" in {
+            intp.typeInfo("val a =") === None
+            intp.typeInfo("val a = 5") === Some("Int")
+            intp.typeInfo("val a = 5; val b = \"foo\"") === Some("Int <and> String")
+        }
     }
 }
