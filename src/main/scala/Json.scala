@@ -75,7 +75,7 @@ object EnumerationJson {
 }
 
 object EnumJson {
-    def reads[T <: EnumType](enum: EnumT[T]): Reads[T] = new Reads[T] {
+    def reads[T <: EnumType](enum: Enumerated[T]): Reads[T] = new Reads[T] {
         def reads(json: JsValue): JsResult[T] = json match {
             case JsString(enum(value)) => JsSuccess(value)
             case _ =>
@@ -88,7 +88,7 @@ object EnumJson {
         def writes(value: T): JsValue = JsString(value.name)
     }
 
-    def format[T <: EnumType](enum: EnumT[T]): Format[T] = {
+    def format[T <: EnumType](enum: Enumerated[T]): Format[T] = {
         Format(reads(enum), writes)
     }
 }

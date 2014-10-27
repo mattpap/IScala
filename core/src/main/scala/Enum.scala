@@ -15,7 +15,7 @@ trait SnakeCase { self: EnumType =>
     override val name = Utils.snakify(toString)
 }
 
-trait EnumT[T <: EnumType] {
+trait Enumerated[T <: EnumType] {
     type ValueType = T
 
     val values: Set[T]

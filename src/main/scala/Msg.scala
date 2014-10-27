@@ -8,28 +8,28 @@ object Protocol {
 }
 
 sealed trait ExecutionStatus extends EnumType
-@enum object ExecutionStatus extends EnumT[ExecutionStatus] {
+@enum object ExecutionStatus extends Enumerated[ExecutionStatus] {
     case object ok extends ExecutionStatus
     case object error extends ExecutionStatus
     case object abort extends ExecutionStatus
 }
 
 sealed trait HistAccessType extends EnumType
-@enum object HistAccessType extends EnumT[HistAccessType] {
+@enum object HistAccessType extends Enumerated[HistAccessType] {
     case object range extends HistAccessType
     case object tail extends HistAccessType
     case object search extends HistAccessType
 }
 
 sealed trait ExecutionState extends EnumType
-@enum object ExecutionState extends EnumT[ExecutionState] {
+@enum object ExecutionState extends Enumerated[ExecutionState] {
     case object busy extends ExecutionState
     case object idle extends ExecutionState
     case object starting extends ExecutionState
 }
 
 sealed trait MsgType extends EnumType
-@enum object MsgType extends EnumT[MsgType] {
+@enum object MsgType extends Enumerated[MsgType] {
     case object execute_request extends MsgType
     case object execute_reply extends MsgType
     case object object_info_request extends MsgType
