@@ -73,7 +73,11 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         settings.classpath.value = ClassPath.join(_classpath, cp.classpath)
     }
 
-    def completion = new IScalaCompletion(intp)
+    lazy val completer = new IScalaCompletion(intp)
+
+    def completions(input: String): List[String] = {
+        completer.collectCompletions(input)
+    }
 
     def withRunner(block: => Results.Result): Results.Result = {
         try {

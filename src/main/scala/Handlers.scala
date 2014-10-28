@@ -118,7 +118,7 @@ class CompleteHandler(parent: Parent) extends Handler[complete_request](parent) 
             val prefix = text.stripPrefix("%")
             Magic.magics.map(_.name.name).filter(_.startsWith(prefix)).map("%" + _)
         } else {
-            val completions = interpreter.completion.completions(text)
+            val completions = interpreter.completions(text)
             val common = Util.commonPrefix(completions)
             var prefix = Util.suffixPrefix(text, common)
             completions.map(_.stripPrefix(prefix)).map(text + _)
