@@ -225,5 +225,18 @@ class InterpreterSpec extends Specification with InterpreterUtil {
             intp.typeInfo("val a = 5") === Some("Int")
             intp.typeInfo("val a = 5; val b = \"foo\"") === Some("Int <and> String")
         }
+
+        "support completions()" in {
+            intp.completions("1.") === List(
+                "%", "&", "*", "+", "-", "/", ">", ">=", ">>", ">>>", "^",
+                "asInstanceOf", "isInstanceOf",
+                "toByte", "toChar", "toDouble", "toFloat", "toInt", "toLong", "toShort", "toString",
+                "unary_+", "unary_-", "unary_~",
+                "|")
+            intp.completions("1.to") === List("toByte", "toChar", "toDouble", "toFloat", "toInt", "toLong", "toShort", "toString")
+            intp.completions("1.toC") === List("toChar")
+            intp.completions("1.toCx") === Nil
+            intp.completions("List(1).") === Nil
+        }
     }
 }
