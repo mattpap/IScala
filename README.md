@@ -21,7 +21,7 @@ console or notebook, respectively.
 
 To start IPython with IScala backend manually, issue:
 ```
-ipython console --KernelManager.kernel_cmd='["java", "-jar", "lib/IScala.jar", "--profile", "{connection_file}", "--parent"]'
+ipython console --KernelManager.kernel_cmd='["java", "-jar", "lib/IScala.jar", "--connection-file", "{connection_file}", "--parent"]'
 ```
 The same works for `qtconsole` and `notebook`, and is, in principle, what scripts in `bin/`
 do. Note that you may have to provide a full path to `IScala.jar`. Option `--parent` is
@@ -40,7 +40,7 @@ $ ipython profile create scala
 ```
 Then add the following line:
 ```
-c.KernelManager.kernel_cmd = ["java", "-jar", "$ISCALA_PATH/lib/IScala.jar", "--profile", "{connection_file}", "--parent"]"
+c.KernelManager.kernel_cmd = ["java", "-jar", "$ISCALA_PATH/lib/IScala.jar", "--connection-file", "{connection_file}", "--parent"]"
 ```
 to `~/.config/ipython/profile_scala/ipython_config.py`. Replace `$ISCALA_PATH` with the actual
 location of `IScala.jar`. Then you can run IPython with `ipython console --profile scala`.
@@ -48,17 +48,17 @@ location of `IScala.jar`. Then you can run IPython with `ipython console --profi
 To start a standalone kernel simply issue:
 ```
 $ java -jar lib/IScala.jar
-connect ipython with --existing profile-18271.json
+connect ipython with --existing kernel-18271.json
 Welcome to Scala 2.10.2 (OpenJDK 64-Bit Server VM, Java 1.6.0_27)
 ```
-This creates a connection file `profile-PID.json`, where `PID` is the process ID of IScala
-kernel. You can connect IPython using `--existing profile-PID.json`. You can provide an
-existing connection file with `--profile` option.
+This creates a connection file `kernel-PID.json`, where `PID` is the process ID of IScala
+kernel. You can connect IPython using `--existing kernel-PID.json`. You can provide an
+existing connection file with `--connection-file` option.
 
 IScala supports other options as well. See `java -jar IScala.jar -h` for details. Note
 that you can also pass options directly to Scala compiler after `--` delimiter:
 ```
-$ java -jar IScala.jar --profile profile.json -- -Xprint:typer
+$ java -jar IScala.jar --connection-file kernel.json -- -Xprint:typer
 ```
 This will start standalone IScala with preexisting connection file and make Scala compiler
 print Scala syntax trees after _typer_ compiler phase.
@@ -271,7 +271,7 @@ Ignore any (deprecation) warnings you will get. To start IScala issue:
 ```
 > run
 [info] Running org.refptr.iscala.IScala
-[info] connect ipython with --existing profile-18271.json
+[info] connect ipython with --existing kernel-18271.json
 [info] Welcome to Scala 2.10.2 (OpenJDK 64-Bit Server VM, Java 1.6.0_27)
 ```
 This is an equivalent of starting a standalone IScala kernel from a terminal. To
