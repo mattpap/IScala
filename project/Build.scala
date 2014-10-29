@@ -5,6 +5,8 @@ import sbtassembly.{Plugin=>SbtAssembly}
 import org.sbtidea.SbtIdeaPlugin
 import com.typesafe.sbt.SbtNativePackager
 
+import play.api.libs.json.Json
+
 object Dependencies {
     val isScala_2_10 = Def.setting {
         scalaVersion.value.startsWith("2.10")
@@ -82,6 +84,25 @@ object IScalaBuild extends Build {
     val develScripts = taskKey[Seq[File]]("Development scripts generated in bin/2.xx/")
     val userScripts = taskKey[Seq[File]]("User scripts generated in target/scala-2.xx/bin/")
 
+    val kernelArgs = taskKey[List[String]]("...")
+    val kernelSpec = taskKey[KernelSpec]("...")
+    val writeKernelSpec = taskKey[Unit]("...")
+
+    case class KernelSpec(
+        argv: List[String],
+        display_name: String,
+        language: String,
+        codemirror_mode: Option[SyntaxMode] = None,
+        env: Map[String, String] = Map.empty,
+        help_links: List[HelpLink] = Nil)
+
+    case class SyntaxMode(mode: String, theme: Option[String] = None)
+    case class HelpLink(text: String, url: String /*java.net.URL*/)
+
+    implicit val HelpLinkJSON   = Json.format[HelpLink]
+    implicit val SyntaxModeJSON = Json.format[SyntaxMode]
+    implicit val KernelSpecJSON = Json.format[KernelSpec]
+
     lazy val ideaSettings = SbtIdeaPlugin.settings
 
     lazy val assemblySettings = SbtAssembly.assemblySettings ++ {
@@ -136,6 +157,24 @@ object IScalaBuild extends Build {
                 import Database.dynamicSession
                 import org.refptr.iscala._
                 """,
+            kernelArgs := {
+                val classpath = (fullClasspath in Compile).value.files.mkString(java.io.File.pathSeparator)
+                val main = (mainClass in Compile).value getOrElse sys.error("unknown main class")
+                List("java", "-cp", classpath, main, "--profile", "{connection_file}", "--parent")
+            },
+            kernelSpec := {
+                KernelSpec(
+                    argv = kernelArgs.value,
+                    display_name = s"IScala (Scala ${scalaBinaryVersion.value})",
+                    language = "scala",
+                    codemirror_mode = Some(SyntaxMode("text/x-scala")))
+            },
+            writeKernelSpec := {
+                val dir = Path.userHome / ".ipython" / "kernels" / s"IScala-${scalaBinaryVersion.value}"
+                val spec = Json.stringify(Json.toJson(kernelSpec.value))
+                IO.createDirectory(dir)
+                IO.write(dir / "kernel.json", spec)
+            },
             ipyCommands := List(
                 "console"   -> "--no-banner",
                 "qtconsole" -> "",
