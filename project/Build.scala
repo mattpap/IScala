@@ -96,7 +96,7 @@ object IScalaBuild extends Build {
         env: Map[String, String] = Map.empty,
         help_links: List[HelpLink] = Nil)
 
-    case class SyntaxMode(mode: String, theme: Option[String] = None)
+    case class SyntaxMode(name: String, mode: String)
     case class HelpLink(text: String, url: String /*java.net.URL*/)
 
     implicit val HelpLinkJSON   = Json.format[HelpLink]
@@ -167,7 +167,7 @@ object IScalaBuild extends Build {
                     argv = kernelArgs.value,
                     display_name = s"IScala (Scala ${scalaBinaryVersion.value})",
                     language = "scala",
-                    codemirror_mode = Some(SyntaxMode("text/x-scala")))
+                    codemirror_mode = Some(SyntaxMode("text/x-scala", "clike")))
             },
             writeKernelSpec := {
                 val dir = Path.userHome / ".ipython" / "kernels" / s"IScala-${scalaBinaryVersion.value}"
