@@ -1,7 +1,5 @@
 package org.refptr.iscala
 
-import db.DB
-
 class Session {
     val id: Int = DB.newSession()
 

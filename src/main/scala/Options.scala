@@ -1,11 +1,17 @@
 package org.refptr.iscala
 
 import java.io.File
+
+import scalax.io.JavaConverters._
+import scalax.file.Path
+
 import scopt.{OptionParser,Read}
 import scala.util.parsing.combinator.JavaTokenParsers
 import sbt.{ModuleID,CrossVersion,Resolver,MavenRepository,Level}
 
 private object CustomReads {
+    implicit val pathReads: Read[Path] = Read.reads(Path.fromString _)
+
     implicit val modulesReads: Read[List[ModuleID]] = Read.reads { string =>
         object ModulesParsers extends JavaTokenParsers {
             def crossVersion: Parser[CrossVersion] = "::" ^^^ CrossVersion.binary | ":" ^^^ CrossVersion.Disabled
@@ -59,9 +65,12 @@ private object CustomReads {
 }
 
 class Options(args: Array[String]) {
+    val IPyHome = Path.fromString(System.getProperty("user.home")) / ".ipython"
+
     case class Config(
-        connection_file: Option[File] = None,
+        connection_file: Option[Path] = None,
         parent: Boolean = false,
+        profile_dir: Path = IPyHome / "profile_scala",
         debug: Boolean = false,
         javacp: Boolean = true,
         classpath: String = "",
@@ -73,13 +82,17 @@ class Options(args: Array[String]) {
         import CustomReads._
 
         val parser = new scopt.OptionParser[Config]("IScala") {
-            opt[File]('f', "connection-file")
+            opt[Path]('f', "connection-file")
                 .action { (connection_file, config) => config.copy(connection_file = Some(connection_file)) }
                 .text("path to IPython's connection file")
 
-            opt[Unit]('p', "parent")
+            opt[Unit]("parent")
                 .action { (_, config) => config.copy(parent = true) }
                 .text("indicate that IPython started this engine")
+
+            opt[Path]("profile-dir")
+                .action { (profile_dir, config) => config.copy(profile_dir = profile_dir) }
+                .text("location of the IPython profile to use")
 
             opt[Unit]('d', "debug")
                 .action { (_, config) => config.copy(debug = true) }

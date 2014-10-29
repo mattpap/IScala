@@ -188,8 +188,6 @@ class HistoryHandler(parent: Parent) extends Handler[history_request](parent) {
     import parent.{ipy,interpreter}
 
     def apply(socket: ZMQ.Socket, msg: Msg[history_request]) {
-        import org.refptr.iscala.db.{DB,History,OutputHistory}
-
         import scala.slick.driver.SQLiteDriver.simple._
         import Database.dynamicSession
 

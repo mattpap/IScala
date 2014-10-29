@@ -1,9 +1,6 @@
-package org.refptr.iscala.db
+package org.refptr.iscala
 
 import java.sql.Timestamp
-
-import scalax.io.JavaConverters._
-import scalax.file.Path
 
 import scala.slick.driver.SQLiteDriver.simple._
 import Database.dynamicSession
@@ -45,8 +42,7 @@ object DB {
     val OutputHistory = TableQuery[OutputHistory]
 
     lazy val dbPath = {
-        val home = Path.fromString(System.getProperty("user.home"))
-        val profile = home / ".ipython" / "profile_scala"
+        val profile = IScala.config.profile_dir
         if (!profile.exists) profile.createDirectory()
         profile / "history.sqlite" path
     }

@@ -13,6 +13,8 @@ import msg._
 object IScala extends App {
     val options = new Options(args)
 
+    def config: Options#Config = options.config
+
     val thread = new Thread {
         override def run() {
             val iscala = new IScala(options.config)
@@ -28,7 +30,7 @@ object IScala extends App {
 
 class IScala(config: Options#Config) extends Parent {
     val connection = config.connection_file match {
-        case Some(path) => Path(path).string.as[Connection]
+        case Some(path) => path.string.as[Connection]
         case None =>
             val file = Path(s"kernel-${Util.getpid()}.json")
             logger.info(s"connect ipython with --existing ${file.toAbsolute.path}")
@@ -97,7 +99,7 @@ class IScala(config: Options#Config) extends Parent {
             // file whether it exists or not. When the file is removed, IScala is
             // terminated.
 
-            class FileWatcher(file: java.io.File, interval: Int) extends Thread {
+            class FileWatcher(file: Path, interval: Int) extends Thread {
                 override def run() {
                     while (true) {
                         if (file.exists) Thread.sleep(interval)
@@ -107,7 +109,7 @@ class IScala(config: Options#Config) extends Parent {
             }
 
             val fileWatcher = new FileWatcher(file, 1000)
-            fileWatcher.setName(s"FileWatcher(${file.getPath})")
+            fileWatcher.setName(s"FileWatcher(${file.path})")
             fileWatcher.start()
         case _ =>
     }
