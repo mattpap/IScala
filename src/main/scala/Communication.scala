@@ -100,7 +100,6 @@ class Communication(zmq: Sockets, connection: Connection) {
             execute_ok_reply(
                 execution_count=execution_count,
                 payload=Nil,
-                user_variables=Nil,
                 user_expressions=Map.empty)))
     }
 

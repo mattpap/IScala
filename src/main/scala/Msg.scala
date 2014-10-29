@@ -112,13 +112,9 @@ case class execute_request(
     // is forced to be False.
     store_history: Option[Boolean]=None,
 
-    // A list of variable names from the user's namespace to be retrieved.
-    // What returns is a rich representation of each variable (dict keyed by name).
+    // A dict mapping names to expressions to be evaluated in the user's dict. The
+    // rich display-data representation of each will be evaluated after execution.
     // See the display_data content for the structure of the representation data.
-    user_variables: List[String],
-
-    // Similarly, a dict mapping names to expressions to be evaluated in the
-    // user's dict.
     user_expressions: Map[String, String],
 
     // Some frontends (e.g. the Notebook) do not support stdin requests. If
@@ -147,8 +143,7 @@ case class execute_ok_reply(
     // action on it as needed.  See main text for further details.
     payload: List[Map[String, String]],
 
-    // Results for the user_variables and user_expressions.
-    user_variables: List[String],
+    // Results for the user_expressions.
     user_expressions: Map[String, String]) extends execute_reply {
 
     val status = ExecutionStatus.ok
