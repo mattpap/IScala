@@ -11,7 +11,7 @@ import json.JsonUtil._
 import msg._
 
 object IScala extends App {
-    val options = new Options(args)
+    private val options = new Options(args)
 
     def config: Options#Config = options.config
 

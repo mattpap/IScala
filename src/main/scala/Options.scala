@@ -86,6 +86,10 @@ class Options(args: Array[String]) {
                 .action { (connection_file, config) => config.copy(connection_file = Some(connection_file)) }
                 .text("path to IPython's connection file")
 
+            opt[Path]("profile")
+                .action { (profile, config) => config.copy(connection_file = Some(profile)) }
+                .text("alias for --connection-file=FILE")
+
             opt[Unit]("parent")
                 .action { (_, config) => config.copy(parent = true) }
                 .text("indicate that IPython started this engine")
