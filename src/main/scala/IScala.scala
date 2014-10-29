@@ -27,14 +27,14 @@ object IScala extends App {
 }
 
 class IScala(config: Options#Config) extends Parent {
-    val profile = config.profile match {
-        case Some(path) => Path(path).string.as[Profile]
+    val connection = config.connection_file match {
+        case Some(path) => Path(path).string.as[Connection]
         case None =>
-            val file = Path(s"profile-${Util.getpid()}.json")
+            val file = Path(s"kernel-${Util.getpid()}.json")
             logger.info(s"connect ipython with --existing ${file.toAbsolute.path}")
-            val profile = Profile.default
-            file.write(toJSON(profile))
-            profile
+            val connection = Connection.default
+            file.write(toJSON(connection))
+            connection
     }
 
     val classpath = {
@@ -55,8 +55,8 @@ class IScala(config: Options#Config) extends Parent {
 
     val interpreter = new Interpreter(classpath, config.args)
 
-    val zmq = new Sockets(profile)
-    val ipy = new Communication(zmq, profile)
+    val zmq = new Sockets(connection)
+    val ipy = new Communication(zmq, connection)
 
     def welcome() {
         import scala.util.Properties._
@@ -89,7 +89,7 @@ class IScala(config: Options#Config) extends Parent {
         }
     }
 
-    (config.profile, config.parent) match {
+    (config.connection_file, config.parent) match {
         case (Some(file), true) =>
             // This setup means that this kernel was started by IPython. Currently
             // IPython is unable to terminate IScala without explicitly killing it

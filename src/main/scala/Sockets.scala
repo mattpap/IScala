@@ -2,7 +2,7 @@ package org.refptr.iscala
 
 import org.zeromq.ZMQ
 
-class Sockets(profile: Profile) {
+class Sockets(connection: Connection) {
     val ctx = ZMQ.context(1)
 
     val publish = ctx.socket(ZMQ.PUB)
@@ -12,13 +12,13 @@ class Sockets(profile: Profile) {
     val heartbeat = ctx.socket(ZMQ.REP)
 
     private def toURI(port: Int) =
-        s"${profile.transport}://${profile.ip}:$port"
+        s"${connection.transport}://${connection.ip}:$port"
 
-    publish.bind(toURI(profile.iopub_port))
-    requests.bind(toURI(profile.shell_port))
-    control.bind(toURI(profile.control_port))
-    stdin.bind(toURI(profile.stdin_port))
-    heartbeat.bind(toURI(profile.hb_port))
+    publish.bind(toURI(connection.iopub_port))
+    requests.bind(toURI(connection.shell_port))
+    control.bind(toURI(connection.control_port))
+    stdin.bind(toURI(connection.stdin_port))
+    heartbeat.bind(toURI(connection.hb_port))
 
     def terminate() {
         publish.close()

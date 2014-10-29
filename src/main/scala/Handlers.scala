@@ -6,7 +6,7 @@ import org.refptr.iscala.msg._
 import org.refptr.iscala.msg.formats._
 
 trait Parent {
-    val profile: Profile
+    val connection: Connection
     val ipy: Communication
     val interpreter: Interpreter
 }
@@ -156,10 +156,10 @@ class ConnectHandler(parent: Parent) extends Handler[connect_request](parent) {
     def apply(socket: ZMQ.Socket, msg: Msg[connect_request]) {
         ipy.send(socket, msg.reply(MsgType.connect_reply,
             connect_reply(
-                shell_port=parent.profile.shell_port,
-                iopub_port=parent.profile.iopub_port,
-                stdin_port=parent.profile.stdin_port,
-                hb_port=parent.profile.hb_port)))
+                shell_port=parent.connection.shell_port,
+                iopub_port=parent.connection.iopub_port,
+                stdin_port=parent.connection.stdin_port,
+                hb_port=parent.connection.hb_port)))
     }
 }
 

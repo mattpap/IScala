@@ -60,7 +60,7 @@ private object CustomReads {
 
 class Options(args: Array[String]) {
     case class Config(
-        profile: Option[File] = None,
+        connection_file: Option[File] = None,
         parent: Boolean = false,
         debug: Boolean = false,
         javacp: Boolean = true,
@@ -73,8 +73,8 @@ class Options(args: Array[String]) {
         import CustomReads._
 
         val parser = new scopt.OptionParser[Config]("IScala") {
-            opt[File]('P', "profile")
-                .action { (profile, config) => config.copy(profile = Some(profile)) }
+            opt[File]('f', "connection-file")
+                .action { (connection_file, config) => config.copy(connection_file = Some(connection_file)) }
                 .text("path to IPython's connection file")
 
             opt[Unit]('p', "parent")

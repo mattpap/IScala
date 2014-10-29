@@ -9,8 +9,8 @@ import org.refptr.iscala.msg.formats._
 
 import org.refptr.iscala.json.JsonUtil._
 
-class Communication(zmq: Sockets, profile: Profile) {
-    private val hmac = HMAC(profile.key, profile.signature_scheme)
+class Communication(zmq: Sockets, connection: Connection) {
+    private val hmac = HMAC(connection.key, connection.signature_scheme)
 
     private val DELIMITER = "<IDS|MSG>"
 
