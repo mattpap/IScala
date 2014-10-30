@@ -1,7 +1,7 @@
 package org.refptr.iscala
 
 class Session {
-    val id: Int = DB.newSession()
+    lazy val id: Int = DB.newSession()
 
     def endSession(num_cmds: Int) {
         DB.endSession(id)(num_cmds)
