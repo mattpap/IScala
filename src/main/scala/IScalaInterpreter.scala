@@ -1,30 +1,74 @@
 package org.refptr.iscala
 
 import java.io.File
+import java.io.StringWriter
+import java.io.PrintWriter
 import scala.collection.mutable
 
+import scala.tools.nsc.{ Settings => ISettings }
 import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
 import scala.tools.nsc.util.Exceptional.unwrap
 
-class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false) extends InterpreterCompatibility {
-    protected val commandLine = new CommandLine(args.toList, println)
+object IScalaInterpreter {
 
-    if (embedded) {
-        commandLine.settings.embeddedDefaults[this.type]
+    def apply(config: Options#Config): IScalaInterpreter = {
+        IScalaInterpreter(classpathFromConfig(config), config.args, config.embed)
     }
 
-    private val _classpath: String = {
-        val cp = commandLine.settings.classpath
-        cp.value = ClassPath.join(cp.value, classpath)
-        logger.debug(s"classpath: ${cp.value}")
-        cp.value
+    def apply(additionalClasspath: String, args: List[String] = Nil, embed: Boolean = false): IScalaInterpreter = {
+        // Setup Settings via CommandLine
+        val settings = new CommandLine(args, println).settings
+
+        // Setup the classpath
+        val fullClasspath = settings.classpath
+        fullClasspath.value = ClassPath.join(fullClasspath.value, additionalClasspath)
+
+        // Embed (???) the interpreter
+        if (embed) {
+            settings.embeddedDefaults[IScalaInterpreter]
+        }
+
+        // Create the backend creation function.
+        val backendInit = (settings:ISettings, printer:PrintWriter) => {
+            new ScalaIMainBackend(new IMain(settings, printer)) 
+        }
+
+        // Create the interpreter
+        new IScalaInterpreter(settings, backendInit)
     }
+
+    // TODO Move this method to the Options#Config class?
+    def classpathFromConfig(config: Options#Config): String = {
+        val (baseClasspath, baseModules) = config.javacp match {
+            case false => ("",                           Modules.Compiler :: Nil)
+            case true  => (sys.props("java.class.path"), Nil)
+        }
+
+        val modules = baseModules ++ config.modules
+        val resolvers = config.resolvers
+
+        val resolved = Sbt.resolve(modules, resolvers).map(_.classpath) getOrElse {
+            sys.error("Failed to resolve dependencies")
+        }
+        ClassPath.join(baseClasspath, config.classpath, resolved)
+    }
+}
+
+class IScalaInterpreter(val settings:ISettings, backendInit:(ISettings, PrintWriter) => IMainBackend) extends Interpreter with Compatibility {
+    
+    val initialClassPath = settings.classpath.value
 
     val output = new java.io.StringWriter
     val printer = new java.io.PrintWriter(output)
 
-    val intp: IMain = new IMain(settings, printer)
-    val runner = new Runner(intp.classLoader)
+    // TODO the initialization of the backend is delayed because the we cannot add dependencies as 
+    // soon as the IMain compiler is operational. SI-6502 is the scala ticket for this problem, a
+    // fix should be ready for 2.10.5/2.11.5.
+    //
+    // IMHO This should be fixed in the IMainBackend. But I couldn't get it to work properly as it 
+    // is unclear to yours truly when the compiler gets operational.
+    lazy val intp = backendInit(settings, printer)
+    lazy val runner = new Runner(intp.classLoader)
 
     private var _session = new Session
     private var _n: Int = 0
@@ -67,17 +111,14 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         bind("_" + n, result.tpe, result.value)
     }
 
-    def settings = commandLine.settings
-
-    def classpath(cp: ClassPath) {
-        settings.classpath.value = ClassPath.join(_classpath, cp.classpath)
+    // TODO - A magic thing - not relevant for SPARK
+    def classpath_=(cp: ClassPath): Unit = {
+        settings.classpath.value = ClassPath.join(initialClassPath, cp.classpath)
     }
+      
+    def classpath: ClassPath = ClassPath(settings.classpath.value.split(File.pathSeparator).map(new File(_)))
 
-    lazy val completer = new IScalaCompletion(intp)
-
-    def completions(input: String): List[String] = {
-        completer.collectCompletions(input)
-    }
+    def completions(input: String): List[String] = intp.collectCompletions(input)
 
     def withRunner(block: => Results.Result): Results.Result = {
         try {
@@ -96,7 +137,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         }
     }
 
-    def withException[T](req: intp.Request)(block: => T): Either[T, Results.Result] = {
+    def withException[T](req: intp.RequestWrapper)(block: => T): Either[T, Results.Result] = {
         try {
             Left(block)
         } catch {
@@ -127,42 +168,33 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         im.reflectField(field).get
     }
 
-    def display(req: intp.Request): Either[Data, Results.Result] = {
-        import intp.memberHandlers.MemberHandler
+    def display(req: intp.RequestWrapper): Either[Data, Results.Result] = {
 
         val displayName = "$display"
         val displayPath = req.lineRep.pathTo(displayName)
 
-        object DisplayObjectSourceCode extends IMain.CodeAssembler[MemberHandler] {
-            import intp.global.NoSymbol
+        import intp.global.NoSymbol
 
-            val NS = "org.refptr.iscala"
+        val NS = "org.refptr.iscala"
 
-            val displayResult = req.value match {
-                case NoSymbol => s"$NS.Data()"
-                case symbol   => s"$NS.display.Repr.stringify(${intp.originalPath(symbol)})"
-            }
-
-            val preamble =
-                s"""
-                |object $displayName {
-                |  ${req.importsPreamble}
-                |  val $displayName: $NS.Data = ${intp.executionWrapper} {
-                |    $displayResult
-                """.stripMargin
-
-            val postamble =
-                s"""
-                |  }
-                |  ${req.importsTrailer}
-                |  val $displayName = this${req.accessPath}.$displayName
-                |}
-                """.stripMargin
-
-            val generate = (handler: MemberHandler) => ""
+        val displayResult = req.value match {
+            case NoSymbol => s"$NS.Data()"
+            case symbol   => s"$NS.display.Repr.stringify(${intp.originalPath(symbol)})"
         }
 
-        val code = DisplayObjectSourceCode(req.handlers)
+        val handlerCode = "" // TODO why is this empty? val generate = (handler: MemberHandler) => ""
+
+        val code = s"""
+                    |object $displayName {
+                    |  ${req.importsPreamble}
+                    |  val $displayName: $NS.Data = ${intp.executionWrapper} {
+                    |    $displayResult
+                    |    $handlerCode
+                    |  }
+                    |  ${req.importsTrailer}
+                    |  val $displayName = this${req.accessPath}.$displayName
+                    |}
+                    """.stripMargin
 
         if (!req.lineRep.compile(code)) Right(Results.Error)
         else withException(req) { runCode(displayPath, displayName) }.left.map {
@@ -170,37 +202,11 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         }
     }
 
-    def loadAndRunReq(req: intp.Request): Results.Result = {
-        import intp.memberHandlers.{MemberHandler,MemberDefHandler,ValHandler,DefHandler,AssignHandler}
+    def loadAndRunReq(req: intp.RequestWrapper): Results.Result = {
         import intp.naming.sessionNames
 
-        def definesValue(handler: MemberHandler): Boolean = {
-            // MemberHandler.definesValue has slightly different meaning from what is
-            // needed in loadAndRunReq. We don't want to eagerly evaluate lazy vals
-            // or 0-arity defs, so we handle those cases here.
-            if (!handler.definesValue) {
-                false
-            } else {
-                handler match {
-                    case handler: ValHandler if handler.mods.isLazy => false
-                    case handler: DefHandler                        => false
-                    case _ => true
-                }
-            }
-        }
-
-        def typeOf(handler: MemberHandler): String = {
-            val symbolName = handler match {
-                case handler: MemberDefHandler => handler.name
-                case handler: AssignHandler    => handler.name
-                case _                         => intp.global.nme.NO_NAME
-            }
-
-            req.lookupTypeOf(symbolName)
-        }
-
         val handler = req.handlers.last
-        val hasValue = definesValue(handler)
+        val hasValue = handler.definesValue()
 
         val evalName = if (hasValue) sessionNames.result else sessionNames.print
         val evalResult = withException(req) { req.lineRep.call(evalName) }
@@ -209,7 +215,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
 
         evalResult match {
             case Left(value) =>
-                lazy val valueType = typeOf(handler)
+                lazy val valueType = req.typeOf(handler)
 
                 if (hasValue && valueType != "Unit") {
                     display(req) match {
@@ -222,20 +228,10 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         }
     }
 
-    def interpret(line: String): Results.Result = interpret(line, false)
-
-    def interpret(line: String, synthetic: Boolean): Results.Result = {
-        import intp.Request
-
-        def requestFromLine(line: String, synthetic: Boolean): Either[IR.Result, Request] = {
-            // XXX: Dirty hack to call a private method IMain.requestFromLine
-            val method = classOf[IMain].getDeclaredMethod("requestFromLine", classOf[String], classOf[Boolean])
-            val args = Array(line, synthetic).map(_.asInstanceOf[AnyRef])
-            method.setAccessible(true)
-            method.invoke(intp, args: _*).asInstanceOf[Either[IR.Result, Request]]
-        }
-
-        requestFromLine(line, synthetic) match {
+    def interpret(line: String, synthetic: Boolean = false): Results.Result = {
+        import intp.RequestWrapper
+        println(line)
+        intp.requestFromLine(line, synthetic) match {
             case Left(IR.Incomplete) => Results.Incomplete
             case Left(_)             => Results.Error      // parse error
             case Right(req)          =>
@@ -246,13 +242,13 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         }
     }
 
-    def bind(name: String, boundType: String, value: Any, modifiers: List[String] = Nil): IR.Result = {
+    def bind(name: String, boundType: String, value: Any, modifiers: List[String] = Nil, quiet:Boolean = false): IR.Result = {
         val imports = (intp.definedTypes ++ intp.definedTerms) match {
             case Nil   => "/* imports */"
             case names => names.map(intp.originalPath(_)).map("import " + _).mkString("\n  ")
         }
 
-        val bindRep = new intp.ReadEvalPrint()
+        val bindRep = intp.readEvalPrint()
         val source = s"""
             |object ${bindRep.evalName} {
             |  $imports
@@ -261,14 +257,19 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
             |}
             """.stripMargin
 
-        bindRep.compile(source)
-        bindRep.callEither("set", value) match {
-            case Right(_) =>
-                val line = "%sval %s = %s.value".format(modifiers map (_ + " ") mkString, name, bindRep.evalPath)
-                intp.interpret(line)
-            case Left(_) =>
-                IR.Error
+        def bind0() = {
+            bindRep.compile(source)
+            bindRep.callEither("set", value) match {
+                case Right(_) =>
+                    val line = "%sval %s = %s.value".format(modifiers map (_ + " ") mkString, name, bindRep.evalPath)
+                    intp.interpret(line)
+                case Left(_) =>
+                    IR.Error
+            }
         }
+
+        if (quiet) intp.beSilentDuring(bind0) 
+        else bind0
     }
 
     def cancel() = runner.cancel()
@@ -277,11 +278,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
 
     def unmangle(string: String): String = intp.naming.unmangle(string)
 
-    def typeInfo(code: String): Option[String] = {
-        typeInfo(code, false)
-    }
-
-    def typeInfo(code: String, deconstruct: Boolean): Option[String] = {
+    def typeInfo(code: String, deconstruct: Boolean = false): Option[String] = {
         typeInfo(intp.symbolOfLine(code), deconstruct)
     }
 
@@ -301,7 +298,7 @@ class Interpreter(classpath: String, args: Seq[String], embedded: Boolean=false)
         if (symbol.exists) {
             Some(intp.global.exitingTyper {
                 val tpe = removeNullaryMethod(symbol)
-                stringify(if (deconstruct) intp.deconstruct.show(tpe) else tpe)
+                stringify(if (deconstruct) intp.showDeconstructed(tpe) else tpe)
             })
         } else None
     }

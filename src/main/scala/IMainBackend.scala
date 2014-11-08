@@ -1,7 +1,7 @@
 package org.refptr.iscala
 
 import scala.tools.nsc.Global
-import scala.tools.nsc.Settings
+import scala.tools.nsc.{ Settings => ISettings}
 import scala.tools.nsc.interpreter.IR
 import scala.tools.nsc.interpreter.Naming
 import scala.tools.nsc.interpreter.NamedParam
@@ -24,6 +24,8 @@ trait IMainBackend {
 
   /**
    * The compiler used by the interpreter.
+   *
+   * Global Needs to lazy: we cannot add jars to the class path as soon as we touch it.
    */
   val global: Global
 
@@ -31,11 +33,6 @@ trait IMainBackend {
    * The naming logic used by the interpreter.
    */
   val naming: Naming
-
-  /**
-   * The initial classpath value.
-   */
-  val initialClassPath: String
 
   import global._
 
@@ -135,11 +132,6 @@ trait IMainBackend {
    * TODO documentation???
    */
   def typeOfExpression(expr: String, silent: Boolean = true): Type
-
-  /**
-   * Get the current interpreter settings.
-   */
-  def settings(): Settings
   
   /**
    * Get the reporter used by the interpreter.
@@ -150,6 +142,11 @@ trait IMainBackend {
    * Show a deconstructed type. This method would normally use 
    */
   def showDeconstructed(tpe: Type): String
+
+  /**
+   * Collect completions for the given input.
+   */
+  def collectCompletions(input: String): List[String]
 
   /**
    * Create a proxy for an Interpreter request.
@@ -212,6 +209,8 @@ trait IMainBackend {
 
   /**
    * Proxy for a MemberHandler instance.
+   *
+   * TODO only one method defined; move it to the toplevel?
    */
   trait MemberHandlerWrapper {
     def subject: MemberHandler

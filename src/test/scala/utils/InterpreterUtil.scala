@@ -17,7 +17,7 @@ trait InterpreterUtil {
     }
 
     // XXX: if (fork) ("", true) else (sys.props("java.class.path"), false)
-    protected val intp = new Interpreter(sys.props("java.class.path"), Nil, false)
+    protected val intp = IScalaInterpreter(sys.props("java.class.path"))
 
     def interpret(code: String): Output[Results.Result] = {
         Capture.captureOutput {
@@ -28,7 +28,7 @@ trait InterpreterUtil {
                     Results.Error // s"ERROR: Line magic function `%$name` not found."
                 case "" =>
                     Results.NoValue
-                case _ =>
+                case _ => 
                     intp.interpret(code)
             }
         }

@@ -190,7 +190,7 @@ object ResolversMagic extends Magic('resolvers, ResolversParser) {
 object UpdateMagic extends EmptyMagic('update) {
     def handle(interpreter: Interpreter) = {
         Sbt.resolve(Settings.libraryDependencies, Settings.resolvers) map { cp =>
-            interpreter.classpath(cp)
+            interpreter.classpath = cp
             if (interpreter.isInitialized) interpreter.reset()
             Results.NoValue
         } getOrElse {
@@ -215,9 +215,10 @@ object ResetMagic extends EmptyMagic('reset) {
 
 object ClassPathMagic extends EmptyMagic('classpath) {
     def handle(interpreter: Interpreter) = {
-        val cp = interpreter.settings.classpath.value.split(java.io.File.pathSeparator).toList
-        interpreter.intp.beSilentDuring { interpreter.bind("cp", "List[String]", cp) }
-        println(interpreter.settings.classpath.value)
+        val cp = interpreter.classpath.jars.map (_.getAbsolutePath).filterNot(_ == "")
+        interpreter.bind("cp", "List[String]", cp, quiet = true)
+        println("Classpath:")
+        cp.sorted.foreach(entry => println(s" $entry"))
         Results.NoValue
     }
 }

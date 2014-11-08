@@ -76,7 +76,8 @@ class Options(args: Array[String]) {
         classpath: String = "",
         modules: List[ModuleID] = Nil,
         resolvers: List[Resolver] = Nil,
-        args: List[String] = Nil)
+        args: List[String] = Nil,
+        embed:Boolean = false /* TODO */)
 
     val config: Config = {
         import CustomReads._

@@ -1,18 +1,20 @@
 package org.refptr.iscala
 
 // IMainWrapper generic imports.
-import scala.tools.nsc.Settings
+import scala.tools.nsc.{ Settings => ISettings }
 import scala.tools.nsc.interpreter.IR
 import scala.tools.nsc.interpreter.NamedParam
+import scala.tools.nsc.interpreter.Parsed
 import scala.tools.nsc.reporters.ConsoleReporter
 import java.io.PrintWriter
 
 // Scala Specific imports.
 import scala.tools.nsc.interpreter.{ IMain => iMainBackend }
-import nl.questtec.dumb.{ ScalaIMainBackendCompatibility => iMainBackendCompatibility }
+import scala.tools.nsc.interpreter.{ JLineCompletion => Completion}
+import org.refptr.iscala.{ ScalaIMainBackendCompatibility => iMainBackendCompatibility }
 
 /**
- * Scala IMainWrapper implementation.
+ * Scala IMainBackend implementation.
  */
 class ScalaIMainBackend(val imain: iMainBackend) extends IMainBackend with iMainBackendCompatibility {
   type IMain = iMainBackend
@@ -21,12 +23,9 @@ class ScalaIMainBackend(val imain: iMainBackend) extends IMainBackend with iMain
   type ReadEvalPrint = imain.ReadEvalPrint
   type MemberHandler = imain.memberHandlers.MemberHandler
 
-  // Force initialization
-  imain.initialize(())
-  
-  val global: Global = imain.global
+  lazy val global: Global = imain.global
   val naming = imain.naming
-  val initialClassPath = imain.settings.classpath.value
+  val completion = new Completion(imain) // TODO check if we should do a lazy init?
 
   import global._
   def subject: IMain = imain
@@ -47,7 +46,7 @@ class ScalaIMainBackend(val imain: iMainBackend) extends IMainBackend with iMain
   def typeOfExpression(expr: String, silent: Boolean = true): Type = imain.typeOfExpression(expr, silent)
   def reporter(): ConsoleReporter = imain.reporter
   def showDeconstructed(tpe: Type): String = imain.deconstruct.show(tpe)
-  def settings(): Settings = imain.settings
+  def collectCompletions(input: String): List[String] = completion.topLevelFor(Parsed.dotted(input, input.length)) 
   protected def requestWrapper(request: Request) = new RequestWrapperImpl(request)
 
   class RequestWrapperImpl(val request: Request) extends RequestWrapper with RequestWrapperImplCompatibility {
@@ -77,7 +76,7 @@ class ScalaIMainBackend(val imain: iMainBackend) extends IMainBackend with iMain
     def callEither(name: String, args: Any*): Either[Throwable, AnyRef] = readEvalPrint.callEither(name, args)
     def pathTo(name: String): String = readEvalPrint.pathTo(name)
     def bindError(t: Throwable): String = readEvalPrint.bindError(t)
-    def call(name: String, args: Any*): AnyRef = readEvalPrint.call(name, args)
+    def call(name: String, args: Any*): AnyRef = readEvalPrint.call(name, args: _*)
   }
 
   class MemberHandlerWrapperImpl(val memberHandler: MemberHandler) extends MemberHandlerWrapper {
