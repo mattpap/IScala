@@ -52,6 +52,11 @@ trait IMainBackend {
   def isInitializeComplete: Boolean
 
   /**
+   * Ensure that the imain instance has been properly initialized.
+   */
+  def initialize(): Unit
+
+  /**
    * The ClassLoader used by the interpreter
    */
   def classLoader: ClassLoader

@@ -24,7 +24,11 @@ class IScalaInterpreter(val settings:ISettings, backendInit:(ISettings, PrintWri
     // By making the Backend a var and recreating it when we add dependencies we could work arround
     // the issue. This would also require us to fixate the interpreter in a number of places 
     // because of the imports we are doing.
-    lazy val intp = backendInit(settings, printer)
+    lazy val intp = {
+        val intp = backendInit(settings, printer)
+        intp.initialize()
+        intp
+    }
     lazy val runner = new Runner(intp.classLoader)
 
     private var _session = new Session

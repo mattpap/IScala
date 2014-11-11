@@ -31,6 +31,7 @@ class ScalaIMainBackend(settings: ISettings, printer: PrintWriter) extends IMain
   import global._
   def subject: IMain = imain
   def reset(): Unit = imain.reset()
+  def initialize(): Unit = imain.initializeSynchronous()
   def isInitializeComplete: Boolean = imain.isInitializeComplete
   def classLoader: ClassLoader = imain.classLoader
   def executionWrapper: String = imain.executionWrapper
