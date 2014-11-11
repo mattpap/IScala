@@ -3,6 +3,8 @@ package org.refptr.iscala
 import java.io.StringWriter
 import scala.tools.nsc.interpreter.IR
 
+trait InterpreterFactory extends Function1[Options#Config, Interpreter]
+
 trait Interpreter {
   def reset(): Unit
   def finish(): Unit

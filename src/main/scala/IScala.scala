@@ -39,7 +39,7 @@ class IScala(config: Options#Config) extends Parent {
             connection
     }
 
-    val interpreter = IScalaInterpreter(config)
+    val interpreter = config.interpreter
 
     val zmq = new Sockets(connection)
     val ipy = new Communication(zmq, connection)

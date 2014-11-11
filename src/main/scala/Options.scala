@@ -62,6 +62,35 @@ private object CustomReads {
             case url => MavenRepository(url, url) :: Nil
         }
     }
+
+    implicit val interpreterFactoryReads:Read[InterpreterFactory] = Read.reads { interpreterClassName =>
+        // Get the java.lang.Class and covert into a scala class symbol
+        val interpreterClass = try {
+            Class.forName(interpreterClassName)
+        } catch {
+            case e:ClassNotFoundException => throw new IllegalArgumentException(s"Class $interpreterClassName is not on the classpath", e)
+        }
+
+        val cm = scala.reflect.runtime.universe.runtimeMirror(getClass.getClassLoader)
+        val classSymbol = cm.classSymbol(interpreterClass)
+
+        // Get the companion object symbol.
+        // TODO deprecation in 2.11 =>
+        // TODO I cannot get the moduleSymbol.isModule to work properly (always returns true even 
+        // when there is no object in sight). So we currently handle the exception.
+        //
+        val instance = try {
+            val moduleSymbol = classSymbol.companionSymbol
+            val moduleMirror = cm.reflectModule(moduleSymbol.asModule)
+            moduleMirror.instance
+        } catch {
+            case e:ClassNotFoundException => throw new IllegalArgumentException(s"Class $interpreterClassName has no companion object", e)
+        }
+
+        // Check and convert the module instance        
+        require(instance.isInstanceOf[InterpreterFactory], s"Companion object $interpreterClassName does not implement the InterpreterFactory trait")
+        instance.asInstanceOf[InterpreterFactory]
+    }
 }
 
 class Options(args: Array[String]) {
@@ -77,7 +106,23 @@ class Options(args: Array[String]) {
         modules: List[ModuleID] = Nil,
         resolvers: List[Resolver] = Nil,
         args: List[String] = Nil,
-        embed:Boolean = false /* TODO */)
+        interpreterFactory: InterpreterFactory = ScalaInterpreterFactory,
+        embed:Boolean = false) {
+
+        def completeClasspath: String = {
+            val (baseClasspath, baseModules) = javacp match {
+                case false => ("", Modules.Compiler :: Nil)
+                case true  => (sys.props("java.class.path"), Nil)
+            }
+
+            val resolved = Sbt.resolve(baseModules ++ modules, resolvers).map(_.classpath) getOrElse {
+                sys.error("Failed to resolve dependencies")
+            }
+            ClassPath.join(baseClasspath, classpath, resolved)
+        }
+
+        def interpreter: Interpreter = interpreterFactory(this)
+    }
 
     val config: Config = {
         import CustomReads._
@@ -122,6 +167,13 @@ class Options(args: Array[String]) {
                 .action { (resolvers, config) => config.copy(resolvers = config.resolvers ++ resolvers) }
                 .text("additional resolvers for automatically managed dependencies, e.g. -r sonatype:releases")
 
+            opt[InterpreterFactory]('i', "interp")
+                .action { (interpreterFactory, config) => config.copy(interpreterFactory = interpreterFactory) }
+                .text("class name of the interpreter to use, e.g. -i org.refptr.iscala.ScalaInterpreterFactory")
+
+            opt[Unit]("embed")
+                .action { (_, config) => config.copy(embed = true) }
+                .text("embed the interpreter")
             // arg[String]("<arg>...")
             //     .unbounded()
             //     .optional()

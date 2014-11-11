@@ -6,53 +6,8 @@ import java.io.PrintWriter
 import scala.collection.mutable
 
 import scala.tools.nsc.{ Settings => ISettings }
-import scala.tools.nsc.interpreter.{IMain,CommandLine,IR}
+import scala.tools.nsc.interpreter.{ IMain, IR }
 import scala.tools.nsc.util.Exceptional.unwrap
-
-object IScalaInterpreter {
-
-    def apply(config: Options#Config): IScalaInterpreter = {
-        IScalaInterpreter(classpathFromConfig(config), config.args, config.embed)
-    }
-
-    def apply(additionalClasspath: String, args: List[String] = Nil, embed: Boolean = false): IScalaInterpreter = {
-        // Setup Settings via CommandLine
-        val settings = new CommandLine(args, println).settings
-
-        // Setup the classpath
-        val fullClasspath = settings.classpath
-        fullClasspath.value = ClassPath.join(fullClasspath.value, additionalClasspath)
-
-        // Embed (???) the interpreter
-        if (embed) {
-            settings.embeddedDefaults[IScalaInterpreter]
-        }
-
-        // Create the backend creation function.
-        val backendInit = (settings:ISettings, printer:PrintWriter) => {
-            new ScalaIMainBackend(new IMain(settings, printer)) 
-        }
-
-        // Create the interpreter
-        new IScalaInterpreter(settings, backendInit)
-    }
-
-    // TODO Move this method to the Options#Config class?
-    def classpathFromConfig(config: Options#Config): String = {
-        val (baseClasspath, baseModules) = config.javacp match {
-            case false => ("",                           Modules.Compiler :: Nil)
-            case true  => (sys.props("java.class.path"), Nil)
-        }
-
-        val modules = baseModules ++ config.modules
-        val resolvers = config.resolvers
-
-        val resolved = Sbt.resolve(modules, resolvers).map(_.classpath) getOrElse {
-            sys.error("Failed to resolve dependencies")
-        }
-        ClassPath.join(baseClasspath, config.classpath, resolved)
-    }
-}
 
 class IScalaInterpreter(val settings:ISettings, backendInit:(ISettings, PrintWriter) => IMainBackend) extends Interpreter with Compatibility {
     
@@ -62,11 +17,13 @@ class IScalaInterpreter(val settings:ISettings, backendInit:(ISettings, PrintWri
     val printer = new java.io.PrintWriter(output)
 
     // TODO the initialization of the backend is delayed because the we cannot add dependencies as 
-    // soon as the IMain compiler is operational. SI-6502 is the scala ticket for this problem, a
-    // fix should be ready for 2.10.5/2.11.5.
+    // soon as the IMain instance is created (the problem is caused by the backing compiler 
+    // instance). The SI-6502 ticket describes this problem for both 2.10 and 2.11. A fix should 
+    // be ready for 2.10.5/2.11.5.
     //
-    // IMHO This should be fixed in the IMainBackend. But I couldn't get it to work properly as it 
-    // is unclear to yours truly when the compiler gets operational.
+    // By making the Backend a var and recreating it when we add dependencies we could work arround
+    // the issue. This would also require us to fixate the interpreter in a number of places 
+    // because of the imports we are doing.
     lazy val intp = backendInit(settings, printer)
     lazy val runner = new Runner(intp.classLoader)
 

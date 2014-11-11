@@ -8,22 +8,22 @@ import scala.tools.nsc.interpreter.Parsed
 import scala.tools.nsc.reporters.ConsoleReporter
 import java.io.PrintWriter
 
-// Scala Specific imports.
-import scala.tools.nsc.interpreter.{ IMain => iMainBackend }
-import scala.tools.nsc.interpreter.{ JLineCompletion => Completion}
-import org.refptr.iscala.{ ScalaIMainBackendCompatibility => iMainBackendCompatibility }
+// Spark Specific imports.
+import org.apache.spark.repl.{ SparkIMain => iMainBackend }
+import org.apache.spark.repl.{ SparkJLineCompletion => Completion }
+import org.refptr.iscala.{ SparkIMainBackendCompatibility => iMainBackendCompatibility }
 
 /**
- * Scala IMainBackend implementation.
+ * Spark IMainBackend implementation.
  */
-class ScalaIMainBackend(settings: ISettings, printer: PrintWriter) extends IMainBackend with iMainBackendCompatibility {
+class SparkIMainBackend(settings: ISettings, printer: PrintWriter) extends IMainBackend with iMainBackendCompatibility {
   type IMain = iMainBackend
   type Global = imain.global.type
   type Request = imain.Request
   type ReadEvalPrint = imain.ReadEvalPrint
   type MemberHandler = imain.memberHandlers.MemberHandler
 
-  val imain: iMainBackend = new iMainBackend(settings, printer)
+  val imain: iMainBackend = new iMainBackend(settings, printer, false)
   val global: Global = imain.global
   val naming = imain.naming
   val completion = new Completion(imain)
