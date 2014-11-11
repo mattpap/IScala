@@ -24,6 +24,8 @@ class ScalaIMainBackend(settings: ISettings, printer: PrintWriter) extends IMain
   type MemberHandler = imain.memberHandlers.MemberHandler
 
   val imain: iMainBackend = new iMainBackend(settings, printer)
+  imain.initializeSynchronous()
+
   val global: Global = imain.global
   val naming = imain.naming
   val completion = new Completion(imain)
@@ -31,7 +33,6 @@ class ScalaIMainBackend(settings: ISettings, printer: PrintWriter) extends IMain
   import global._
   def subject: IMain = imain
   def reset(): Unit = imain.reset()
-  def initialize(): Unit = imain.initializeSynchronous()
   def isInitializeComplete: Boolean = imain.isInitializeComplete
   def classLoader: ClassLoader = imain.classLoader
   def executionWrapper: String = imain.executionWrapper
@@ -43,6 +44,7 @@ class ScalaIMainBackend(settings: ISettings, printer: PrintWriter) extends IMain
   def beSilentDuring[T](block: => T): T = imain.beQuietDuring(block)
   def symbolOfLine(code: String): Symbol = imain.symbolOfLine(code)
   def sessionWildcards: List[Type] = imain.sessionWildcards
+  def bind(name: String, boundType: String, value: Any, modifiers: List[String] = Nil): IR.Result = imain.bind(name, boundType, value, modifiers)
   def rebind(param: NamedParam): IR.Result = imain.rebind(param)
   def unqualifiedIds: List[String] = imain.unqualifiedIds
   def typeOfExpression(expr: String, silent: Boolean = true): Type = imain.typeOfExpression(expr, silent)

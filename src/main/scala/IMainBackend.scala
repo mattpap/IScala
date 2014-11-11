@@ -52,11 +52,6 @@ trait IMainBackend {
   def isInitializeComplete: Boolean
 
   /**
-   * Ensure that the imain instance has been properly initialized.
-   */
-  def initialize(): Unit
-
-  /**
    * The ClassLoader used by the interpreter
    */
   def classLoader: ClassLoader
@@ -123,6 +118,16 @@ trait IMainBackend {
    */
   def sessionWildcards: List[Type]
 
+  /** Bind a specified name to a specified value.  The name may
+   *  later be used by expressions passed to interpret.
+   *
+   *  @param name      the variable name to bind
+   *  @param boundType the type of the variable, as a string
+   *  @param value     the object value to bind to it
+   *  @return          an indication of whether the binding succeeded
+   */
+  def bind(name: String, boundType: String, value: Any, modifiers: List[String] = Nil): IR.Result
+  
   /**
    * Rebind an existing variable to a different type.
    */

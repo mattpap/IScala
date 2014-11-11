@@ -208,7 +208,7 @@ object TypeMagic extends Magic('type, TypeParser) {
 
 object ResetMagic extends EmptyMagic('reset) {
     def handle(interpreter: Interpreter) = {
-        interpreter.reset()
+        if (interpreter.isInitialized) interpreter.reset()
         Results.NoValue
     }
 }
@@ -216,7 +216,7 @@ object ResetMagic extends EmptyMagic('reset) {
 object ClassPathMagic extends EmptyMagic('classpath) {
     def handle(interpreter: Interpreter) = {
         val cp = interpreter.classpath.jars.map (_.getAbsolutePath).filterNot(_ == "")
-        interpreter.bind("cp", "List[String]", cp, quiet = true)
+        //interpreter.bind("cp", "List[String]", cp, quiet = true)
         println("Classpath:")
         cp.sorted.foreach(entry => println(s" $entry"))
         Results.NoValue

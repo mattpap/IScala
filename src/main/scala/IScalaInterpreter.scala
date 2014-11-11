@@ -4,6 +4,7 @@ import java.io.File
 import java.io.StringWriter
 import java.io.PrintWriter
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 import scala.tools.nsc.{ Settings => ISettings }
 import scala.tools.nsc.interpreter.{ IMain, IR }
@@ -25,12 +26,14 @@ class IScalaInterpreter(val settings:ISettings, backendInit:(ISettings, PrintWri
     // the issue. This would also require us to fixate the interpreter in a number of places 
     // because of the imports we are doing.
     lazy val intp = {
-        val intp = backendInit(settings, printer)
-        intp.initialize()
-        intp
+        val intp0 = backendInit(settings, printer)
+        intpInitialized = true
+        execCode(intp0, setupCode, false)
+        intp0
     }
     lazy val runner = new Runner(intp.classLoader)
 
+    private var intpInitialized = false
     private var _session = new Session
     private var _n: Int = 0
 
@@ -40,26 +43,55 @@ class IScalaInterpreter(val settings:ISettings, backendInit:(ISettings, PrintWri
     val In = mutable.Map.empty[Int, String]
     val Out = mutable.Map.empty[Int, Any]
 
+    val setupCode = ListBuffer.empty[IMainBackend => Any]
+    val tearDownCode = ListBuffer.empty[IMainBackend => Any]
+
+    private def execCode(intp0:IMainBackend, code: mutable.Seq[IMainBackend => Any], ignoreExceptions:Boolean) {
+        intp0.beSilentDuring {
+            code.foreach { block =>
+                try {
+                    block(intp0) match {
+                        case IR.Error | IR.Incomplete | _:Results.Failure if (!ignoreExceptions) => throw new RuntimeException("Error during code execution")
+                        case Results.Exception(_, _, _, ee) if (!ignoreExceptions) => throw new RuntimeException("Error during code execution", ee)
+                        case _ => 
+                    }
+                } catch {
+                    /* Swallow exception if that is the required behavior. */
+                    case e:Exception if (ignoreExceptions) => 
+                }
+            }
+        }
+    }
+
     def reset() {
         finish()
         _session = new Session
         _n = 0
         In.clear()
         Out.clear()
-        intp.reset()
+        if (intpInitialized) {
+            intp.reset()
+            execCode(intp, setupCode, false)
+        }
     }
 
     def finish() {
+        if (intpInitialized) {
+           execCode(intp, tearDownCode, true) 
+        }
         _session.endSession(_n)
     }
 
-    def isInitialized = intp.isInitializeComplete
+    def isInitialized = intpInitialized && intp.isInitializeComplete
 
     def resetOutput() { // TODO: this shouldn't be maintained externally
         output.getBuffer.setLength(0)
     }
 
-    def nextInput(): Int = { _n += 1; _n }
+    def nextInput(): Int = { 
+        _n += 1
+        _n 
+    }
 
     def storeInput(input: String) {
         In(n) = input
@@ -72,7 +104,6 @@ class IScalaInterpreter(val settings:ISettings, backendInit:(ISettings, PrintWri
         bind("_" + n, result.tpe, result.value)
     }
 
-    // TODO - A magic thing - not relevant for SPARK
     def classpath_=(cp: ClassPath): Unit = {
         settings.classpath.value = ClassPath.join(initialClassPath, cp.classpath)
     }
@@ -262,5 +293,16 @@ class IScalaInterpreter(val settings:ISettings, backendInit:(ISettings, PrintWri
                 stringify(if (deconstruct) intp.showDeconstructed(tpe) else tpe)
             })
         } else None
+    }
+}
+
+object IScalaInterpreter {
+    def code(line:String) = (intp:IMainBackend) => { 
+        intp.interpret(line)
+    }
+    def bind[T](name:String, block: => T, options: List[String] = Nil) = (intp:IMainBackend) => { 
+        val value = block
+        val boundType = if (value != null) value.getClass.getName else "java.lang.Object"
+        intp.bind(name, boundType, value, options)
     }
 }
