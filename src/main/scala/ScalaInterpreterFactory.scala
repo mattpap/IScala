@@ -8,11 +8,11 @@ import scala.tools.nsc.interpreter.CommandLine
 
 object ScalaInterpreterFactory extends InterpreterFactory {
 
-    def apply(config: Options#Config): IScalaInterpreter = {
+    def apply(config: Options#Config): Interpreter = {
         ScalaInterpreterFactory(config.completeClasspath, config.args, config.embed)
     }
 
-    def apply(additionalClasspath: String, args: List[String] = Nil, embed: Boolean = false): IScalaInterpreter = {
+    def apply(additionalClasspath: String, args: List[String] = Nil, embed: Boolean = false): Interpreter = {
         // Setup Settings via CommandLine
         val settings = new CommandLine(args, println).settings
 
@@ -22,7 +22,7 @@ object ScalaInterpreterFactory extends InterpreterFactory {
 
         // Embed (???) the interpreter
         if (embed) {
-            settings.embeddedDefaults[IScalaInterpreter]
+            settings.embeddedDefaults[Interpreter]
         }
 
         // Create the backend creation function.
@@ -31,7 +31,7 @@ object ScalaInterpreterFactory extends InterpreterFactory {
         }
 
         // Create the interpreter
-        new IScalaInterpreter(settings, backendInit)
+        new Interpreter(settings, backendInit)
     }
 
     override def toString = "<SparkInterpreterFactory>"

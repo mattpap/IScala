@@ -12,11 +12,11 @@ import org.apache.spark.repl.SparkIMain
 
 object SparkInterpreterFactory extends InterpreterFactory {
 
-    def apply(config: Options#Config): IScalaInterpreter = {
+    def apply(config: Options#Config): Interpreter = {
         SparkInterpreterFactory(config.completeClasspath, config.args, config.javacp)
     }
 
-    def apply(additionalClasspath: String, args: List[String] = Nil, javacp: Boolean = false): IScalaInterpreter = {
+    def apply(additionalClasspath: String, args: List[String] = Nil, javacp: Boolean = false): Interpreter = {
 
         // Setup Settings via CommandLine
         val settings = new SparkCommandLine(args).settings
@@ -32,7 +32,7 @@ object SparkInterpreterFactory extends InterpreterFactory {
 
         // Embed (???) the interpreter
         // TODO figure out why this is the default?
-        settings.embeddedDefaults[IScalaInterpreter]
+        settings.embeddedDefaults[Interpreter]
 
         // Create the backend creation function.
         val backendInit = (settings:ISettings, printer:PrintWriter) => {
@@ -40,8 +40,8 @@ object SparkInterpreterFactory extends InterpreterFactory {
         }
 
         // Create the interpreter
-        new IScalaInterpreter(settings, backendInit) {
-            import IScalaInterpreter._
+        new Interpreter(settings, backendInit) {
+            import Interpreter._
             
             setupCode += sparkContextCreator
             setupCode += code("import org.apache.spark.SparkContext")
@@ -74,6 +74,5 @@ object SparkInterpreterFactory extends InterpreterFactory {
         // variable with a name which has been bound in the previous session.
         intp0.bind("sc", "org.apache.spark.SparkContext",  sparkContext, List("@transient"))
     }
-
     override def toString = "<SparkInterpreterFactory>"
 }

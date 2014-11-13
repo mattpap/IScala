@@ -17,7 +17,7 @@ trait InterpreterUtil {
     }
 
     // XXX: if (fork) ("", true) else (sys.props("java.class.path"), false)
-    protected val intp = IScalaInterpreter(sys.props("java.class.path"))
+    protected val intp = ScalaInterpreterFactory(sys.props("java.class.path"))
 
     def interpret(code: String): Output[Results.Result] = {
         Capture.captureOutput {

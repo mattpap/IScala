@@ -23,7 +23,20 @@ class SparkIMainBackend(settings: ISettings, printer: PrintWriter) extends IMain
   type ReadEvalPrint = imain.ReadEvalPrint
   type MemberHandler = imain.memberHandlers.MemberHandler
 
-  val imain: iMainBackend = new iMainBackend(settings, printer, false)
+  val imain: iMainBackend = {
+    try {
+      new iMainBackend(settings, printer)  
+    }
+    catch {
+      // Hack for the everyone using Spark 1.2...
+      case e: java.lang.NoSuchMethodError => {
+        import java.lang.{Boolean => JBoolean}
+        val constructor = classOf[iMainBackend].getDeclaredConstructor(classOf[ISettings], classOf[PrintWriter], classOf[Boolean])
+        constructor.newInstance(settings, printer, JBoolean.FALSE)
+      }
+    }
+  }
+    
   imain.initializeSynchronous()
 
   val global: Global = imain.global

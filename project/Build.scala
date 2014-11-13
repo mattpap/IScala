@@ -56,7 +56,7 @@ object Dependencies {
 
     val xml = scala_2_11_+("org.scala-lang.modules" %% "scala-xml" % "1.0.2")
 
-    val spark = "org.apache.spark" % "spark-repl_2.10" % "1.2.0-SNAPSHOT" % Provided
+    val spark = "org.apache.spark" % "spark-repl_2.10" % "1.1.0" % Provided
 }
 
 object IScalaBuild extends Build {
