@@ -109,7 +109,7 @@ class CompleteHandler(parent: Parent) extends Handler[complete_request](parent) 
             // Notebook only gives us line and cursor_pos
             val pos = msg.content.cursor_pos
             val upToCursor = msg.content.line.splitAt(pos)._1
-            upToCursor.split("""[^\w.%]""").last
+            upToCursor.split("""[^\w.%]""").last // FIXME java.util.NoSuchElementException
         } else {
             msg.content.text
         }

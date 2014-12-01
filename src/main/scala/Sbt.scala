@@ -4,7 +4,7 @@ import java.io.File
 
 import sbt.{
     ShowLines,
-    Logger, ConsoleLogger,
+    Logger, BasicLogger, LogEvent, ControlEvent, Level, StackTrace, ConsoleOut,
     ModuleID,ModuleInfo,CrossVersion,Resolver,
     IvyPaths,InlineIvyConfiguration,IvySbt,IvyScala,IvyActions,
     InlineConfiguration,UpdateConfiguration,
@@ -28,7 +28,7 @@ object ClassPath {
 
 object Sbt {
     def resolve(modules: Seq[ModuleID], resolvers: Seq[Resolver]): Option[ClassPath] =
-        resolve(modules, resolvers, ConsoleLogger())
+        resolve(modules, resolvers, SimpleLogger)
 
     def resolve(modules: Seq[ModuleID], resolvers: Seq[Resolver], logger: Logger): Option[ClassPath] = {
         val paths = new IvyPaths(new File("."), None)
@@ -49,5 +49,51 @@ object Sbt {
                 warning.lines.foreach(logger.error(_))
                 None
         }
+    }
+}
+
+// TODO replace by better logger
+object SimpleLogger extends BasicLogger {
+    val out: ConsoleOut = ConsoleOut.systemOut
+    
+    def trace(t: => Throwable): Unit = {
+        out.lockObject.synchronized {
+            val traceLevel = getTrace
+            if(traceLevel >= 0)
+                out.print(StackTrace.trimmed(t, traceLevel))
+        }
+    }
+
+    def log(level: Level.Value, message: => String):Unit = {
+        if(atLevel(level))
+            log(level.toString, message)
+    }
+
+    def logAll(events: Seq[LogEvent]) = out.lockObject.synchronized { 
+        events.foreach(log)
+    }
+    
+    def control(event: ControlEvent.Value, message: => String):Unit = {
+        log(Level.Info, message) 
+    }
+
+    private def log(label: String , message: String): Unit = {
+        out.lockObject.synchronized {
+            for(line <- message.split("""\n"""))
+                printLabeledLine(label, line)
+        }
+    }
+
+    def success(message: => String)
+    {
+        if(successEnabled)
+            log(Level.SuccessLabel, message)
+    }
+    private def printLabeledLine(label: String, line: String): Unit = {
+        out.print("[")
+        out.print(label)
+        out.print("] ")
+        out.print(line)
+        out.println()
     }
 }

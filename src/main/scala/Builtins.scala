@@ -22,9 +22,7 @@ class Builtins(interpreter: Interpreter, ipy: Communication, msg: Msg[_]) {
     val bindings = List(
         ("raw_input", "() => String", raw_input _))
 
-    interpreter.intp.beSilentDuring {
-        bindings.foreach { case (name, tpe, value) =>
-            interpreter.intp.bind(name, tpe, value)
-        }
+    bindings.foreach{ case (name, tpe, value) =>
+        interpreter.bind(name, tpe, value, quiet = true)
     }
 }

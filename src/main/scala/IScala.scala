@@ -39,23 +39,7 @@ class IScala(config: Options#Config) extends Parent {
             connection
     }
 
-    val classpath = {
-        val (baseClasspath, baseModules) = config.javacp match {
-            case false => ("",                           Modules.Compiler :: Nil)
-            case true  => (sys.props("java.class.path"), Nil)
-        }
-
-        val modules = baseModules ++ config.modules
-        val resolvers = config.resolvers
-
-        val resolved = Sbt.resolve(modules, resolvers).map(_.classpath) getOrElse {
-            sys.error("Failed to resolve dependencies")
-        }
-
-        ClassPath.join(baseClasspath, config.classpath, resolved)
-    }
-
-    val interpreter = new Interpreter(classpath, config.args)
+    val interpreter = config.interpreter
 
     val zmq = new Sockets(connection)
     val ipy = new Communication(zmq, connection)

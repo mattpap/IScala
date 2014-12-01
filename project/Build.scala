@@ -55,6 +55,8 @@ object Dependencies {
     val quasiquotes = scala_2_10("org.scalamacros" %% "quasiquotes" % "2.0.0")
 
     val xml = scala_2_11_+("org.scala-lang.modules" %% "scala-xml" % "1.0.2")
+
+    val spark = "org.apache.spark" % "spark-repl_2.10" % "1.1.0" % Provided
 }
 
 object IScalaBuild extends Build {
@@ -136,13 +138,13 @@ object IScalaBuild extends Build {
     lazy val pluginSettings = ideaSettings ++ assemblySettings ++ packagerSettings
 
     lazy val iscalaSettings = Defaults.coreDefaultSettings ++ pluginSettings ++ {
-        Seq(resolvers += {
+        Seq(resolvers ++= {
                 val github = url("https://raw.githubusercontent.com/mattpap/mvn-repo/master/releases")
-                Resolver.url("github-releases", github)(Resolver.ivyStylePatterns)
+                Seq(Resolver.url("github-releases", github)(Resolver.ivyStylePatterns), Resolver.mavenLocal)
             },
             libraryDependencies ++= {
                 import Dependencies._
-                scalaio ++ Seq(ivy.value, scopt, jeromq, play_json, slick, sqlite, slf4j, specs2, compiler.value)
+                scalaio ++ Seq(ivy.value, scopt, jeromq, play_json, slick, sqlite, slf4j, specs2, compiler.value, spark)
             },
             unmanagedSourceDirectories in Compile += {
                 (sourceDirectory in Compile).value / s"scala_${scalaBinaryVersion.value}"
