@@ -64,6 +64,7 @@ private object CustomReads {
     }
 
     implicit val interpreterFactoryReads:Read[InterpreterFactory] = Read.reads { interpreterClassName =>
+
         // Get the java.lang.Class and covert into a scala class symbol
         val interpreterClass = try {
             Class.forName(interpreterClassName)

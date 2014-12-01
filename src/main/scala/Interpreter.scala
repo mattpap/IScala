@@ -63,8 +63,8 @@ class Interpreter(val settings:ISettings, backendInit:(ISettings, PrintWriter) =
             code.foreach { block =>
                 try {
                     block(intp0) match {
-                        case IR.Error | IR.Incomplete | _:Results.Failure if (!ignoreExceptions) => throw new RuntimeException("Error during code execution")
-                        case Results.Exception(_, _, _, ee) if (!ignoreExceptions) => throw new RuntimeException("Error during code execution", ee)
+                        case IR.Error | IR.Incomplete | _:Results.Failure if (!ignoreExceptions) => throw new RuntimeException(s"Error during code execution: $block")
+                        case Results.Exception(_, _, _, ee) if (!ignoreExceptions) => throw new RuntimeException(s"Error during code execution: $block", ee)
                         case _ => 
                     }
                 } catch {
@@ -350,12 +350,15 @@ class Interpreter(val settings:ISettings, backendInit:(ISettings, PrintWriter) =
 }
 
 object Interpreter {
-    def code(line:String) = (intp:IMainBackend) => { 
-        intp.interpret(line)
+    case class code(line:String) extends (IMainBackend => IR.Result) {
+        def apply(intp:IMainBackend) = intp.interpret(line)
     }
-    def bind[T](name:String, block: => T, options: List[String] = Nil) = (intp:IMainBackend) => { 
-        val value = block
-        val boundType = if (value != null) value.getClass.getName else "java.lang.Object"
-        intp.bind(name, boundType, value, options)
+
+    case class bind[T](name:String, block:() => T, options: List[String] = Nil) extends (IMainBackend => IR.Result) {
+        def apply(intp:IMainBackend) = {
+            val value = block()
+            val boundType = if (value != null) value.getClass.getName else "java.lang.Object"
+            intp.bind(name, boundType, value, options)
+        }
     }
 }
