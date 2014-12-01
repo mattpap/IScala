@@ -12,6 +12,16 @@ import org.apache.spark.repl.SparkIMain
 
 object SparkInterpreterFactory extends InterpreterFactory {
 
+    def sparkSessionSetupCode: Seq[IMainBackend => Any] = {
+        import Interpreter._
+        sparkContextCreator :: code("import org.apache.spark.SparkContext") :: Nil
+    }
+
+    def sparkSessionTearDownCode: Seq[IMainBackend => Any] = {
+        import Interpreter._
+        code("if (sc != null) sc.stop()") :: Nil
+    }
+
     def apply(config: Options#Config): Interpreter = {
         SparkInterpreterFactory(config.completeClasspath, config.args, config.javacp)
     }
@@ -40,13 +50,10 @@ object SparkInterpreterFactory extends InterpreterFactory {
         }
 
         // Create the interpreter
+        // TODO create decent setup/teardown code passing.
         new Interpreter(settings, backendInit) {
-            import Interpreter._
-            
-            setupCode += sparkContextCreator
-            setupCode += code("import org.apache.spark.SparkContext")
-
-            tearDownCode += code("if (sc != null) sc.stop()")
+            setupCode ++= sparkSessionSetupCode
+            tearDownCode ++= sparkSessionTearDownCode
         }
     }
 
