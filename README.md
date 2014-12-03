@@ -21,7 +21,7 @@ console or notebook, respectively.
 
 To start IPython with IScala backend manually, issue:
 ```
-ipython console --KernelManager.kernel_cmd='["java", "-jar", "lib/IScala.jar", "--connection-file", "{connection_file}", "--parent"]'
+ipython console --KernelManager.kernel_cmd='["java", "-jar", "lib/IScala.jar", "--profile", "{connection_file}", "--parent"]'
 ```
 The same works for `qtconsole` and `notebook`, and is, in principle, what scripts in `bin/`
 do. Note that you may have to provide a full path to `IScala.jar`. Option `--parent` is
@@ -40,9 +40,9 @@ $ ipython profile create scala
 ```
 Then add the following line:
 ```
-c.KernelManager.kernel_cmd = ["java", "-jar", "$ISCALA_PATH/lib/IScala.jar", "--connection-file", "{connection_file}", "--parent"]"
+c.KernelManager.kernel_cmd = ["java", "-jar", "$ISCALA_PATH/lib/IScala.jar", "--profile", "{connection_file}", "--parent"]
 ```
-to `~/.config/ipython/profile_scala/ipython_config.py`. Replace `$ISCALA_PATH` with the actual
+to `~/.ipython/profile_scala/ipython_config.py`. Replace `$ISCALA_PATH` with the actual
 location of `IScala.jar`. Then you can run IPython with `ipython console --profile scala`.
 
 To start a standalone kernel simply issue:
