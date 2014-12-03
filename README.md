@@ -42,7 +42,7 @@ Then add the following line:
 ```
 c.KernelManager.kernel_cmd = ["java", "-jar", "$ISCALA_PATH/lib/IScala.jar", "--connection-file", "{connection_file}", "--parent"]"
 ```
-to `~/.config/ipython/profile_scala/ipython_config.py`. Replace `$ISCALA_PATH` with the actual
+to `~/.ipython/profile_scala/ipython_config.py`. Replace `$ISCALA_PATH` with the actual
 location of `IScala.jar`. Then you can run IPython with `ipython console --profile scala`.
 
 To start a standalone kernel simply issue:
