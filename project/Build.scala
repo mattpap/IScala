@@ -213,7 +213,7 @@ object IScalaBuild extends Build {
                 }
             },
             userScripts := {
-                val baseDir = "$(dirname $(dirname $(readlink -f $0)))"
+                val baseDir = "$(cd \"$(dirname $(dirname \"$0\"))\" && pwd)"
                 val jarName = {
                     import SbtAssembly.AssemblyKeys.{assembly,jarName=>jar}
                     (jar in assembly).value
