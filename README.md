@@ -4,6 +4,17 @@
 
 [![Build Status][travis]](https://travis-ci.org/mattpap/IScala)
 
+## Warning
+
+**Development of IScala has stopped.**
+
+See **Almond** for a Scala kernel for Jupyter that is actively being developed.
+
+- Almond home: http://almond-sh.github.io/almond/stable
+- Almond repo: https://github.com/almond-sh/almond
+- Almond install: http://almond-sh.github.io/almond/stable/docs/quick-start-install
+- Almond versions: http://almond-sh.github.io/almond/stable/docs/install-versions
+
 ## Requirements
 
 * [IPython](http://ipython.org/ipython-doc/stable/install/install.html) 1.0+
