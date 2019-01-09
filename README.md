@@ -303,3 +303,12 @@ Copyright &copy; 2013-2014 by Mateusz Paprocki and contributors.
 Published under The MIT License, see LICENSE.
 
 [travis]: https://api.travis-ci.org/mattpap/IScala.png?branch=master
+
+### Code Visualization:
+
+Here is a cool visualization of the code evolution
+
+ [![Watch the video](https://img.youtube.com/vi/y7ngBQl93YU/0.jpg)](https://www.youtube.com/watch?v=y7ngBQl93YU)
+
+ [https://www.youtube.com/watch?v=y7ngBQl93YU](https://www.youtube.com/watch?v=y7ngBQl93YU)
+
